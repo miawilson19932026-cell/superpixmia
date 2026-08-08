@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 120">
+  <!-- Pixel icon: 3x3 grid of squares forming a stylized "P" -->
+  <g transform="translate(16, 24)">
+    <!-- 5x5 pixel grid forming a minimal pixel mark -->
+    <rect x="0"  y="0"  width="16" height="16" rx="3" fill="#fafafa" />
+    <rect x="18" y="0"  width="16" height="16" rx="3" fill="#fafafa" />
+    <rect x="36" y="0"  width="16" height="16" rx="3" fill="#fafafa" />
+    <rect x="54" y="0"  width="16" height="16" rx="3" fill="#fafafa" />
+
+    <rect x="0"  y="18" width="16" height="16" rx="3" fill="#fafafa" />
+    <rect x="18" y="18" width="16" height="16" rx="3" fill="#fafafa" opacity="0" />
+    <rect x="36" y="18" width="16" height="16" rx="3" fill="#fafafa" opacity="0" />
+    <rect x="54" y="18" width="16" height="16" rx="3" fill="#fafafa" />
+
+    <rect x="0"  y="36" width="16" height="16" rx="3" fill="#fafafa" />
+    <rect x="18" y="36" width="16" height="16" rx="3" fill="#fafafa" />
+    <rect x="36" y="36" width="16" height="16" rx="3" fill="#fafafa" />
+    <rect x="54" y="36" width="16" height="16" rx="3" fill="#fafafa" />
+
+    <rect x="0"  y="54" width="16" height="16" rx="3" fill="#fafafa" />
+    <rect x="18" y="54" width="16" height="16" rx="3" fill="#fafafa" opacity="0" />
+    <rect x="36" y="54" width="16" height="16" rx="3" fill="#fafafa" opacity="0" />
+    <rect x="54" y="54" width="16" height="16" rx="3" fill="#fafafa" opacity="0" />
+  </g>
+
+  <!-- Text -->
+  <text x="100" y="52" font-family="'SF Pro Display', 'Inter', -apple-system, sans-serif" font-size="28" font-weight="300" fill="#a0a0a0" letter-spacing="8">
+    SUPER
+  </text>
+  <text x="100" y="92" font-family="'SF Pro Display', 'Inter', -apple-system, sans-serif" font-size="40" font-weight="600" fill="#fafafa" letter-spacing="1">
+    PixMia
+  </text>
+</svg>

@@ -1,0 +1,11 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/*.ts": {
+      "memory": 512,
+      "maxDuration": 10
+    }
+  }
+}
