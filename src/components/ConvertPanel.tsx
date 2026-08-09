@@ -21,9 +21,34 @@ interface Props {
   batch?: boolean
 }
 
+function detectSourceFormat(file: File): OutputFormat {
+  const t = file.type
+  if (t === 'image/png') return 'png'
+  if (t === 'image/jpeg') return 'jpeg'
+  if (t === 'image/webp') return 'webp'
+  if (t === 'image/avif') return 'avif'
+  if (t === 'image/bmp') return 'bmp'
+  if (t === 'image/x-icon' || t === 'image/vnd.microsoft.icon') return 'ico'
+  // fallback: derive from extension
+  const name = file.name.toLowerCase()
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'jpeg'
+  if (name.endsWith('.webp')) return 'webp'
+  if (name.endsWith('.avif')) return 'avif'
+  if (name.endsWith('.bmp')) return 'bmp'
+  if (name.endsWith('.ico')) return 'ico'
+  return 'png'
+}
+
+function pickDefaultFormat(source: OutputFormat): OutputFormat {
+  // Pick a useful format different from source
+  const order: OutputFormat[] = ['webp', 'png', 'jpeg', 'avif', 'bmp', 'ico']
+  return order.find(f => f !== source) ?? 'webp'
+}
+
 export default function ConvertPanel({ file, resultSize, onConvert, processing, hasResult, batch = false }: Props) {
   const { t } = useTranslation()
-  const [format, setFormat] = useState<OutputFormat>('png')
+  const sourceFormat = detectSourceFormat(file)
+  const [format, setFormat] = useState<OutputFormat>(() => pickDefaultFormat(sourceFormat))
   const [quality, setQuality] = useState(92)
   const originalSize = file.size
   const prevFileRef = useRef<File | null>(null)
@@ -34,7 +59,10 @@ export default function ConvertPanel({ file, resultSize, onConvert, processing, 
   useEffect(() => {
     if (!batch && !hasResult && file !== prevFileRef.current) {
       prevFileRef.current = file
-      onConvert(format, isLossy ? quality : undefined)
+      const defaultFormat = pickDefaultFormat(detectSourceFormat(file))
+      setFormat(defaultFormat)
+      const lossy = defaultFormat === 'jpeg' || defaultFormat === 'webp' || defaultFormat === 'avif'
+      onConvert(defaultFormat, lossy ? quality : undefined)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batch, hasResult, file])

@@ -100,8 +100,12 @@ export default function ResizePanel({ originalWidth, originalHeight, onResize, p
           <label className="block text-[11px] text-[var(--text-dim)] mb-1.5 uppercase tracking-wide">{t.width} (px)</label>
           <input
             type="number"
-            value={w}
-            onChange={(e) => updateW(Number(e.target.value) || 0)}
+            value={w || ''}
+            onChange={(e) => {
+              const raw = e.target.value
+              if (raw === '') { setW(0); return }
+              updateW(Number(raw))
+            }}
             className="w-full bg-[var(--bg-input)] border border-[var(--border)] hover:border-[var(--border-hover)] focus:border-[var(--accent)]
               text-[var(--text-primary)] text-sm font-mono rounded-[var(--radius-sm)] px-3 py-2.5 outline-none transition-colors"
           />
@@ -119,11 +123,11 @@ export default function ResizePanel({ originalWidth, originalHeight, onResize, p
         >
           {lock ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-3.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
           ) : (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-3.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
           )}
         </button>
@@ -132,8 +136,12 @@ export default function ResizePanel({ originalWidth, originalHeight, onResize, p
           <label className="block text-[11px] text-[var(--text-dim)] mb-1.5 uppercase tracking-wide">{t.height} (px)</label>
           <input
             type="number"
-            value={h}
-            onChange={(e) => updateH(Number(e.target.value) || 0)}
+            value={h || ''}
+            onChange={(e) => {
+              const raw = e.target.value
+              if (raw === '') { setH(0); return }
+              updateH(Number(raw))
+            }}
             className="w-full bg-[var(--bg-input)] border border-[var(--border)] hover:border-[var(--border-hover)] focus:border-[var(--accent)]
               text-[var(--text-primary)] text-sm font-mono rounded-[var(--radius-sm)] px-3 py-2.5 outline-none transition-colors"
           />

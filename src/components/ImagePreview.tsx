@@ -49,12 +49,16 @@ export default function ImagePreview({
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
 
   // Drop state
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)    // which cell is being hovered
   const [dragOverAdd, setDragOverAdd] = useState(false)                   // hovering the add-slot
   const [dragOverArea, setDragOverArea] = useState(false)                 // hovering somewhere in the preview
 
+  const dragStart = useRef({ x: 0, y: 0 })
+  const panStart = useRef({ x: 0, y: 0 })
+  const pinchStart = useRef({ dist: 0, zoom: 1, pan: { x: 0, y: 0 } })
   const currentIndexRef = useRef(currentIndex)
   currentIndexRef.current = currentIndex
 
@@ -171,7 +175,103 @@ export default function ImagePreview({
     }
   }, [processing, onDropFiles])
 
-  // Zoom is controlled exclusively via the +/− buttons (avoid gesture conflicts on mobile)
+  // ─── Wheel zoom (on image only, not modal) ───
+  const onWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const cx = e.clientX - rect.left - rect.width / 2
+    const cy = e.clientY - rect.top - rect.height / 2
+    setZoom((prev) => {
+      const factor = e.deltaY < 0 ? 1.12 : 0.88
+      const next = Math.max(0.5, Math.min(5, prev * factor))
+      const scale = next / prev
+      setPan((p) => {
+        if (next <= 1) return { x: 0, y: 0 }
+        return { x: cx - scale * (cx - p.x), y: cy - scale * (cy - p.y) }
+      })
+      return next
+    })
+  }, [])
+
+  // ─── Double-click toggle 1× ↔ 2× ───
+  const onDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const cx = e.clientX - rect.left - rect.width / 2
+    const cy = e.clientY - rect.top - rect.height / 2
+    if (zoom > 1.1) {
+      setZoom(1)
+      setPan({ x: 0, y: 0 })
+    } else {
+      setZoom(2)
+      setPan({ x: -cx, y: -cy })
+    }
+  }, [zoom])
+
+  // ─── Mouse drag to pan ───
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    if (zoom <= 1 || e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+    dragStart.current = { x: e.clientX, y: e.clientY }
+    panStart.current = { x: pan.x, y: pan.y }
+  }, [zoom, pan])
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return
+    setPan({
+      x: panStart.current.x + (e.clientX - dragStart.current.x),
+      y: panStart.current.y + (e.clientY - dragStart.current.y),
+    })
+  }, [isDragging])
+
+  const onMouseUp = useCallback(() => setIsDragging(false), [])
+
+  // ─── Touch pinch zoom + drag ───
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.stopPropagation()
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      pinchStart.current = { dist: Math.hypot(dx, dy), zoom, pan: { ...pan } }
+    } else if (e.touches.length === 1 && zoom > 1) {
+      setIsDragging(true)
+      dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      panStart.current = { ...pan }
+    }
+  }, [zoom, pan])
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault()
+      e.stopPropagation()
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const dist = Math.hypot(dx, dy)
+      const scale = dist / pinchStart.current.dist
+      const nextZoom = Math.max(0.5, Math.min(5, pinchStart.current.zoom * scale))
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      const cx = midX - rect.left - rect.width / 2
+      const cy = midY - rect.top - rect.height / 2
+      const s = nextZoom / pinchStart.current.zoom
+      setZoom(nextZoom)
+      setPan(nextZoom <= 1 ? { x: 0, y: 0 } : {
+        x: cx - s * (cx - pinchStart.current.pan.x),
+        y: cy - s * (cy - pinchStart.current.pan.y),
+      })
+    } else if (e.touches.length === 1 && isDragging) {
+      setPan({
+        x: panStart.current.x + (e.touches[0].clientX - dragStart.current.x),
+        y: panStart.current.y + (e.touches[0].clientY - dragStart.current.y),
+      })
+    }
+  }, [isDragging])
+
+  const onTouchEnd = useCallback(() => setIsDragging(false), [])
 
   // ─── Lightbox navigation ───
   const lbPrev = () => setLightboxIndex((i) => (i > 0 ? i - 1 : totalCount - 1))
@@ -489,15 +589,25 @@ export default function ImagePreview({
             {/* Image area */}
             <div
               className="flex-1 flex items-center justify-center p-6 min-h-[200px] overflow-hidden"
+              onMouseMove={onMouseMove}
+              onMouseUp={onMouseUp}
+              onMouseLeave={onMouseUp}
             >
               <img
                 src={lbUrl}
                 alt={lbLabel as string}
                 draggable={false}
-                className="max-w-full max-h-[65vh] object-contain select-none"
+                className="max-w-full max-h-[65vh] object-contain select-none transition-transform duration-[50ms] ease-linear"
                 style={{
                   transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
                 }}
+                onWheel={onWheel}
+                onDoubleClick={onDoubleClick}
+                onMouseDown={onMouseDown}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
               />
             </div>
 
@@ -510,9 +620,14 @@ export default function ImagePreview({
                     👆 {lang === 'zh' ? '长按图片即可保存到相册' : 'Long-press to save'}
                   </span>
                 ) : (
-                  <span className="text-[11px] text-white/30">
-                    🔍 {lang === 'zh' ? '使用下方 +/− 按钮缩放' : 'Use +/− buttons to zoom'}
-                  </span>
+                  <>
+                    <span className="text-[11px] text-white/30 hidden sm:inline">
+                      🖱️ {t.zoomHint as string}
+                    </span>
+                    <span className="text-[11px] text-white/30 sm:hidden">
+                      🔍 {lang === 'zh' ? '双指缩放 · 下方 +/− 按钮' : 'Pinch zoom · +/− buttons'}
+                    </span>
+                  </>
                 )}
               </div>
               <div className="flex items-center gap-1.5">
