@@ -527,6 +527,37 @@ export default function App() {
           />
         )}
 
+        {/* Progress bar — visible during processing for both single & batch */}
+        {/* Progress bar — visible during processing for both single & batch */}
+        {hasImage && isProcessing && (
+          <div className="mx-auto max-w-2xl mt-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-2 bg-[var(--bg-input)] rounded-full overflow-hidden">
+                {processingProgress ? (
+                  <div
+                    className="h-full bg-gradient-to-r from-[var(--accent)] to-[#a78bfa] rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${(processingProgress.current / processingProgress.total) * 100}%` }}
+                  />
+                ) : (
+                  <div
+                    className="h-full w-1/3 bg-gradient-to-r from-[var(--accent)] to-[#a78bfa] rounded-full"
+                    style={{ animation: 'progressIndeterminate 1.5s ease-in-out infinite' }}
+                  />
+                )}
+              </div>
+              {processingProgress ? (
+                <span className="text-xs font-mono tabular-nums text-[var(--accent)] whitespace-nowrap">
+                  {processingProgress.current}/{processingProgress.total}
+                </span>
+              ) : (
+                <span className="text-xs text-[var(--text-dim)] animate-pulse whitespace-nowrap">
+                  {lang === 'zh' ? '处理中…' : 'Processing…'}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {hasImage && (
           <div className="mx-auto max-w-md mt-6 animate-in" key={activeTool}>
             {activeTool === 'resize' && (
@@ -654,6 +685,11 @@ export default function App() {
         }
         .animate-in {
           animation: panelIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes progressIndeterminate {
+          0% { transform: translateX(-50%); }
+          50% { transform: translateX(200%); }
+          100% { transform: translateX(-50%); }
         }
       `}</style>
     </div>
