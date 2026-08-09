@@ -447,8 +447,8 @@ export default function App() {
                   key={key}
                   onClick={() => setActiveTool(key)}
                   className={`
-                    relative flex-1 sm:flex-none flex sm:flex-col items-center gap-1 sm:gap-2
-                    px-1.5 sm:px-4 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-sm font-medium transition-all duration-200
+                    relative flex-1 sm:flex-none flex sm:flex-col items-center justify-center gap-1 sm:gap-2
+                    px-1 sm:px-4 py-2 sm:py-3 rounded-xl text-[10px] sm:text-sm font-medium transition-all duration-200
                     glass backdrop-blur-xl border-white/[0.06] card-hover
                     ${active
                       ? 'glass-active text-[var(--accent)]'
@@ -456,10 +456,10 @@ export default function App() {
                     }
                   `}
                 >
-                  <div className="w-4 h-4 sm:w-6 sm:h-6 shrink-0">
+                  <div className="w-4 h-4 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center">
                     {active ? icons.filled : icons.outline}
                   </div>
-                  <span className="whitespace-nowrap leading-tight">
+                  <span className="whitespace-nowrap leading-none text-center">
                     {t[toolLabelMap[key] as keyof typeof t] as string}
                   </span>
                 </button>
