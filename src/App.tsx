@@ -206,6 +206,9 @@ export default function App() {
 
   // ── Handle new images ──
   const handleImages = useCallback(async (files: File[]) => {
+    // Block adding images during processing — new images won't be processed by the current batch
+    if (processingTools.size > 0) return
+
     const items = await Promise.all(files.map(loadImageItem))
 
     if (mode === 'batch' && imageCount > 0) {
@@ -220,7 +223,7 @@ export default function App() {
       setImages(items)
       setCurrentIndex(0)
     }
-  }, [mode, imageCount, images, loadImageItem, clearAllResults])
+  }, [mode, imageCount, images, loadImageItem, clearAllResults, processingTools])
 
   const handleSingleImage = useCallback((file: File) => {
     handleImages([file])
@@ -504,6 +507,7 @@ export default function App() {
           mode={mode}
           onToggleMode={handleToggleMode}
           onClear={handleClearAll}
+          processing={isProcessing}
         />
 
         {hasImage && (
@@ -519,6 +523,7 @@ export default function App() {
             onDropReplace={mode === 'batch' ? handleReplaceAt : undefined}
             maxItems={MAX_BATCH}
             lightboxTrigger={lightboxTrigger}
+            processing={isProcessing}
           />
         )}
 

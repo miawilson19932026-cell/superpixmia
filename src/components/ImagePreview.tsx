@@ -25,6 +25,7 @@ interface Props {
   onDropReplace?: (files: File[], index: number) => void
   maxItems?: number
   lightboxTrigger?: number
+  processing?: boolean
 }
 
 export default function ImagePreview({
@@ -39,6 +40,7 @@ export default function ImagePreview({
   onDropReplace,
   maxItems = 15,
   lightboxTrigger,
+  processing = false,
 }: Props) {
   const { t, lang } = useTranslation()
   void _onPrev; void _onNext
@@ -94,22 +96,25 @@ export default function ImagePreview({
 
   // ─── Drop handlers ───
   const handleDragOver = useCallback((e: DragEvent) => {
+    if (processing) return
     e.preventDefault()
     e.stopPropagation()
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     setDragOverArea(true)
-  }, [])
+  }, [processing])
 
   const handleDragLeave = useCallback((e: DragEvent) => {
+    if (processing) return
     // Only fire when leaving the container, not when entering a child
     if (e.currentTarget === e.target || !(e.currentTarget as HTMLElement).contains(e.relatedTarget as HTMLElement)) {
       setDragOverArea(false)
       setDragOverIdx(null)
       setDragOverAdd(false)
     }
-  }, [])
+  }, [processing])
 
   const handleDrop = useCallback((e: DragEvent) => {
+    if (processing) return
     e.preventDefault()
     e.stopPropagation()
     setDragOverArea(false)
@@ -118,22 +123,24 @@ export default function ImagePreview({
     if (e.dataTransfer.files?.length && onDropFiles) {
       onDropFiles(Array.from(e.dataTransfer.files))
     }
-  }, [onDropFiles])
+  }, [processing, onDropFiles])
 
   // Per-cell drop (replace)
   const handleCellDragOver = useCallback((e: DragEvent, idx: number) => {
+    if (processing) return
     e.preventDefault()
     e.stopPropagation()
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     setDragOverIdx(idx)
     setDragOverAdd(false)
-  }, [])
+  }, [processing])
 
   const handleCellDragLeave = useCallback(() => {
     setDragOverIdx(null)
   }, [])
 
   const handleCellDrop = useCallback((e: DragEvent, idx: number) => {
+    if (processing) return
     e.preventDefault()
     e.stopPropagation()
     setDragOverIdx(null)
@@ -141,18 +148,20 @@ export default function ImagePreview({
     if (e.dataTransfer.files?.length && onDropReplace) {
       onDropReplace(Array.from(e.dataTransfer.files), idx)
     }
-  }, [onDropReplace])
+  }, [processing, onDropReplace])
 
   // Add-slot drop
   const handleAddSlotDragOver = useCallback((e: DragEvent) => {
+    if (processing) return
     e.preventDefault()
     e.stopPropagation()
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     setDragOverAdd(true)
     setDragOverIdx(null)
-  }, [])
+  }, [processing])
 
   const handleAddSlotDrop = useCallback((e: DragEvent) => {
+    if (processing) return
     e.preventDefault()
     e.stopPropagation()
     setDragOverAdd(false)
@@ -160,7 +169,7 @@ export default function ImagePreview({
     if (e.dataTransfer.files?.length && onDropFiles) {
       onDropFiles(Array.from(e.dataTransfer.files))
     }
-  }, [onDropFiles])
+  }, [processing, onDropFiles])
 
   // Zoom is controlled exclusively via the +/− buttons (avoid gesture conflicts on mobile)
 
@@ -198,6 +207,8 @@ export default function ImagePreview({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={`rounded-[var(--radius-xl)] transition-all ${
+              processing ? 'opacity-50 pointer-events-none' : ''
+            } ${
               dragOverArea && dragOverIdx == null && !dragOverAdd
                 ? 'ring-2 ring-[var(--accent)]/40 shadow-[0_0_24px_var(--accent-glow)]'
                 : ''
@@ -328,6 +339,8 @@ export default function ImagePreview({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={`rounded-[var(--radius-xl)] overflow-hidden transition-all ${
+              processing ? 'opacity-50 pointer-events-none' : ''
+            } ${
               dragOverArea
                 ? 'ring-2 ring-[var(--accent)]/40 shadow-[0_0_24px_var(--accent-glow)]'
                 : ''

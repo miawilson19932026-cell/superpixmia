@@ -25,12 +25,14 @@ interface Props {
   mode: 'single' | 'batch'
   onToggleMode: () => void
   onClear?: () => void
+  processing?: boolean
 }
 
 export default function DropZone({
   onImage, hasImage, activeTool,
   batch = false, maxBatch = 9, onImages, imageCount = 0,
   mode, onToggleMode, onClear,
+  processing = false,
 }: Props) {
   const { t, lang } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -108,12 +110,13 @@ export default function DropZone({
   if (hasImage) {
     return (
       <div
-        onDrop={handleDrop}
-        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
-        onDragLeave={() => setIsDragOver(false)}
+        onDrop={processing ? undefined : handleDrop}
+        onDragOver={processing ? undefined : (e) => { e.preventDefault(); setIsDragOver(true) }}
+        onDragLeave={processing ? undefined : () => setIsDragOver(false)}
         className={`
           mx-auto max-w-2xl p-2.5 sm:p-3 rounded-[var(--radius-lg)]
           flex flex-wrap items-center justify-between gap-2 transition-all
+          ${processing ? 'opacity-50 pointer-events-none' : ''}
           ${isDragOver
             ? 'shadow-[0_0_20px_var(--accent-glow)] scale-[1.02]'
             : ''
@@ -138,6 +141,11 @@ export default function DropZone({
           <span className="text-[11px] sm:text-xs font-medium text-[var(--accent)] bg-[var(--accent-glow)]/30 px-2 py-0.5 rounded-md border border-[var(--accent)]/10 shrink-0">
             {t[toolLabelKey[activeTool] as keyof typeof t] as string}
           </span>
+          {processing && (
+            <span className="text-[11px] text-[var(--accent)] animate-pulse shrink-0">
+              {lang === 'zh' ? '处理中…' : 'Processing…'}
+            </span>
+          )}
           {batch && imageCount > 0 && (
             <span className="text-[11px] sm:text-xs text-[var(--text-dim)]">
               {imageCount}/{maxBatch}
