@@ -464,7 +464,8 @@ export default function App() {
   useEffect(() => {
     if (mode !== 'batch' || imageCount === 0 || isProcessing) return
     if (activeTool === 'remove-bg' || activeTool === 'convert') return
-    const hasPending = toolResults[activeTool].slice(0, imageCount).some(r => !r)
+    const resultsLen = toolResults[activeTool].length
+    const hasPending = resultsLen < imageCount || toolResults[activeTool].slice(0, imageCount).some(r => !r)
     if (!hasPending) return
     if (processNewGate.current) return
     processNewGate.current = true
@@ -472,7 +473,7 @@ export default function App() {
     const t = setTimeout(async () => {
       // Re-compute AFTER the delay so indices are fresh
       const pending: number[] = []
-      for (let i = 0; i < Math.min(images.length, toolResults[activeTool].length); i++) {
+      for (let i = 0; i < images.length; i++) {
         if (!toolResults[activeTool][i]) pending.push(i)
       }
       if (pending.length === 0) { processNewGate.current = false; return }
