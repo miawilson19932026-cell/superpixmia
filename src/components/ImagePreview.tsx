@@ -20,7 +20,6 @@ interface Props {
   onNext: () => void
   onGoTo: (index: number) => void
   onDelete?: (index: number) => void
-  onClear?: () => void
   onDropFiles?: (files: File[]) => void
   onDropReplace?: (files: File[], index: number) => void
   maxItems?: number
@@ -35,7 +34,6 @@ export default function ImagePreview({
   onNext: _onNext,
   onGoTo,
   onDelete,
-  onClear,
   onDropFiles,
   onDropReplace,
   maxItems = 15,
@@ -329,8 +327,11 @@ export default function ImagePreview({
                     onDrop={(e) => handleCellDrop(e, i)}
                     className="relative"
                   >
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => { onGoTo(i); openLightbox(i) }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { onGoTo(i); openLightbox(i) } }}
                       onDragOver={(e) => e.preventDefault()}
                       className="
                         relative aspect-square w-full rounded-[var(--radius-md)] overflow-hidden
@@ -343,21 +344,22 @@ export default function ImagePreview({
                         className="w-full h-full object-cover"
                       />
 
-                      {/* Delete button — always visible, top-right */}
+                      {/* Delete button — top-right inside the rounded corner */}
                       {onDelete && (
-                        <div
-                          className="absolute top-0 right-0 z-10 bg-black/70 rounded-bl-lg pt-0.5 pb-1 pl-1.5 pr-0.5"
+                        <button
+                          className="absolute top-0 right-0 z-10 w-7 h-7 flex items-center justify-center
+                            text-white/90 hover:text-white hover:bg-red-500/90
+                            transition-all text-[11px] leading-none shadow-md
+                            rounded-bl-lg"
+                          style={{ background: 'rgba(0,0,0,0.85)' }}
                           onClick={(e) => {
                             e.stopPropagation()
                             onDelete(i)
                           }}
-                          role="button"
-                          tabIndex={0}
+                          aria-label={lang === 'zh' ? '删除' : 'Delete'}
                         >
-                          <div className="w-5 h-5 flex items-center justify-center rounded-full bg-black/90 hover:bg-red-500/90 text-white/90 hover:text-white transition-all text-[11px] leading-none shadow-sm">
-                            ✕
-                          </div>
-                        </div>
+                          ✕
+                        </button>
                       )}
 
                       {/* Hover overlay (lightbox hint) */}
@@ -368,7 +370,10 @@ export default function ImagePreview({
                       </div>
 
                       {/* Bottom info bar: index + size */}
-                      <div className="absolute bottom-0 inset-x-0 bg-black/80 pt-1 pb-1 px-1.5 flex items-center justify-between gap-1">
+                      <div
+                        className="absolute bottom-0 inset-x-0 pt-1 pb-1 px-1.5 flex items-center justify-between gap-1"
+                        style={{ background: 'rgba(0,0,0,0.85)' }}
+                      >
                         <span className="text-[10px] text-white/60 font-medium tabular-nums shrink-0 min-w-[14px] text-left">
                           {i + 1}
                         </span>
@@ -376,7 +381,7 @@ export default function ImagePreview({
                           {renderSize(item.originalSize, item.resultSize)}
                         </span>
                       </div>
-                    </button>
+                    </div>
 
                     {/* Drag-replace overlay */}
                     {isDragTarget && onDropReplace && (
@@ -477,57 +482,6 @@ export default function ImagePreview({
           </div>
         )}
 
-        {/* Size info (single mode only — batch shows per-image sizes in grid) */}
-        {!showGrid && (
-          <div className="flex items-center justify-center gap-4 text-sm text-[var(--text-dim)]">
-            <span className="font-mono tabular-nums">{formatSize(current.originalSize)}</span>
-            {current.resultSize != null && (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
-                <span className={`font-mono tabular-nums ${current.resultSize < current.originalSize ? 'text-emerald-400' : ''}`}>
-                  {formatSize(current.resultSize)}
-                </span>
-                {current.resultSize < current.originalSize && (
-                  <span className="text-emerald-400 text-xs font-medium">
-                    -{Math.round((1 - current.resultSize / current.originalSize) * 100)}%
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Bottom row: dot indicators + clear button (batch only) */}
-        {showGrid && (
-          <div className="flex items-center justify-center gap-3">
-            {/* Dot indicators */}
-            <div className="flex items-center gap-1.5">
-              {items.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => onGoTo(i)}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    i === currentIndex
-                      ? 'bg-[var(--accent)] w-4'
-                      : 'bg-white/20 hover:bg-white/40'
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* Clear All button */}
-            {onClear && (
-              <button
-                onClick={onClear}
-                className="text-[11px] text-red-400/50 hover:text-red-400 transition-colors font-medium"
-              >
-                {t.clearAll as string}
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── Lightbox Modal ── */}

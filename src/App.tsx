@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from './i18n'
 import type { ToolType, OutputFormat, Dimensions } from './types'
 import { resizeImage, compressImage, convertImage } from './utils'
@@ -206,9 +206,6 @@ export default function App() {
 
   // ── Handle new images ──
   const handleImages = useCallback(async (files: File[]) => {
-    // Block adding images during processing — new images won't be processed by the current batch
-    if (processingTools.size > 0) return
-
     const items = await Promise.all(files.map(loadImageItem))
 
     if (mode === 'batch' && imageCount > 0) {
@@ -223,7 +220,7 @@ export default function App() {
       setImages(items)
       setCurrentIndex(0)
     }
-  }, [mode, imageCount, images, loadImageItem, clearAllResults, processingTools])
+  }, [mode, imageCount, images, loadImageItem, clearAllResults])
 
   const handleSingleImage = useCallback((file: File) => {
     handleImages([file])
@@ -304,13 +301,13 @@ export default function App() {
       ? images.map((img, i) => ({ img, idx: i }))
       : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
 
-    if (targets.length > 1) setProcessingProgress({ current: 0, total: targets.length })
+    setProcessingProgress({ current: 0, total: targets.length })
     for (const { img, idx } of targets) {
       try {
         const blob = await resizeImage(img.file, dims)
         saveToolResult('resize', blob, idx)
       } catch (e) { console.error('Resize failed:', e) }
-      if (targets.length > 1) setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
+      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
     }
     setProcessingProgress(null)
     markDone('resize')
@@ -322,13 +319,13 @@ export default function App() {
       ? images.map((img, i) => ({ img, idx: i }))
       : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
 
-    if (targets.length > 1) setProcessingProgress({ current: 0, total: targets.length })
+    setProcessingProgress({ current: 0, total: targets.length })
     for (const { img, idx } of targets) {
       try {
         const blob = await compressImage(img.file, quality / 100, format)
         saveToolResult('compress', blob, idx)
       } catch (e) { console.error('Compress failed:', e) }
-      if (targets.length > 1) setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
+      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
     }
     setProcessingProgress(null)
     markDone('compress')
@@ -340,29 +337,33 @@ export default function App() {
       ? images.map((img, i) => ({ img, idx: i }))
       : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
 
-    if (targets.length > 1) setProcessingProgress({ current: 0, total: targets.length })
+    setProcessingProgress({ current: 0, total: targets.length })
     for (const { img, idx } of targets) {
       try {
         const blob = await convertImage(img.file, format, quality)
         saveToolResult('convert', blob, idx)
       } catch (e) { console.error('Convert failed:', e) }
-      if (targets.length > 1) setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
+      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
     }
     setProcessingProgress(null)
     markDone('convert')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
-  const handleRemoveBg = useCallback(async () => {
-    if (!currentImage) return
-    const idx = currentIndex
+  const handleRemoveBg = useCallback(async (index?: number) => {
+    const idx = index ?? currentIndex
+    const img = images[idx]
+    if (!img) return
     markProcessing('remove-bg')
     setBgProgress(0)
+    setProcessingProgress({ current: 0, total: 1 })
     try {
-      const blob = await removeImageBackground(currentImage.file, (p) => setBgProgress(p))
+      const blob = await removeImageBackground(img.file, (p) => setBgProgress(p))
       saveToolResult('remove-bg', blob, idx)
     } catch (e) { console.error('Remove BG failed:', e) }
+    setProcessingProgress(p => p && { current: 1, total: 1 })
+    setTimeout(() => setProcessingProgress(null), 400)
     markDone('remove-bg')
-  }, [currentImage, currentIndex, saveToolResult, markProcessing, markDone])
+  }, [images, currentIndex, saveToolResult, markProcessing, markDone])
 
   // ── Batch: process all remaining images for remove-bg only ──
   const processAllRemoveBg = useCallback(async () => {
@@ -449,6 +450,64 @@ export default function App() {
   const hasResult = !!activeResult && !isProcessing
   const allProcessed = imageCount > 0 && toolResults[activeTool].filter(Boolean).length === imageCount
 
+  // ── Sync progress bar total with image count (grow/shrink) ──
+  useEffect(() => {
+    setProcessingProgress((p) => {
+      if (!p) return p
+      if (p.total === imageCount && p.current <= imageCount) return p
+      return { current: Math.min(p.current, imageCount), total: imageCount }
+    })
+  }, [imageCount])
+
+  // ── Process only unprocessed images (incremental), never redo all ──
+  const processNewGate = useRef(false)
+  useEffect(() => {
+    if (mode !== 'batch' || imageCount === 0 || isProcessing) return
+    if (activeTool === 'remove-bg' || activeTool === 'convert') return
+    const hasPending = toolResults[activeTool].slice(0, imageCount).some(r => !r)
+    if (!hasPending) return
+    if (processNewGate.current) return
+    processNewGate.current = true
+
+    const t = setTimeout(async () => {
+      // Re-compute AFTER the delay so indices are fresh
+      const pending: number[] = []
+      for (let i = 0; i < Math.min(images.length, toolResults[activeTool].length); i++) {
+        if (!toolResults[activeTool][i]) pending.push(i)
+      }
+      if (pending.length === 0) { processNewGate.current = false; return }
+
+      markProcessing(activeTool)
+      setProcessingProgress({ current: images.length - pending.length, total: images.length })
+      for (const idx of pending) {
+        const img = images[idx]
+        if (!img) continue
+        try {
+          let blob: Blob
+          switch (activeTool) {
+            case 'resize': {
+              const dims = { width: img.width, height: img.height }
+              blob = await resizeImage(img.file, dims)
+              break
+            }
+            case 'compress':
+              blob = await compressImage(img.file, 0.8, 'jpeg')
+              break
+            default:
+              continue
+          }
+          saveToolResult(activeTool, blob, idx)
+        } catch (e) { console.error(`${activeTool} failed:`, e) }
+        setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
+      }
+      setProcessingProgress(null)
+      markDone(activeTool)
+      processNewGate.current = false
+    }, 300)
+    return () => { clearTimeout(t); processNewGate.current = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageCount, isProcessing, mode, activeTool, toolResults])
+
   const previewItems = useMemo(() => images.map((img, i) => ({
     originalUrl: img.url,
     resultUrl: toolResults[activeTool][i]?.url ?? null,
@@ -519,7 +578,6 @@ export default function App() {
             onNext={goToNext}
             onGoTo={setCurrentIndex}
             onDelete={handleDeleteImage}
-            onClear={handleClearAll}
             onDropFiles={handleImages}
             onDropReplace={mode === 'batch' ? handleReplaceAt : undefined}
             maxItems={MAX_BATCH}
@@ -529,92 +587,61 @@ export default function App() {
         )}
 
         {/* Game-style progress bar — between DropZone & ImagePreview */}
-        {hasImage && isProcessing && (
+        {hasImage && isProcessing && processingProgress && (
           <div className="mx-auto max-w-2xl">
-            {processingProgress ? (
-              /* Batch: segmented game bar */
-              <div className="space-y-1">
-                {/* Segments */}
-                <div className="flex gap-1">
-                  {Array.from({ length: processingProgress.total }, (_, i) => {
-                    const filled = i < processingProgress.current
-                    const current = i === processingProgress.current
-                    return (
-                      <div
-                        key={i}
-                        className="flex-1 h-1.5 relative"
-                        style={{
-                          background: filled
-                            ? `rgba(124,58,237,${0.3 + (i / processingProgress.total) * 0.7})`
-                            : 'rgba(255,255,255,0.06)',
-                          boxShadow: filled
-                            ? `0 0 6px rgba(124,58,237,0.6), inset 0 0 4px rgba(168,133,248,0.3)`
-                            : 'inset 0 1px 2px rgba(0,0,0,0.3)',
-                          border: filled
-                            ? '1px solid rgba(168,133,248,0.4)'
-                            : '1px solid rgba(255,255,255,0.05)',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        }}
-                      >
-                        {/* Current segment pulse */}
-                        {current && (
-                          <div className="absolute inset-0 bg-[var(--accent)] animate-pulse"
-                            style={{ boxShadow: '0 0 10px rgba(124,58,237,0.8)' }}
-                          />
-                        )}
-                        {/* Filled segment shimmer */}
-                        {filled && !current && (
-                          <div className="absolute inset-0 overflow-hidden">
-                            <div className="absolute inset-y-0 w-4 bg-white/15 skew-x-[-30deg]"
-                              style={{
-                                animation: `shineSweep 1.5s ease-in-out ${i * 0.1}s infinite`,
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-                {/* Label */}
-                <div className="flex justify-between">
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--text-dim)] font-mono">
-                    {lang === 'zh' ? '处理中' : 'PROCESSING'}
-                  </span>
-                  <span className="text-[10px] font-mono tabular-nums text-[var(--accent)]">
-                    {processingProgress.current}<span className="text-[var(--text-dim)]"> / {processingProgress.total}</span>
-                  </span>
-                </div>
-              </div>
-            ) : (
-              /* Single: scanning game bar */
-              <div className="space-y-1">
-                <div className="h-1 bg-[rgba(255,255,255,0.04)] relative overflow-hidden"
-                  style={{ border: '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  {/* Scanning beam */}
-                  <div
-                    className="absolute inset-y-0 w-1/4"
-                    style={{
-                      background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.8), rgba(168,133,248,0.6), transparent)',
-                      boxShadow: '0 0 8px rgba(124,58,237,0.5)',
-                      animation: 'scanBeam 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite',
-                    }}
-                  />
-                  {/* Background ticks */}
-                  {Array.from({ length: 20 }, (_, i) => (
+            <div className="space-y-1">
+              {/* Segments */}
+              <div className="flex gap-1">
+                {Array.from({ length: processingProgress.total }, (_, i) => {
+                  const filled = i < processingProgress.current
+                  const current = i === processingProgress.current
+                  return (
                     <div
                       key={i}
-                      className="absolute inset-y-0 w-px bg-white/10"
-                      style={{ left: `${(i / 20) * 100}%` }}
-                    />
-                  ))}
-                </div>
-                <p className="text-[10px] uppercase tracking-widest text-center text-[var(--text-dim)] font-mono animate-pulse">
-                  {lang === 'zh' ? '处理中…' : 'PROCESSING…'}
-                </p>
+                      className="flex-1 h-1.5 relative"
+                      style={{
+                        background: filled
+                          ? `rgba(124,58,237,${0.3 + (i / processingProgress.total) * 0.7})`
+                          : 'rgba(255,255,255,0.06)',
+                        boxShadow: filled
+                          ? `0 0 6px rgba(124,58,237,0.6), inset 0 0 4px rgba(168,133,248,0.3)`
+                          : 'inset 0 1px 2px rgba(0,0,0,0.3)',
+                        border: filled
+                          ? '1px solid rgba(168,133,248,0.4)'
+                          : '1px solid rgba(255,255,255,0.05)',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                    >
+                      {/* Current segment pulse */}
+                      {current && (
+                        <div className="absolute inset-0 bg-[var(--accent)] animate-pulse"
+                          style={{ boxShadow: '0 0 10px rgba(124,58,237,0.8)' }}
+                        />
+                      )}
+                      {/* Filled segment shimmer */}
+                      {filled && !current && (
+                        <div className="absolute inset-0 overflow-hidden">
+                          <div className="absolute inset-y-0 w-4 bg-white/15 skew-x-[-30deg]"
+                            style={{
+                              animation: `shineSweep 1.5s ease-in-out ${i * 0.1}s infinite`,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-            )}
+              {/* Label */}
+              <div className="flex justify-between">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--text-dim)] font-mono">
+                  {lang === 'zh' ? '处理中' : 'PROCESSING'}
+                </span>
+                <span className="text-[10px] font-mono tabular-nums text-[var(--accent)]">
+                  {processingProgress.current}<span className="text-[var(--text-dim)]"> / {processingProgress.total}</span>
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -656,6 +683,10 @@ export default function App() {
                 onRemoveBg={handleRemoveBg}
                 processing={isProcessing}
                 progress={bgProgress}
+                imageCount={imageCount}
+                currentIndex={currentIndex}
+                onPrev={goToPrev}
+                onNext={goToNext}
               />
             )}
 
@@ -749,10 +780,6 @@ export default function App() {
         @keyframes shineSweep {
           0% { left: -1rem; }
           100% { left: calc(100% + 1rem); }
-        }
-        @keyframes scanBeam {
-          0% { left: -25%; }
-          100% { left: 100%; }
         }
       `}</style>
     </div>

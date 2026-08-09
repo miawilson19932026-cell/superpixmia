@@ -221,11 +221,17 @@ export default function CatMascot() {
               {/* Mock WeChat menu dropdown */}
               <div className="px-2 py-3 space-y-1">
                 <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-white/30">
-                  <span className="text-base">↗️</span> {lang === 'zh' ? '分享给朋友' : 'Share'}
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 1024 1024" fill="none">
+                    <path d="M919.272727 416.581818L607.418182 79.127273c-11.636364-11.636364-32.581818-11.636364-44.218182 0-6.981818 6.981818-9.309091 16.290909-9.309091 25.6v181.527272c-258.327273 0-465.454545 207.127273-465.454545 463.127273 0 62.836364 13.963636 125.672727 39.563636 183.854546 37.236364-193.163636 221.090909-339.781818 425.890909-339.781819v181.527273c-2.327273 9.309091 2.327273 18.618182 9.309091 25.6 4.654545 6.981818 13.963636 9.309091 23.272727 9.309091s18.618182-4.654545 23.272728-11.636364L919.272727 465.454545c6.981818-6.981818 9.309091-13.963636 9.309091-23.272727s-4.654545-18.618182-9.309091-25.6z" fill="#07C160"/>
+                  </svg> {lang === 'zh' ? '分享给朋友' : 'Share'}
                 </div>
                 <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
                   style={{ background: 'rgba(255,215,0,0.15)', color: '#ffd700' }}>
-                  <span className="text-base">⭐</span>
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 1038 1024" fill="none">
+                    <path d="M519.41878 2.21928l465.305548 225.654276a20.428048 20.428048 0 0 1 0 36.50568L519.986226 508.948371a21.184643 21.184643 0 0 1-18.91486 0L35.765818 264.379236a20.617197 20.617197 0 0 1 0-36.50568L501.638812 2.21928a18.91486 18.91486 0 0 1 17.779968 0z" fill="#00AEFF"/>
+                    <path d="M469.861848 1005.08514L11.554798 783.592134a20.428048 20.428048 0 0 1-11.538065-18.91486V309.58575a20.428048 20.428048 0 0 1 29.885479-18.91486l458.307049 237.759787a20.049751 20.049751 0 0 1 10.970619 18.914859v439.39219a20.428048 20.428048 0 0 1-29.318032 18.347414z" fill="#FFC817"/>
+                    <path d="M533.037479 528.430677L991.344529 291.427485a20.428048 20.428048 0 0 1 29.885478 18.91486v454.902375a20.428048 20.428048 0 0 1-11.538064 18.914859L551.384893 1005.08514a20.428048 20.428048 0 0 1-29.318033-18.914859V546.588942a20.049751 20.049751 0 0 1 10.970619-18.158265z" fill="#EA4748"/>
+                  </svg>
                   <span className="font-semibold">{lang === 'zh' ? '收藏' : 'Favorite'}</span>
                   {/* Pointing hand */}
                   <span className="ml-auto text-xl" style={{ animation: 'bouncePoint 0.8s ease-in-out infinite' }}>
@@ -241,7 +247,7 @@ export default function CatMascot() {
 
           {/* Bottom hint */}
           <p className="text-sm text-white/50 animate-pulse mt-2">
-            {lang === 'zh' ? '👆 点击右上角 ···，然后点 ⭐ 收藏' : '👆 Tap ··· then ⭐ Favorite'}
+            {lang === 'zh' ? '👆 点击右上角 ···，然后点 收藏' : '👆 Tap ··· then Favorite'}
           </p>
           <p className="text-xs text-white/30 mt-1">
             {lang === 'zh' ? '（点击任意处关闭）' : '(tap anywhere to close)'}

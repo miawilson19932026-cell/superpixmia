@@ -5,12 +5,16 @@ type BgMode = 'transparent' | 'white' | 'black'
 
 interface Props {
   resultUrl: string | null
-  onRemoveBg: () => void
+  onRemoveBg: (index?: number) => void
   processing: boolean
   progress: number // 0-1
+  imageCount: number
+  currentIndex: number
+  onPrev: () => void
+  onNext: () => void
 }
 
-export default function BgRemovePanel({ resultUrl, onRemoveBg, processing, progress }: Props) {
+export default function BgRemovePanel({ resultUrl, onRemoveBg, processing, progress, imageCount, currentIndex, onPrev, onNext }: Props) {
   const { t } = useTranslation()
   const [bgMode, setBgMode] = useState<BgMode>('transparent')
 
@@ -80,22 +84,55 @@ export default function BgRemovePanel({ resultUrl, onRemoveBg, processing, progr
         </div>
       )}
 
-      {/* Result preview with bg option */}
+      {/* Result preview with bg option + navigation */}
       {resultUrl && !processing && (
-        <div
-          className={`rounded-[var(--radius-xl)] overflow-hidden border border-[var(--border)] flex items-center justify-center p-4 min-h-[200px] ${
-            bgMode === 'transparent' ? 'checkerboard' : ''
-          }`}
-          style={bgMode !== 'transparent' ? bgStyle[bgMode] : undefined}
-        >
-          <img src={resultUrl} alt="Background removed" className="max-w-full max-h-[300px] object-contain" />
+        <div className="flex items-center gap-2">
+          {/* Prev button */}
+          {imageCount > 1 && (
+            <button
+              onClick={onPrev}
+              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+
+          <div
+            className={`flex-1 rounded-[var(--radius-xl)] overflow-hidden border border-[var(--border)] flex items-center justify-center p-4 min-h-[200px] ${
+              bgMode === 'transparent' ? 'checkerboard' : ''
+            }`}
+            style={bgMode !== 'transparent' ? bgStyle[bgMode] : undefined}
+          >
+            <img src={resultUrl} alt="Background removed" className="max-w-full max-h-[300px] object-contain" />
+          </div>
+
+          {/* Next button */}
+          {imageCount > 1 && (
+            <button
+              onClick={onNext}
+              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
         </div>
+      )}
+
+      {/* Image indicator (when multiple) */}
+      {!processing && imageCount > 1 && (
+        <p className="text-center text-[11px] text-[var(--text-dim)] font-mono tabular-nums">
+          {currentIndex + 1} / {imageCount}
+        </p>
       )}
 
       {/* Action button */}
       {!resultUrl && (
         <button
-          onClick={onRemoveBg}
+          onClick={() => onRemoveBg()}
           disabled={processing}
           className="w-full py-2.5 btn-gradient text-sm font-medium rounded-[var(--radius-md)] disabled:opacity-40 disabled:pointer-events-none"
         >

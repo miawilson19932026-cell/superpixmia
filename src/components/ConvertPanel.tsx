@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useTranslation } from '../i18n'
 import type { OutputFormat } from '../types'
-import { formatSize } from '../utils'
 
 const FORMATS: { value: OutputFormat; label: string; ext: string; desc: string }[] = [
   { value: 'png', label: 'PNG', ext: '.png', desc: 'Lossless' },
@@ -21,51 +20,12 @@ interface Props {
   batch?: boolean
 }
 
-function detectSourceFormat(file: File): OutputFormat {
-  const t = file.type
-  if (t === 'image/png') return 'png'
-  if (t === 'image/jpeg') return 'jpeg'
-  if (t === 'image/webp') return 'webp'
-  if (t === 'image/avif') return 'avif'
-  if (t === 'image/bmp') return 'bmp'
-  if (t === 'image/x-icon' || t === 'image/vnd.microsoft.icon') return 'ico'
-  // fallback: derive from extension
-  const name = file.name.toLowerCase()
-  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'jpeg'
-  if (name.endsWith('.webp')) return 'webp'
-  if (name.endsWith('.avif')) return 'avif'
-  if (name.endsWith('.bmp')) return 'bmp'
-  if (name.endsWith('.ico')) return 'ico'
-  return 'png'
-}
-
-function pickDefaultFormat(source: OutputFormat): OutputFormat {
-  // Pick a useful format different from source
-  const order: OutputFormat[] = ['webp', 'png', 'jpeg', 'avif', 'bmp', 'ico']
-  return order.find(f => f !== source) ?? 'webp'
-}
-
-export default function ConvertPanel({ file, resultSize, onConvert, processing, hasResult, batch = false }: Props) {
+export default function ConvertPanel({ onConvert, processing }: Props) {
   const { t } = useTranslation()
-  const sourceFormat = detectSourceFormat(file)
-  const [format, setFormat] = useState<OutputFormat>(() => pickDefaultFormat(sourceFormat))
+  const [format, setFormat] = useState<OutputFormat | null>(null)
   const [quality, setQuality] = useState(92)
-  const originalSize = file.size
-  const prevFileRef = useRef<File | null>(null)
 
   const isLossy = format === 'jpeg' || format === 'webp' || format === 'avif'
-
-  // Auto-convert when a new file arrives; skip in batch mode
-  useEffect(() => {
-    if (!batch && !hasResult && file !== prevFileRef.current) {
-      prevFileRef.current = file
-      const defaultFormat = pickDefaultFormat(detectSourceFormat(file))
-      setFormat(defaultFormat)
-      const lossy = defaultFormat === 'jpeg' || defaultFormat === 'webp' || defaultFormat === 'avif'
-      onConvert(defaultFormat, lossy ? quality : undefined)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [batch, hasResult, file])
 
   return (
     <div className="mx-auto max-w-md space-y-5">
@@ -127,23 +87,6 @@ export default function ConvertPanel({ file, resultSize, onConvert, processing, 
           </div>
         </div>
       )}
-
-      {/* Size info */}
-      <div className="flex items-center justify-center gap-4 p-4 rounded-[var(--radius-lg)] glass backdrop-blur-xl">
-        <div className="text-center">
-          <p className="text-[11px] text-[var(--text-dim)] mb-1">{t.originalSize}</p>
-          <p className="text-sm font-mono tabular-nums text-[var(--text-primary)]">{formatSize(originalSize)}</p>
-        </div>
-        <svg className="w-5 h-5 text-[var(--text-dim)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-        </svg>
-        <div className="text-center">
-          <p className="text-[11px] text-[var(--text-dim)] mb-1">{t.convertSize}</p>
-          <p className="text-sm font-mono tabular-nums text-[var(--text-primary)]">
-            {resultSize != null ? formatSize(resultSize) : '—'}
-          </p>
-        </div>
-      </div>
 
       {processing && (
         <p className="text-xs text-center text-[var(--text-dim)]">{t.processing}</p>
