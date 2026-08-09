@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { DragEvent } from 'react'
 import { useTranslation } from '../i18n'
 import { formatSize } from '../utils'
@@ -24,6 +24,7 @@ interface Props {
   onDropFiles?: (files: File[]) => void
   onDropReplace?: (files: File[], index: number) => void
   maxItems?: number
+  lightboxTrigger?: number
 }
 
 export default function ImagePreview({
@@ -37,6 +38,7 @@ export default function ImagePreview({
   onDropFiles,
   onDropReplace,
   maxItems = 15,
+  lightboxTrigger,
 }: Props) {
   const { t, lang } = useTranslation()
   void _onPrev; void _onNext
@@ -55,6 +57,8 @@ export default function ImagePreview({
   const dragStart = useRef({ x: 0, y: 0 })
   const panStart = useRef({ x: 0, y: 0 })
   const pinchStart = useRef({ dist: 0, zoom: 1, pan: { x: 0, y: 0 } })
+  const currentIndexRef = useRef(currentIndex)
+  currentIndexRef.current = currentIndex
 
   if (items.length === 0) return null
 
@@ -74,6 +78,14 @@ export default function ImagePreview({
   }
 
   const closeLightbox = () => setLightbox(false)
+
+  // External trigger (e.g. WeChat download button)
+  useEffect(() => {
+    if (lightboxTrigger !== undefined && lightboxTrigger > 0) {
+      openLightbox(currentIndexRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightboxTrigger])
 
   // Lightbox item
   const lbItem = items[lightboxIndex]

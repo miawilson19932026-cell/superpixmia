@@ -127,6 +127,8 @@ export default function App() {
     convert: [],
   })
   const [processingTools, setProcessingTools] = useState<Set<ToolType>>(new Set())
+  const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null)
+  const [lightboxTrigger, setLightboxTrigger] = useState(0)
   const [bgProgress, setBgProgress] = useState(0)
 
   // Cleanup on unmount
@@ -299,12 +301,15 @@ export default function App() {
       ? images.map((img, i) => ({ img, idx: i }))
       : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
 
+    if (targets.length > 1) setProcessingProgress({ current: 0, total: targets.length })
     for (const { img, idx } of targets) {
       try {
         const blob = await resizeImage(img.file, dims)
         saveToolResult('resize', blob, idx)
       } catch (e) { console.error('Resize failed:', e) }
+      if (targets.length > 1) setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
     }
+    setProcessingProgress(null)
     markDone('resize')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
@@ -314,12 +319,15 @@ export default function App() {
       ? images.map((img, i) => ({ img, idx: i }))
       : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
 
+    if (targets.length > 1) setProcessingProgress({ current: 0, total: targets.length })
     for (const { img, idx } of targets) {
       try {
         const blob = await compressImage(img.file, quality / 100, format)
         saveToolResult('compress', blob, idx)
       } catch (e) { console.error('Compress failed:', e) }
+      if (targets.length > 1) setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
     }
+    setProcessingProgress(null)
     markDone('compress')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
@@ -329,12 +337,15 @@ export default function App() {
       ? images.map((img, i) => ({ img, idx: i }))
       : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
 
+    if (targets.length > 1) setProcessingProgress({ current: 0, total: targets.length })
     for (const { img, idx } of targets) {
       try {
         const blob = await convertImage(img.file, format, quality)
         saveToolResult('convert', blob, idx)
       } catch (e) { console.error('Convert failed:', e) }
+      if (targets.length > 1) setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
     }
+    setProcessingProgress(null)
     markDone('convert')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
@@ -353,15 +364,20 @@ export default function App() {
   // ── Batch: process all remaining images for remove-bg only ──
   const processAllRemoveBg = useCallback(async () => {
     markProcessing('remove-bg')
+    const pending = images.filter((_, i) => !toolResults['remove-bg'][i])
+    if (pending.length > 1) setProcessingProgress({ current: 0, total: pending.length })
+    let done = 0
     for (let idx = 0; idx < imageCount; idx++) {
-      // Skip already processed
       if (toolResults['remove-bg'][idx]) continue
       const img = images[idx]
       try {
         const blob = await removeImageBackground(img.file, (p) => setBgProgress(p))
         saveToolResult('remove-bg', blob, idx)
       } catch (e) { console.error('Remove BG failed:', e) }
+      done++
+      if (pending.length > 1) setProcessingProgress({ current: done, total: pending.length })
     }
+    setProcessingProgress(null)
     markDone('remove-bg')
   }, [images, imageCount, toolResults, saveToolResult, markProcessing, markDone])
 
@@ -380,10 +396,8 @@ export default function App() {
       const url = URL.createObjectURL(blob)
 
       if (isWeChat) {
-        // WeChat can't save blob URLs — convert to data URL so long-press works
-        const reader = new FileReader()
-        reader.onload = () => { window.location.href = reader.result as string }
-        reader.readAsDataURL(blob)
+        // WeChat: open lightbox so user can zoom & long-press to save
+        setLightboxTrigger(n => n + 1)
         return
       } else if (isIOS) {
         // iOS Safari doesn't support blob download via a.click()
@@ -504,6 +518,7 @@ export default function App() {
             onDropFiles={handleImages}
             onDropReplace={mode === 'batch' ? handleReplaceAt : undefined}
             maxItems={MAX_BATCH}
+            lightboxTrigger={lightboxTrigger}
           />
         )}
 
@@ -582,6 +597,13 @@ export default function App() {
                         : '💡 Tap below to preview → long-press the image → save to photos'}
                     </div>
                   )}
+                  {isProcessing && processingProgress && (
+                    <div className="text-center mb-2 text-[11px] text-[var(--accent)] font-medium">
+                      {lang === 'zh'
+                        ? `处理中 ${processingProgress.current}/${processingProgress.total}`
+                        : `Processing ${processingProgress.current}/${processingProgress.total}`}
+                    </div>
+                  )}
                   <button
                     onClick={download}
                     className="w-full px-8 py-3.5 btn-gradient text-sm font-semibold rounded-[var(--radius-md)] active:scale-[0.98]"
@@ -593,6 +615,13 @@ export default function App() {
                   </button>
                 </div>
                 {/* Desktop: inline */}
+                {isProcessing && processingProgress && (
+                  <div className="hidden sm:block text-center mb-2 text-[11px] text-[var(--accent)] font-medium">
+                    {lang === 'zh'
+                      ? `处理中 ${processingProgress.current}/${processingProgress.total}`
+                      : `Processing ${processingProgress.current}/${processingProgress.total}`}
+                  </div>
+                )}
                 <button
                   onClick={download}
                   className="hidden sm:block px-8 py-3 btn-gradient text-sm font-semibold rounded-[var(--radius-md)]"
