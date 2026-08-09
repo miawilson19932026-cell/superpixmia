@@ -109,7 +109,7 @@ interface ImageItem {
 }
 
 const MAX_BATCH = 15
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
 export default function App() {
@@ -378,8 +378,8 @@ export default function App() {
       const base = (images[0]?.file.name ?? 'image').replace(/\.[^.]+$/, '')
       const url = URL.createObjectURL(blob)
 
-      if (isIOS) {
-        // iOS Safari: open image in new tab, user long-presses to save
+      if (isMobile) {
+        // Mobile browsers: open image in new tab, user long-presses to save
         window.open(url, '_blank')
       } else {
         const a = document.createElement('a')
@@ -400,7 +400,7 @@ export default function App() {
       })
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(zipBlob)
-      if (isIOS) {
+      if (isMobile) {
         window.open(url, '_blank')
       } else {
         const a = document.createElement('a')
