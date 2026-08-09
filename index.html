@@ -215,18 +215,20 @@
     <link rel="preconnect" href="https://cloud.umami.is" />
   </head>
   <body>
-    <!-- Baidu/UC browser detection — these WebViews claim to support backdrop-filter but render it broken -->
+    <!-- Chinese browser detection — older WebViews/forks claim to support modern CSS but render it broken -->
     <script>
       (function() {
         var ua = navigator.userAgent || ''
-        var isBaidu = /baiduboxapp|baidu/i.test(ua)
-        var isUC = /UCBrowser|UCWEB/i.test(ua)
-        if (isBaidu || isUC) {
+        var isLegacy = /baiduboxapp|baidu/i.test(ua) ||
+          /360se|360ee|qihu|Qihoo/i.test(ua) ||
+          /QQBrowser|MQQBrowser/i.test(ua) ||
+          /Sogou|MetaSr|SE\s|Maxthon|LieBao|LBBROWSER/i.test(ua) ||
+          /UCBrowser|UCWEB/i.test(ua)
+        if (isLegacy) {
           document.documentElement.classList.add('legacy-webview')
-          // debug: show banner to confirm detection (remove after verification)
           var banner = document.createElement('div')
-          banner.textContent = '[DETECTED: ' + (isBaidu ? 'Baidu' : 'UC') + ' Browser — fallback active]'
-          banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:4px 8px;background:#7c3aed;color:#fff;text-align:center;font-size:11px;font-family:sans-serif;pointer-events:none;opacity:0.9'
+          banner.textContent = '[DETECTED: legacy browser — fallback active | UA: ' + (ua.substring(0, 50)) + ']'
+          banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:4px 8px;background:#7c3aed;color:#fff;text-align:center;font-size:11px;font-family:sans-serif;pointer-events:none;opacity:0.85;word-break:break-all'
           document.body.appendChild(banner)
         }
       })()
