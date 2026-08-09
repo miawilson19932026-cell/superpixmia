@@ -28,6 +28,7 @@ export default function CatMascot() {
   const [frame, setFrame] = useState(1)
   const [winking, setWinking] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const idxRef = useRef(0)
 
   // Cycle frames with per-frame timing
@@ -43,8 +44,12 @@ export default function CatMascot() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Click: double-blink + pause
+  // Click: WeChat shows guide overlay, otherwise double-blink
   const handleClick = useCallback(() => {
+    if (isWeChat) {
+      setShowGuide(true)
+      return
+    }
     if (winking) return
     setWinking(true)
     // Rapid blink sequence
@@ -71,6 +76,7 @@ export default function CatMascot() {
   )
 
   return (
+    <>
     <button
       onClick={handleClick}
       className="absolute -bottom-32 -left-4 sm:-bottom-44 sm:left-auto sm:-right-28 z-10 w-[150px] h-[150px] sm:w-[280px] sm:h-[280px]
@@ -186,5 +192,70 @@ export default function CatMascot() {
         </button>
       </div>
     </button>
+
+      {/* WeChat bookmark guide overlay */}
+      {showGuide && (
+        <div
+          className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setShowGuide(false)}
+        >
+          {/* Top bar mockup — WeChat browser chrome */}
+          <div className="w-full max-w-sm mb-6 animate-in">
+            <div className="rounded-xl overflow-hidden border border-white/10 shadow-2xl"
+              style={{ background: 'rgba(30,30,50,0.95)' }}
+            >
+              {/* Mock WeChat top bar */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5"
+                style={{ background: '#1a1a2e' }}
+              >
+                <span className="text-xs text-white/40">🌐 superpixmia.com</span>
+                <div className="relative">
+                  {/* The ··· button with finger pointer */}
+                  <span className="text-xl text-white/80 font-bold tracking-[3px]">···</span>
+                  {/* Animated finger */}
+                  <span className="absolute -top-6 -right-1 text-2xl" style={{ animation: 'bouncePoint 0.8s ease-in-out infinite' }}>
+                    👆
+                  </span>
+                </div>
+              </div>
+
+              {/* Mock WeChat menu dropdown */}
+              <div className="px-2 py-3 space-y-1">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-white/30">
+                  <span className="text-base">↗️</span> {lang === 'zh' ? '分享给朋友' : 'Share'}
+                </div>
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
+                  style={{ background: 'rgba(255,215,0,0.15)', color: '#ffd700' }}>
+                  <span className="text-base">⭐</span>
+                  <span className="font-semibold">{lang === 'zh' ? '收藏' : 'Favorite'}</span>
+                  {/* Pointing hand */}
+                  <span className="ml-auto text-xl" style={{ animation: 'bouncePoint 0.8s ease-in-out infinite' }}>
+                    👈
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm text-white/30">
+                  <span className="text-base">⚙️</span> {lang === 'zh' ? '设置' : 'Settings'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom hint */}
+          <p className="text-sm text-white/50 animate-pulse mt-2">
+            {lang === 'zh' ? '👆 点击右上角 ···，然后点 ⭐ 收藏' : '👆 Tap ··· then ⭐ Favorite'}
+          </p>
+          <p className="text-xs text-white/30 mt-1">
+            {lang === 'zh' ? '（点击任意处关闭）' : '(tap anywhere to close)'}
+          </p>
+
+          <style>{`
+            @keyframes bouncePoint {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-8px); }
+            }
+          `}</style>
+        </div>
+      )}
+    </>
   )
 }
