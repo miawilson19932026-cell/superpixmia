@@ -5,7 +5,7 @@ import type { ToolType } from '../types'
 import CatMascot from './CatMascot'
 
 const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif', 'image/bmp', 'image/svg+xml', 'image/x-icon', 'image/tiff', 'image/vnd.microsoft.icon']
-const MAX_SIZE = 500 * 1024 * 1024
+const MAX_SIZE = 50 * 1024 * 1024
 
 const toolLabelKey: Record<ToolType, string> = {
   resize: 'toolResize',
