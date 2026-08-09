@@ -132,6 +132,7 @@ export default function App() {
   const [wechatGuideDismissed, setWechatGuideDismissed] = useState(
     () => localStorage.getItem('wechat-guide-dismissed') === '1'
   )
+  const [wechatGuideOpen, setWechatGuideOpen] = useState(false)
   const [bgProgress, setBgProgress] = useState(0)
 
   // Cleanup on unmount
@@ -465,8 +466,19 @@ export default function App() {
       <ParticleBg />
       <div className="scanlines" />
 
-      {/* WeChat bookmark guide */}
-      {isWeChat && !wechatGuideDismissed && (
+      {/* WeChat floating trigger bubble */}
+      {isWeChat && !wechatGuideDismissed && !wechatGuideOpen && (
+        <button
+          onClick={() => setWechatGuideOpen(true)}
+          className="fixed top-2 right-12 sm:right-16 z-[100] w-9 h-9 flex items-center justify-center rounded-full glass border border-amber-500/30 text-lg shadow-lg shadow-amber-500/10 animate-in hover:scale-110 active:scale-95 transition-transform"
+          style={{ background: 'rgba(20,16,36,0.92)' }}
+        >
+          💡
+        </button>
+      )}
+
+      {/* WeChat bookmark guide card */}
+      {isWeChat && wechatGuideOpen && (
         <div className="fixed top-0 inset-x-0 z-[100] flex justify-center pt-2 sm:pt-3 pointer-events-none">
           <div className="pointer-events-auto mx-3 sm:mx-auto animate-in max-w-sm w-full">
             <div className="relative glass backdrop-blur-xl rounded-[var(--radius-lg)] border border-amber-500/30 p-3 sm:p-4 shadow-lg shadow-amber-500/10"
@@ -490,6 +502,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => {
+                    setWechatGuideOpen(false)
                     setWechatGuideDismissed(true)
                     localStorage.setItem('wechat-guide-dismissed', '1')
                   }}
