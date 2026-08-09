@@ -2,7 +2,7 @@ import type { Translations } from './types'
 
 const en: Translations = {
   brand: 'SuperPixMia',
-  brandTagline: 'Lightweight image toolkit — simple, fast, 100% private',
+  brandTagline: 'Free online image tools — resize, compress, remove BG & convert in your browser',
   toolResize: 'Resize',
   toolCompress: 'Compress',
   toolRemoveBg: 'Remove BG',
@@ -50,9 +50,9 @@ const en: Translations = {
   applyConvert: 'Convert & Download',
   download: 'Download',
   downloading: 'Processing...',
-  footerPrivacy: 'All processing happens in your browser',
-  footerNoUpload: 'Your images are never uploaded to any server',
-  footerNoServer: 'Zero server · 100% private',
+  footerPrivacy: '100% browser-based — your images never leave your device',
+  footerNoUpload: 'No uploads, no servers, no ads, no watermarks — completely free',
+  footerNoServer: 'Built for developers & designers · open source · privacy first',
   errorFileTooBig: 'File is too large. Please use an image under 500MB.',
   errorUnsupportedFormat: 'Unsupported format. Please use PNG, JPEG, or WebP.',
   errorProcess: 'Processing failed. Please try again.',

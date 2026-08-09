@@ -23,9 +23,12 @@
 
     <!-- ── Icons ── -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
+    <meta name="msapplication-TileColor" content="#0a0a0a" />
+    <meta name="msapplication-TileImage" content="/apple-touch-icon.png" />
 
     <!-- ── Open Graph (Facebook, LinkedIn, Discord, etc.) ── -->
     <meta property="og:type" content="website" />
@@ -50,11 +53,48 @@
     <meta name="twitter:image" content="https://superpixmia.com/og-image.svg" />
     <meta name="twitter:image:alt" content="SuperPixMia — Free online image toolkit for developers and designers" />
 
-    <!-- ── Structured Data: WebApplication ── -->
+    <!-- ── Structured Data: Organization ── -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
+      "@type": "Organization",
+      "name": "SuperPixMia",
+      "url": "https://superpixmia.com/",
+      "logo": "https://superpixmia.com/logo.png",
+      "description": "Free online image toolkit — resize, compress, remove backgrounds, and convert images 100% in your browser.",
+      "foundingDate": "2026",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "url": "https://github.com/miawilson19932026-cell/superpixmia"
+      }
+    }
+    </script>
+
+    <!-- ── Structured Data: BreadcrumbList ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [{
+        "@type": "ListItem",
+        "position": 1,
+        "name": "SuperPixMia",
+        "item": "https://superpixmia.com/"
+      }, {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Online Image Tools",
+        "item": "https://superpixmia.com/"
+      }]
+    }
+    </script>
+
+    <!-- ── Structured Data: SoftwareApplication ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
       "name": "SuperPixMia",
       "url": "https://superpixmia.com/",
       "description": "Free online image toolkit for developers and designers. Resize, compress, remove backgrounds, and convert images between 9 formats — all processed 100% in your browser.",
@@ -80,6 +120,41 @@
         "@type": "Organization",
         "name": "SuperPixMia"
       }
+    }
+    </script>
+
+    <!-- ── Structured Data: HowTo (image compression) ── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "How to Compress Images Online with SuperPixMia",
+      "description": "Compress PNG, JPEG, WebP, and AVIF images directly in your browser with no upload. Adjust quality, see live preview, and download compressed images instantly.",
+      "totalTime": "PT30S",
+      "tool": {
+        "@type": "HowToTool",
+        "name": "SuperPixMia Online Image Compressor"
+      },
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Upload or drag your image",
+          "text": "Click the upload area or drag and drop any PNG, JPEG, WebP, AVIF, GIF, BMP, SVG, ICO, or TIFF image into SuperPixMia."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "Select the Compress tool",
+          "text": "Click the Compress tab in the toolbar. SuperPixMia automatically compresses the image as you adjust the quality slider between 1% and 100%."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Adjust quality and download",
+          "text": "Slide to your desired quality level. See the file size reduction in real time, then click Download to save your compressed image to your device."
+        }
+      ]
     }
     </script>
 
@@ -140,6 +215,32 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- ── SEO content for search engines (noscript: visible only when JS is disabled) ── -->
+    <noscript>
+      <div style="max-width:720px;margin:40px auto;padding:20px;font-family:sans-serif;color:#333">
+        <h1>SuperPixMia — Free Online Image Tools</h1>
+        <p>SuperPixMia is a <strong>100% browser-based</strong> image toolkit. All processing runs locally on your device — <strong>your images never leave your computer</strong>. No uploads, no servers, no ads, no watermarks. Completely free.</p>
+
+        <h2>Image Resizer</h2>
+        <p>Resize images with built-in presets (Instagram, Twitter, LinkedIn, 4K, HD) or custom dimensions. Lock/unlock aspect ratio. Supports PNG, JPEG, WebP, AVIF, GIF, BMP, SVG, ICO, and TIFF formats.</p>
+
+        <h2>Image Compressor</h2>
+        <p>Compress images with a real-time quality slider. See before/after file sizes and compression ratio. Batch compress up to 15 images at once. Keeps original format or exports to any supported format.</p>
+
+        <h2>AI Background Remover</h2>
+        <p>Remove image backgrounds with one click using AI and WebAssembly. Process images entirely in your browser — no images are sent to external servers. Preview with transparent, white, or black backgrounds.</p>
+
+        <h2>Image Format Converter</h2>
+        <p>Convert between 9 image formats: PNG, JPEG, WebP, AVIF, BMP, ICO, GIF, SVG, and TIFF. Batch convert multiple images and download as a ZIP archive.</p>
+
+        <h2>Privacy First</h2>
+        <p>Unlike other online image tools, SuperPixMia never uploads your images. All processing uses the Canvas API, WebAssembly, and client-side compression libraries. Your files stay on your device, 100% private.</p>
+
+        <p><a href="https://superpixmia.com/">Start using SuperPixMia →</a></p>
+      </div>
+    </noscript>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

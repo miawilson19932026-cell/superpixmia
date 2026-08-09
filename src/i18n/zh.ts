@@ -2,7 +2,7 @@ import type { Translations } from './types'
 
 const zh: Translations = {
   brand: 'SuperPixMia',
-  brandTagline: '轻量化一站式图像工具，简易极速，数据安全无负担',
+  brandTagline: '免费在线图片工具 — 浏览器端改尺寸、压缩、抠图、格式转换一站式处理',
   toolResize: '改尺寸',
   toolCompress: '压缩',
   toolRemoveBg: '抠图',
@@ -50,9 +50,9 @@ const zh: Translations = {
   applyConvert: '转换并下载',
   download: '下载',
   downloading: '处理中...',
-  footerPrivacy: '所有处理在浏览器中完成',
-  footerNoUpload: '图片不会上传到任何服务器',
-  footerNoServer: '零服务器 · 100% 隐私',
+  footerPrivacy: '100% 浏览器端处理 — 你的图片不会离开你的设备',
+  footerNoUpload: '无需上传、无广告、无水印 — 完全免费',
+  footerNoServer: '为开发者与设计师打造 · 开源 · 隐私至上',
   errorFileTooBig: '文件过大，请选择 500MB 以下的图片',
   errorUnsupportedFormat: '不支持的格式，请使用 PNG、JPEG 或 WebP',
   errorProcess: '处理失败，请重试',
