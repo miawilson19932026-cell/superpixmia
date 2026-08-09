@@ -103,70 +103,38 @@ body::after {
 
 /* ---- Glass-morphism card ---- */
 .glass {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(18, 18, 40, 0.88);
   backdrop-filter: blur(24px) saturate(120%);
   -webkit-backdrop-filter: blur(24px) saturate(120%);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
-
-/* Fallback for browsers without backdrop-filter (Baidu, old WebViews) */
-@supports not (backdrop-filter: blur(1px)) {
-  .glass,
-  .backdrop-blur-sm,
-  .backdrop-blur,
-  .backdrop-blur-md,
-  .backdrop-blur-lg,
-  .backdrop-blur-xl,
-  .backdrop-blur-2xl,
-  .backdrop-blur-3xl {
-    background: rgba(14, 14, 36, 0.92) !important;
-  }
-  .glass-icon {
-    background: rgba(20, 20, 45, 0.9) !important;
-  }
+/* Glass on glass: nested glass elements need lighter bg to avoid stacking too dark */
+.glass .glass {
+  background: rgba(255, 255, 255, 0.04);
 }
 
-/* Force fallback for Baidu/UC WebViews that LIE about backdrop-filter support */
+/* Legacy WebViews: kill backdrop-filter, keep solid bg (triggered by JS detection) */
 .legacy-webview .glass,
-.legacy-webview .backdrop-blur-sm,
-.legacy-webview .backdrop-blur,
-.legacy-webview .backdrop-blur-md,
-.legacy-webview .backdrop-blur-lg,
-.legacy-webview .backdrop-blur-xl,
-.legacy-webview .backdrop-blur-2xl,
-.legacy-webview .backdrop-blur-3xl {
-  background: rgba(14, 14, 36, 0.92) !important;
+.legacy-webview [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  background: rgba(18, 18, 40, 0.95) !important;
 }
 .legacy-webview .glass-icon {
   background: rgba(20, 20, 45, 0.9) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
-
-/* Baidu/UC: kill gradient orb animations that cause layout/paint issues */
 .legacy-webview body::before,
 .legacy-webview body::after {
   display: none !important;
 }
-
-/* Baidu/UC already has dark bg, add explicit fallback */
 .legacy-webview body {
   background: #0a0a0a !important;
 }
-
-/* Fix text size boosting (Chinese browsers forcibly scale text even with viewport meta) */
 .legacy-webview {
   -webkit-text-size-adjust: none !important;
   text-size-adjust: none !important;
-}
-
-/* Kill all backdrop-filter on fixed elements (known WebView crash trigger) */
-.legacy-webview [class*="backdrop-blur"] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background-color: rgba(14, 14, 36, 0.9) !important;
 }
 
 /* ---- Gradient border via mask (works with border-radius) ---- */
@@ -249,7 +217,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(18, 18, 40, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.06);

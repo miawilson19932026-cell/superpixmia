@@ -128,7 +128,7 @@ export default function DropZone({
             }
           : {
               border: '1px solid rgba(139,92,246,0.18)',
-              background: 'rgba(255,255,255,0.03)',
+              background: 'rgba(18,18,40,0.88)',
               backdropFilter: 'blur(24px) saturate(120%)',
               WebkitBackdropFilter: 'blur(24px) saturate(120%)',
             }
