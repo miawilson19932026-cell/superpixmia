@@ -523,7 +523,7 @@ export default function App() {
       <main className="flex-1 px-3 sm:px-6 py-5 sm:py-6 pb-24 sm:pb-6 space-y-5">
         {/* Tool Nav */}
         <div className="mx-auto max-w-2xl">
-          <div className="flex sm:grid sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {toolKeys.map((key) => {
               const active = activeTool === key
               const icons = gameIcons[key]
@@ -532,8 +532,8 @@ export default function App() {
                   key={key}
                   onClick={() => setActiveTool(key)}
                   className={`
-                    relative flex-1 sm:flex-none flex sm:flex-col items-center justify-center gap-1 sm:gap-2
-                    px-1 sm:px-4 py-2 sm:py-3 rounded-xl text-[10px] sm:text-sm font-medium transition-all duration-200
+                    relative flex flex-col items-center justify-center gap-1.5 sm:gap-2
+                    px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200
                     glass backdrop-blur-xl border-white/[0.06] card-hover
                     ${active
                       ? 'glass-active text-[var(--accent)]'
@@ -541,10 +541,10 @@ export default function App() {
                     }
                   `}
                 >
-                  <div className="w-4 h-4 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center">
                     {active ? icons.filled : icons.outline}
                   </div>
-                  <span className="whitespace-nowrap leading-none text-center">
+                  <span className="whitespace-nowrap leading-tight text-center">
                     {t[toolLabelMap[key] as keyof typeof t] as string}
                   </span>
                 </button>
