@@ -111,9 +111,10 @@ interface ImageItem {
 const MAX_BATCH = 15
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+const isWeChat = /MicroMessenger/i.test(navigator.userAgent)
 
 export default function App() {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
 
   const [mode, setMode] = useState<Mode>('single')
   const [activeTool, setActiveTool] = useState<ToolType>('resize')
@@ -378,8 +379,8 @@ export default function App() {
       const base = (images[0]?.file.name ?? 'image').replace(/\.[^.]+$/, '')
       const url = URL.createObjectURL(blob)
 
-      if (isIOS) {
-        // iOS Safari doesn't support blob download via a.click()
+      if (isIOS || isWeChat) {
+        // iOS Safari & WeChat don't support blob download via a.click()
         window.open(url, '_blank')
       } else {
         const a = document.createElement('a')
@@ -400,7 +401,7 @@ export default function App() {
       })
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(zipBlob)
-      if (isIOS) {
+      if (isIOS || isWeChat) {
         window.open(url, '_blank')
       } else {
         const a = document.createElement('a')
@@ -556,6 +557,13 @@ export default function App() {
                     background: 'linear-gradient(180deg, transparent 0%, rgba(8,8,16,0.95) 30%, rgba(8,8,16,1) 100%)',
                   }}
                 >
+                  {isWeChat && (
+                    <div className="text-center mb-2 px-3 py-1.5 rounded-[var(--radius-sm)] bg-amber-500/10 border border-amber-500/20 text-amber-400/90 text-[11px] leading-relaxed">
+                      💡 {lang === 'zh'
+                        ? '微信内无法直接下载，请点击右上角 ··· → 在浏览器中打开'
+                        : 'WeChat blocks downloads — tap ··· → Open in Browser'}
+                    </div>
+                  )}
                   <button
                     onClick={download}
                     className="w-full px-8 py-3.5 btn-gradient text-sm font-semibold rounded-[var(--radius-md)] active:scale-[0.98]"
