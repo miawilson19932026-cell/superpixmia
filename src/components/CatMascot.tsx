@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from '../i18n'
 
+const isWeChat = /MicroMessenger/i.test(navigator.userAgent)
+
 // [frame, duration_ms] — frames 4-5 slower
 const FRAME_SEQ: [number, number][] = [
   [1, 400],
@@ -172,9 +174,13 @@ export default function CatMascot() {
         >
           <p className="text-[12px] sm:text-[14px] leading-loose text-white/85 text-center whitespace-pre-line"
             style={{ fontFamily: "'ZCOOL KuaiLe', cursive" }}>
-            {hovered
-              ? (lang === 'zh' ? '⌘+D / Ctrl+D\n收藏我吧 💜' : '⌘+D / Ctrl+D\nto bookmark 💜')
-              : (t.catBubble as string)
+            {isWeChat
+              ? (lang === 'zh'
+                ? '点击右上角 ···\n→ 收藏我\n下次在「我→收藏」\n找到 MiaDun 💜'
+                : 'Tap ··· → Favorite\nFind me later in\nMe → Favorites 💜')
+              : hovered
+                ? (lang === 'zh' ? '⌘+D / Ctrl+D\n收藏我吧 💜' : '⌘+D / Ctrl+D\nto bookmark 💜')
+                : (t.catBubble as string)
             }
           </p>
         </button>
