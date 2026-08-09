@@ -124,6 +124,31 @@ body::after {
   }
 }
 
+/* Force fallback for Baidu/UC WebViews that LIE about backdrop-filter support */
+.legacy-webview .glass,
+.legacy-webview .backdrop-blur-sm,
+.legacy-webview .backdrop-blur,
+.legacy-webview .backdrop-blur-md,
+.legacy-webview .backdrop-blur-lg,
+.legacy-webview .backdrop-blur-xl,
+.legacy-webview .backdrop-blur-2xl,
+.legacy-webview .backdrop-blur-3xl {
+  background: rgba(14, 14, 36, 0.92) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.legacy-webview .glass-icon {
+  background: rgba(20, 20, 45, 0.9) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Baidu/UC: kill gradient orb animations that cause layout issues */
+.legacy-webview body::before {
+  opacity: 0.7 !important;
+  animation: none !important;
+}
+
 /* ---- Gradient border via mask (works with border-radius) ---- */
 .gradient-border {
   position: relative;

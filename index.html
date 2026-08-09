@@ -215,6 +215,17 @@
     <link rel="preconnect" href="https://cloud.umami.is" />
   </head>
   <body>
+    <!-- Baidu/UC browser detection — these WebViews claim to support backdrop-filter but render it broken -->
+    <script>
+      (function() {
+        var ua = navigator.userAgent || ''
+        var isBaidu = /baiduboxapp|baidu/i.test(ua)
+        var isUC = /UCBrowser|UCWEB/i.test(ua)
+        if (isBaidu || isUC) {
+          document.documentElement.classList.add('legacy-webview')
+        }
+      })()
+    </script>
     <div id="root"></div>
 
     <!-- ── SEO content for search engines (noscript: visible only when JS is disabled) ── -->
