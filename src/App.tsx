@@ -528,63 +528,90 @@ export default function App() {
           />
         )}
 
-        {/* Cool progress bar — between DropZone & ImagePreview */}
+        {/* Game-style progress bar — between DropZone & ImagePreview */}
         {hasImage && isProcessing && (
           <div className="mx-auto max-w-2xl">
             {processingProgress ? (
-              /* Batch: determinate progress with glow */
-              <div className="relative">
-                <div className="h-3 bg-[var(--bg-input)] rounded-full overflow-hidden shadow-inner"
-                  style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }}
-                >
-                  <div
-                    className="h-full rounded-full transition-all duration-500 ease-out relative overflow-hidden"
-                    style={{
-                      width: `${(processingProgress.current / processingProgress.total) * 100}%`,
-                      background: 'linear-gradient(90deg, #7c3aed, #a78bfa, #7c3aed)',
-                      backgroundSize: '200% 100%',
-                      animation: 'shimmer 2s linear infinite',
-                      boxShadow: '0 0 12px rgba(124,58,237,0.5), 0 0 24px rgba(124,58,237,0.2)',
-                    }}
-                  >
-                    {/* Shine streak */}
-                    <div className="absolute inset-y-0 w-8 bg-white/20 skew-x-[-20deg]"
-                      style={{ animation: 'shineSweep 1.2s ease-in-out infinite' }}
-                    />
-                    {/* Spark dots along the progress */}
-                    <div className="absolute -top-0.5 -right-1 w-4 h-4 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8),0_0_20px_rgba(168,133,248,0.6)]"
-                      style={{ animation: 'pulseDot 0.8s ease-in-out infinite' }}
-                    />
-                  </div>
+              /* Batch: segmented game bar */
+              <div className="space-y-1">
+                {/* Segments */}
+                <div className="flex gap-1">
+                  {Array.from({ length: processingProgress.total }, (_, i) => {
+                    const filled = i < processingProgress.current
+                    const current = i === processingProgress.current
+                    return (
+                      <div
+                        key={i}
+                        className="flex-1 h-1.5 relative"
+                        style={{
+                          background: filled
+                            ? `rgba(124,58,237,${0.3 + (i / processingProgress.total) * 0.7})`
+                            : 'rgba(255,255,255,0.06)',
+                          boxShadow: filled
+                            ? `0 0 6px rgba(124,58,237,0.6), inset 0 0 4px rgba(168,133,248,0.3)`
+                            : 'inset 0 1px 2px rgba(0,0,0,0.3)',
+                          border: filled
+                            ? '1px solid rgba(168,133,248,0.4)'
+                            : '1px solid rgba(255,255,255,0.05)',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                      >
+                        {/* Current segment pulse */}
+                        {current && (
+                          <div className="absolute inset-0 bg-[var(--accent)] animate-pulse"
+                            style={{ boxShadow: '0 0 10px rgba(124,58,237,0.8)' }}
+                          />
+                        )}
+                        {/* Filled segment shimmer */}
+                        {filled && !current && (
+                          <div className="absolute inset-0 overflow-hidden">
+                            <div className="absolute inset-y-0 w-4 bg-white/15 skew-x-[-30deg]"
+                              style={{
+                                animation: `shineSweep 1.5s ease-in-out ${i * 0.1}s infinite`,
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-                <div className="flex justify-between mt-1.5">
-                  <span className="text-[11px] text-[var(--text-dim)]">
-                    {lang === 'zh' ? '处理中' : 'Processing'}
+                {/* Label */}
+                <div className="flex justify-between">
+                  <span className="text-[10px] uppercase tracking-widest text-[var(--text-dim)] font-mono">
+                    {lang === 'zh' ? '处理中' : 'PROCESSING'}
                   </span>
-                  <span className="text-xs font-mono font-semibold tabular-nums text-[var(--accent)]">
-                    {processingProgress.current}<span className="text-[var(--text-dim)]">/{processingProgress.total}</span>
+                  <span className="text-[10px] font-mono tabular-nums text-[var(--accent)]">
+                    {processingProgress.current}<span className="text-[var(--text-dim)]"> / {processingProgress.total}</span>
                   </span>
                 </div>
               </div>
             ) : (
-              /* Single: indeterminate shimmer bar */
-              <div className="relative">
-                <div className="h-2 bg-[var(--bg-input)] rounded-full overflow-hidden"
-                  style={{ boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)' }}
+              /* Single: scanning game bar */
+              <div className="space-y-1">
+                <div className="h-1 bg-[rgba(255,255,255,0.04)] relative overflow-hidden"
+                  style={{ border: '1px solid rgba(255,255,255,0.06)' }}
                 >
+                  {/* Scanning beam */}
                   <div
-                    className="h-full rounded-full"
+                    className="absolute inset-y-0 w-1/4"
                     style={{
-                      width: '40%',
-                      background: 'linear-gradient(90deg, #7c3aed, #a78bfa, #c4b5fd, #a78bfa, #7c3aed)',
-                      backgroundSize: '300% 100%',
-                      animation: 'indeterminateSlide 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite',
-                      boxShadow: '0 0 10px rgba(124,58,237,0.4)',
+                      background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.8), rgba(168,133,248,0.6), transparent)',
+                      boxShadow: '0 0 8px rgba(124,58,237,0.5)',
+                      animation: 'scanBeam 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite',
                     }}
                   />
+                  {/* Background ticks */}
+                  {Array.from({ length: 20 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="absolute inset-y-0 w-px bg-white/10"
+                      style={{ left: `${(i / 20) * 100}%` }}
+                    />
+                  ))}
                 </div>
-                <p className="text-center text-[11px] text-[var(--text-dim)] mt-1.5 animate-pulse">
-                  {lang === 'zh' ? '处理中…' : 'Processing…'}
+                <p className="text-[10px] uppercase tracking-widest text-center text-[var(--text-dim)] font-mono animate-pulse">
+                  {lang === 'zh' ? '处理中…' : 'PROCESSING…'}
                 </p>
               </div>
             )}
@@ -719,26 +746,13 @@ export default function App() {
         .animate-in {
           animation: panelIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes progressIndeterminate {
-          0% { transform: translateX(-50%); }
-          50% { transform: translateX(200%); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
         @keyframes shineSweep {
-          0% { left: -2rem; }
-          100% { left: calc(100% + 2rem); }
+          0% { left: -1rem; }
+          100% { left: calc(100% + 1rem); }
         }
-        @keyframes pulseDot {
-          0%, 100% { transform: scale(1); opacity: 0.9; }
-          50% { transform: scale(1.4); opacity: 1; }
-        }
-        @keyframes indeterminateSlide {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(350%); }
+        @keyframes scanBeam {
+          0% { left: -25%; }
+          100% { left: 100%; }
         }
       `}</style>
     </div>
