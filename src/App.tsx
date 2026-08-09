@@ -380,8 +380,11 @@ export default function App() {
       const url = URL.createObjectURL(blob)
 
       if (isWeChat) {
-        // WeChat blocks window.open — navigate to image so user can long-press to save
-        window.location.href = url
+        // WeChat can't save blob URLs — convert to data URL so long-press works
+        const reader = new FileReader()
+        reader.onload = () => { window.location.href = reader.result as string }
+        reader.readAsDataURL(blob)
+        return
       } else if (isIOS) {
         // iOS Safari doesn't support blob download via a.click()
         window.open(url, '_blank')
@@ -405,7 +408,10 @@ export default function App() {
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(zipBlob)
       if (isWeChat) {
-        window.location.href = url
+        alert(lang === 'zh'
+          ? '微信内不支持下载ZIP文件，请点击右上角 ··· → 在浏览器中打开'
+          : 'ZIP downloads not supported in WeChat — tap ··· → Open in Browser')
+        return
       } else if (isIOS) {
         window.open(url, '_blank')
       } else {
