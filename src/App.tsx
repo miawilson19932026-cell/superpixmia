@@ -417,10 +417,11 @@ export default function App() {
       }
     } else {
       const zip = new JSZip()
-      validResults.forEach((result, i) => {
+      results.forEach((result, idx) => {
+        if (!result) return
         const blob = result.blob
         const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/jpeg' ? 'jpg' : 'webp'
-        const base = (images[i]?.file.name ?? `image-${i + 1}`).replace(/\.[^.]+$/, '')
+        const base = (images[idx]?.file.name ?? `image-${idx + 1}`).replace(/\.[^.]+$/, '')
         zip.file(`${base}-pixmia.${ext}`, blob)
       })
       const zipBlob = await zip.generateAsync({ type: 'blob' })
