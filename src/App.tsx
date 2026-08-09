@@ -528,34 +528,66 @@ export default function App() {
           />
         )}
 
-        {/* Progress bar — visible during processing for both single & batch */}
-        {/* Progress bar — visible during processing for both single & batch */}
+        {/* Cool progress bar — between DropZone & ImagePreview */}
         {hasImage && isProcessing && (
-          <div className="mx-auto max-w-2xl mt-3">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-2 bg-[var(--bg-input)] rounded-full overflow-hidden">
-                {processingProgress ? (
+          <div className="mx-auto max-w-2xl">
+            {processingProgress ? (
+              /* Batch: determinate progress with glow */
+              <div className="relative">
+                <div className="h-3 bg-[var(--bg-input)] rounded-full overflow-hidden shadow-inner"
+                  style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }}
+                >
                   <div
-                    className="h-full bg-gradient-to-r from-[var(--accent)] to-[#a78bfa] rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${(processingProgress.current / processingProgress.total) * 100}%` }}
-                  />
-                ) : (
-                  <div
-                    className="h-full w-1/3 bg-gradient-to-r from-[var(--accent)] to-[#a78bfa] rounded-full"
-                    style={{ animation: 'progressIndeterminate 1.5s ease-in-out infinite' }}
-                  />
-                )}
+                    className="h-full rounded-full transition-all duration-500 ease-out relative overflow-hidden"
+                    style={{
+                      width: `${(processingProgress.current / processingProgress.total) * 100}%`,
+                      background: 'linear-gradient(90deg, #7c3aed, #a78bfa, #7c3aed)',
+                      backgroundSize: '200% 100%',
+                      animation: 'shimmer 2s linear infinite',
+                      boxShadow: '0 0 12px rgba(124,58,237,0.5), 0 0 24px rgba(124,58,237,0.2)',
+                    }}
+                  >
+                    {/* Shine streak */}
+                    <div className="absolute inset-y-0 w-8 bg-white/20 skew-x-[-20deg]"
+                      style={{ animation: 'shineSweep 1.2s ease-in-out infinite' }}
+                    />
+                    {/* Spark dots along the progress */}
+                    <div className="absolute -top-0.5 -right-1 w-4 h-4 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8),0_0_20px_rgba(168,133,248,0.6)]"
+                      style={{ animation: 'pulseDot 0.8s ease-in-out infinite' }}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-between mt-1.5">
+                  <span className="text-[11px] text-[var(--text-dim)]">
+                    {lang === 'zh' ? '处理中' : 'Processing'}
+                  </span>
+                  <span className="text-xs font-mono font-semibold tabular-nums text-[var(--accent)]">
+                    {processingProgress.current}<span className="text-[var(--text-dim)]">/{processingProgress.total}</span>
+                  </span>
+                </div>
               </div>
-              {processingProgress ? (
-                <span className="text-xs font-mono tabular-nums text-[var(--accent)] whitespace-nowrap">
-                  {processingProgress.current}/{processingProgress.total}
-                </span>
-              ) : (
-                <span className="text-xs text-[var(--text-dim)] animate-pulse whitespace-nowrap">
+            ) : (
+              /* Single: indeterminate shimmer bar */
+              <div className="relative">
+                <div className="h-2 bg-[var(--bg-input)] rounded-full overflow-hidden"
+                  style={{ boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)' }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: '40%',
+                      background: 'linear-gradient(90deg, #7c3aed, #a78bfa, #c4b5fd, #a78bfa, #7c3aed)',
+                      backgroundSize: '300% 100%',
+                      animation: 'indeterminateSlide 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+                      boxShadow: '0 0 10px rgba(124,58,237,0.4)',
+                    }}
+                  />
+                </div>
+                <p className="text-center text-[11px] text-[var(--text-dim)] mt-1.5 animate-pulse">
                   {lang === 'zh' ? '处理中…' : 'Processing…'}
-                </span>
-              )}
-            </div>
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -691,6 +723,22 @@ export default function App() {
           0% { transform: translateX(-50%); }
           50% { transform: translateX(200%); }
           100% { transform: translateX(-50%); }
+        }
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes shineSweep {
+          0% { left: -2rem; }
+          100% { left: calc(100% + 2rem); }
+        }
+        @keyframes pulseDot {
+          0%, 100% { transform: scale(1); opacity: 0.9; }
+          50% { transform: scale(1.4); opacity: 1; }
+        }
+        @keyframes indeterminateSlide {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(350%); }
         }
       `}</style>
     </div>
