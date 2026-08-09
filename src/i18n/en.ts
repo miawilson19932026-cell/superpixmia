@@ -11,7 +11,7 @@ const en: Translations = {
   dropHint: 'or click to browse / paste from clipboard',
   dropBrowse: 'Browse files',
   dropFormats: 'PNG, JPEG, WebP, AVIF, GIF, BMP, SVG, ICO, TIFF',
-  dropMaxSize: 'Max 20MB per file',
+  dropMaxSize: 'Max 500MB per file',
   dropNewImage: 'Upload new image',
   resizeTitle: 'Resize',
   width: 'Width',
@@ -53,7 +53,7 @@ const en: Translations = {
   footerPrivacy: 'All processing happens in your browser',
   footerNoUpload: 'Your images are never uploaded to any server',
   footerNoServer: 'Zero server · 100% private',
-  errorFileTooBig: 'File is too large. Please use an image under 20MB.',
+  errorFileTooBig: 'File is too large. Please use an image under 500MB.',
   errorUnsupportedFormat: 'Unsupported format. Please use PNG, JPEG, or WebP.',
   errorProcess: 'Processing failed. Please try again.',
   errorBgRemove: 'Background removal failed. Please try a different image.',
@@ -77,6 +77,7 @@ const en: Translations = {
   batchLimit: 'Max 15 files',
   imageOf: '{current} / {total}',
   clearAll: 'Clear All',
+  catBubble: 'I\'m MiaDun!\nNice to meet you～\nBookmark me?\nI\'ll miss you! 💗',
 }
 
 export default en

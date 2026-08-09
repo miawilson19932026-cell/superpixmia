@@ -72,6 +72,7 @@ export interface Translations {
   batchLimit: string
   imageOf: string
   clearAll: string
+  catBubble: string
 }
 
 // Detect language from browser or localStorage

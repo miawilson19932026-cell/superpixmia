@@ -2,9 +2,10 @@ import { useCallback, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { useTranslation } from '../i18n'
 import type { ToolType } from '../types'
+import CatMascot from './CatMascot'
 
 const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif', 'image/bmp', 'image/svg+xml', 'image/x-icon', 'image/tiff', 'image/vnd.microsoft.icon']
-const MAX_SIZE = 20 * 1024 * 1024
+const MAX_SIZE = 500 * 1024 * 1024
 
 const toolLabelKey: Record<ToolType, string> = {
   resize: 'toolResize',
@@ -366,9 +367,8 @@ export default function DropZone({
           {t.dropBrowse}
         </button>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 text-[10px] sm:text-[11px] text-[var(--text-dim)] text-center leading-relaxed">
+        <div className="flex flex-col items-center justify-center gap-1 text-[10px] sm:text-[11px] text-[var(--text-dim)] text-center leading-relaxed">
           <span className="max-w-[280px] sm:max-w-none">{t.dropFormats}</span>
-          <span className="w-1 h-1 rounded-full bg-[var(--border)] hidden sm:block" />
           <span>{t.dropMaxSize}</span>
         </div>
 
@@ -378,6 +378,8 @@ export default function DropZone({
           className="hidden"
         />
       </div>
+
+      <CatMascot />
     </div>
   )
 }

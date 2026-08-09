@@ -11,7 +11,7 @@ const zh: Translations = {
   dropHint: '或点击选择 / 粘贴上传',
   dropBrowse: '选择文件',
   dropFormats: '支持 PNG、JPEG、WebP、AVIF、GIF、BMP、SVG、ICO、TIFF',
-  dropMaxSize: '单文件最大 20MB',
+  dropMaxSize: '单文件最大 500MB',
   dropNewImage: '上传新图片',
   resizeTitle: '调整尺寸',
   width: '宽度',
@@ -53,7 +53,7 @@ const zh: Translations = {
   footerPrivacy: '所有处理在浏览器中完成',
   footerNoUpload: '图片不会上传到任何服务器',
   footerNoServer: '零服务器 · 100% 隐私',
-  errorFileTooBig: '文件过大，请选择 20MB 以下的图片',
+  errorFileTooBig: '文件过大，请选择 500MB 以下的图片',
   errorUnsupportedFormat: '不支持的格式，请使用 PNG、JPEG 或 WebP',
   errorProcess: '处理失败，请重试',
   errorBgRemove: '抠图失败，请尝试其他图片',
@@ -77,6 +77,7 @@ const zh: Translations = {
   batchLimit: '最多 15 张',
   imageOf: '第 {current} / {total} 张',
   clearAll: '清空',
+  catBubble: '我叫MiaDun～\n很高兴认识你，\n可以把我收藏到书签吗？\n我会想你的~💗',
 }
 
 export default zh
