@@ -226,18 +226,6 @@
           /UCBrowser|UCWEB/i.test(ua)
         if (isLegacy) {
           document.documentElement.classList.add('legacy-webview')
-          // Debug banner — wait for body to be available
-          function showBanner() {
-            var banner = document.createElement('div')
-            banner.textContent = '[DETECTED: legacy browser — fallback active]'
-            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:4px 8px;background:#7c3aed;color:#fff;text-align:center;font-size:11px;font-family:sans-serif;pointer-events:none;opacity:0.85'
-            if (document.body) {
-              document.body.appendChild(banner)
-            } else {
-              setTimeout(showBanner, 50)
-            }
-          }
-          showBanner()
         }
       })()
     </script>
