@@ -3,6 +3,8 @@ import type { DragEvent } from 'react'
 import { useTranslation } from '../i18n'
 import { formatSize } from '../utils'
 
+const isWeChat = /MicroMessenger/i.test(navigator.userAgent)
+
 export interface PreviewItem {
   originalUrl: string
   resultUrl: string | null
@@ -36,7 +38,7 @@ export default function ImagePreview({
   onDropReplace,
   maxItems = 15,
 }: Props) {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
   void _onPrev; void _onNext
 
   const [lightbox, setLightbox] = useState(false)
@@ -588,9 +590,15 @@ export default function ImagePreview({
             <div className="flex items-center justify-between px-4 py-3 border-t border-[rgba(139,92,246,0.08)]">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-white/50 font-medium">{lbLabel as string}</span>
-                <span className="text-[11px] text-white/30 hidden sm:inline">
-                  🖱️ {t.zoomHint as string}
-                </span>
+                {isWeChat ? (
+                  <span className="text-[11px] text-amber-400/70">
+                    👆 {lang === 'zh' ? '长按图片即可保存到相册' : 'Long-press to save'}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-white/30 hidden sm:inline">
+                    🖱️ {t.zoomHint as string}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-1.5">
                 <button

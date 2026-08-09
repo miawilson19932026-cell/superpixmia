@@ -571,15 +571,15 @@ export default function App() {
                   {isWeChat && mode === 'batch' && imageCount > 1 && (
                     <div className="text-center mb-2 px-3 py-2 rounded-[var(--radius-sm)] bg-amber-500/10 border border-amber-500/20 text-amber-400/90 text-[11px] leading-relaxed">
                       {lang === 'zh'
-                        ? '💡 微信不支持批量下载ZIP。点击下方任一单张图片 → 打开后长按即可保存到相册'
-                        : '💡 WeChat cannot download ZIP. Tap any image below to open it, then long-press to save.'}
+                        ? '💡 批量ZIP请在浏览器中下载。点击上方单张图片预览，长按即可保存到相册'
+                        : '💡 Open in browser for ZIP. Tap any image above to preview & long-press to save.'}
                     </div>
                   )}
                   {isWeChat && (mode === 'single' || imageCount <= 1) && (
                     <div className="text-center mb-2 px-3 py-2 rounded-[var(--radius-sm)] bg-amber-500/10 border border-amber-500/20 text-amber-400/90 text-[11px] leading-relaxed">
                       {lang === 'zh'
-                        ? '💡 第①步：点击下方按钮查看图片 → 第②步：长按图片 → 第③步：点击「保存图片」'
-                        : '💡 Step ①: Tap button to view image → ②: Long-press the image → ③: Tap "Save Image"'}
+                        ? '💡 点击按钮预览图片 → 长按图片 → 保存到相册'
+                        : '💡 Tap below to preview → long-press the image → save to photos'}
                     </div>
                   )}
                   <button
@@ -587,7 +587,7 @@ export default function App() {
                     className="w-full px-8 py-3.5 btn-gradient text-sm font-semibold rounded-[var(--radius-md)] active:scale-[0.98]"
                   >
                     ↓ {isWeChat
-                      ? (mode === 'batch' && imageCount > 1 ? t.downloadZip : (lang === 'zh' ? '查看并保存图片' : 'View & Save Image'))
+                      ? (mode === 'batch' && imageCount > 1 ? t.downloadZip : (lang === 'zh' ? '预览并长按保存' : 'Preview & Long-press'))
                       : (mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download)
                     }
                   </button>
