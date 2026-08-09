@@ -129,6 +129,9 @@ export default function App() {
   const [processingTools, setProcessingTools] = useState<Set<ToolType>>(new Set())
   const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null)
   const [lightboxTrigger, setLightboxTrigger] = useState(0)
+  const [wechatGuideDismissed, setWechatGuideDismissed] = useState(
+    () => localStorage.getItem('wechat-guide-dismissed') === '1'
+  )
   const [bgProgress, setBgProgress] = useState(0)
 
   // Cleanup on unmount
@@ -461,6 +464,47 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
       <ParticleBg />
       <div className="scanlines" />
+
+      {/* WeChat bookmark guide */}
+      {isWeChat && !wechatGuideDismissed && (
+        <div className="fixed top-0 inset-x-0 z-[100] flex justify-center pt-2 sm:pt-3 pointer-events-none">
+          <div className="pointer-events-auto mx-3 sm:mx-auto animate-in max-w-sm w-full">
+            <div className="relative glass backdrop-blur-xl rounded-[var(--radius-lg)] border border-amber-500/30 p-3 sm:p-4 shadow-lg shadow-amber-500/10"
+              style={{ background: 'rgba(20,16,36,0.95)' }}
+            >
+              {/* Arrow pointing to top-right (WeChat ···) */}
+              <div className="absolute -top-2 right-10 sm:right-14 w-4 h-4 rotate-45 bg-amber-500/20 border-l border-t border-amber-500/30" />
+              <div className="flex items-start gap-3">
+                <span className="text-2xl shrink-0">👆</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-amber-200 font-medium leading-relaxed">
+                    {lang === 'zh'
+                      ? '点击右上角 ··· → 收藏'
+                      : 'Tap ··· → Favorite'}
+                  </p>
+                  <p className="text-xs text-amber-400/60 mt-1 leading-relaxed">
+                    {lang === 'zh'
+                      ? '下次在「我 → 收藏」中快速找到 SuperPixMia'
+                      : 'Find us later in Me → Favorites'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setWechatGuideDismissed(true)
+                    localStorage.setItem('wechat-guide-dismissed', '1')
+                  }}
+                  className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Header />
 
       <main className="flex-1 px-3 sm:px-6 py-5 sm:py-6 pb-24 sm:pb-6 space-y-5">
