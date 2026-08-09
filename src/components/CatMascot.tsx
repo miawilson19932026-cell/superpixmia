@@ -28,6 +28,7 @@ export default function CatMascot() {
   const [frame, setFrame] = useState(1)
   const [winking, setWinking] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const [clicked, setClicked] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const idxRef = useRef(0)
 
@@ -44,15 +45,15 @@ export default function CatMascot() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Click: WeChat shows guide overlay, otherwise double-blink
+  // Click: WeChat shows guide overlay, PC toggles bookmark hint
   const handleClick = useCallback(() => {
     if (isWeChat) {
       setShowGuide(true)
       return
     }
+    setClicked((c) => !c)
     if (winking) return
     setWinking(true)
-    // Rapid blink sequence
     let count = 0
     const blink = setInterval(() => {
       count++
@@ -181,10 +182,8 @@ export default function CatMascot() {
           <p className="text-[12px] sm:text-[14px] leading-loose text-white/85 text-center whitespace-pre-line"
             style={{ fontFamily: "'ZCOOL KuaiLe', cursive" }}>
             {isWeChat
-              ? (lang === 'zh'
-                ? '点击右上角 ···\n→ 收藏我\n下次在「我→收藏」\n找到 MiaDun 💜'
-                : 'Tap ··· → Favorite\nFind me later in\nMe → Favorites 💜')
-              : hovered
+              ? (t.catBubble as string)
+              : (hovered || clicked)
                 ? (lang === 'zh' ? '⌘+D / Ctrl+D\n收藏我吧 💜' : '⌘+D / Ctrl+D\nto bookmark 💜')
                 : (t.catBubble as string)
             }
