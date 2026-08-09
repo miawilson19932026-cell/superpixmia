@@ -7,31 +7,26 @@
   </defs>
   <!-- Dark rounded background -->
   <rect width="128" height="128" rx="24" fill="url(#bg)"/>
-  <!-- Subtle border -->
-  <rect x="2" y="2" width="124" height="124" rx="22" fill="none" stroke="rgba(250,250,250,0.12)" stroke-width="1.5"/>
 
-  <!-- Pixel "P" mark — 5 columns × 5 rows grid, centered -->
-  <g transform="translate(22, 22)">
-    <!-- Row 0: ████ (all filled) -->
-    <rect x="0"  y="0"  width="18" height="18" rx="3.5" fill="#fafafa"/>
-    <rect x="20" y="0"  width="18" height="18" rx="3.5" fill="#fafafa"/>
-    <rect x="40" y="0"  width="18" height="18" rx="3.5" fill="#fafafa"/>
-    <rect x="60" y="0"  width="18" height="18" rx="3.5" fill="#fafafa"/>
+  <!-- Pixel "P" mark — exact match with logo: 4 columns × 4 rows -->
+  <g transform="translate(29, 29)">
+    <!-- Row 0: ████ -->
+    <rect x="0"  y="0"  width="16" height="16" rx="3" fill="#fafafa"/>
+    <rect x="18" y="0"  width="16" height="16" rx="3" fill="#fafafa"/>
+    <rect x="36" y="0"  width="16" height="16" rx="3" fill="#fafafa"/>
+    <rect x="54" y="0"  width="16" height="16" rx="3" fill="#fafafa"/>
 
-    <!-- Row 1: █  █ (first + last only) -->
-    <rect x="0"  y="20" width="18" height="18" rx="3.5" fill="#fafafa"/>
-    <rect x="60" y="20" width="18" height="18" rx="3.5" fill="#fafafa"/>
+    <!-- Row 1: █  █ -->
+    <rect x="0"  y="18" width="16" height="16" rx="3" fill="#fafafa"/>
+    <rect x="54" y="18" width="16" height="16" rx="3" fill="#fafafa"/>
 
-    <!-- Row 2: ████ (all filled) -->
-    <rect x="0"  y="40" width="18" height="18" rx="3.5" fill="#fafafa"/>
-    <rect x="20" y="40" width="18" height="18" rx="3.5" fill="#fafafa"/>
-    <rect x="40" y="40" width="18" height="18" rx="3.5" fill="#fafafa"/>
-    <rect x="60" y="40" width="18" height="18" rx="3.5" fill="#fafafa"/>
+    <!-- Row 2: ████ -->
+    <rect x="0"  y="36" width="16" height="16" rx="3" fill="#fafafa"/>
+    <rect x="18" y="36" width="16" height="16" rx="3" fill="#fafafa"/>
+    <rect x="36" y="36" width="16" height="16" rx="3" fill="#fafafa"/>
+    <rect x="54" y="36" width="16" height="16" rx="3" fill="#fafafa"/>
 
-    <!-- Row 3: █ (first only — leg of P) -->
-    <rect x="0"  y="60" width="18" height="18" rx="3.5" fill="#fafafa"/>
-
-    <!-- Row 4: █ (first only — leg of P) -->
-    <rect x="0"  y="80" width="18" height="18" rx="3.5" fill="#fafafa"/>
+    <!-- Row 3: █ -->
+    <rect x="0"  y="54" width="16" height="16" rx="3" fill="#fafafa"/>
   </g>
 </svg>
