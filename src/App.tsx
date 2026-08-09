@@ -109,6 +109,8 @@ interface ImageItem {
 }
 
 const MAX_BATCH = 15
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
 export default function App() {
   const { t } = useTranslation()
@@ -375,13 +377,19 @@ export default function App() {
       const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/jpeg' ? 'jpg' : 'webp'
       const base = (images[0]?.file.name ?? 'image').replace(/\.[^.]+$/, '')
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${base}-pixmia.${ext}`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+
+      if (isIOS) {
+        // iOS Safari: open image in new tab, user long-presses to save
+        window.open(url, '_blank')
+      } else {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${base}-pixmia.${ext}`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
     } else {
       const zip = new JSZip()
       validResults.forEach((result, i) => {
@@ -392,13 +400,17 @@ export default function App() {
       })
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(zipBlob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'pixmia-batch.zip'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      if (isIOS) {
+        window.open(url, '_blank')
+      } else {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'pixmia-batch.zip'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
     }
   }, [toolResults, activeTool, mode, images])
 
