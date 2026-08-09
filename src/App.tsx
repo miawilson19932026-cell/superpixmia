@@ -568,18 +568,28 @@ export default function App() {
                     background: 'linear-gradient(180deg, transparent 0%, rgba(8,8,16,0.95) 30%, rgba(8,8,16,1) 100%)',
                   }}
                 >
-                  {isWeChat && (
-                    <div className="text-center mb-2 px-3 py-1.5 rounded-[var(--radius-sm)] bg-amber-500/10 border border-amber-500/20 text-amber-400/90 text-[11px] leading-relaxed">
-                      💡 {lang === 'zh'
-                        ? '点击下载按钮打开图片后，长按图片即可保存'
-                        : 'Tap download, then long-press the image to save'}
+                  {isWeChat && mode === 'batch' && imageCount > 1 && (
+                    <div className="text-center mb-2 px-3 py-2 rounded-[var(--radius-sm)] bg-amber-500/10 border border-amber-500/20 text-amber-400/90 text-[11px] leading-relaxed">
+                      {lang === 'zh'
+                        ? '💡 微信不支持批量下载ZIP。点击下方任一单张图片 → 打开后长按即可保存到相册'
+                        : '💡 WeChat cannot download ZIP. Tap any image below to open it, then long-press to save.'}
+                    </div>
+                  )}
+                  {isWeChat && (mode === 'single' || imageCount <= 1) && (
+                    <div className="text-center mb-2 px-3 py-2 rounded-[var(--radius-sm)] bg-amber-500/10 border border-amber-500/20 text-amber-400/90 text-[11px] leading-relaxed">
+                      {lang === 'zh'
+                        ? '💡 第①步：点击下方按钮查看图片 → 第②步：长按图片 → 第③步：点击「保存图片」'
+                        : '💡 Step ①: Tap button to view image → ②: Long-press the image → ③: Tap "Save Image"'}
                     </div>
                   )}
                   <button
                     onClick={download}
                     className="w-full px-8 py-3.5 btn-gradient text-sm font-semibold rounded-[var(--radius-md)] active:scale-[0.98]"
                   >
-                    ↓ {mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download}
+                    ↓ {isWeChat
+                      ? (mode === 'batch' && imageCount > 1 ? t.downloadZip : (lang === 'zh' ? '查看并保存图片' : 'View & Save Image'))
+                      : (mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download)
+                    }
                   </button>
                 </div>
                 {/* Desktop: inline */}
