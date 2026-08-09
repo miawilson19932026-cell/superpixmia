@@ -110,13 +110,12 @@ export default function DropZone({
   if (hasImage) {
     return (
       <div
-        onDrop={processing ? undefined : handleDrop}
-        onDragOver={processing ? undefined : (e) => { e.preventDefault(); setIsDragOver(true) }}
-        onDragLeave={processing ? undefined : () => setIsDragOver(false)}
+        onDrop={handleDrop}
+        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+        onDragLeave={() => setIsDragOver(false)}
         className={`
           mx-auto max-w-2xl p-2.5 sm:p-3 rounded-[var(--radius-lg)]
           flex flex-wrap items-center justify-between gap-2 transition-all
-          ${processing ? 'opacity-50 pointer-events-none' : ''}
           ${isDragOver
             ? 'shadow-[0_0_20px_var(--accent-glow)] scale-[1.02]'
             : ''

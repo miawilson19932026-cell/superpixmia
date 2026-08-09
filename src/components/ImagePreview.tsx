@@ -307,8 +307,6 @@ export default function ImagePreview({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={`rounded-[var(--radius-xl)] transition-all ${
-              processing ? 'opacity-50 pointer-events-none' : ''
-            } ${
               dragOverArea && dragOverIdx == null && !dragOverAdd
                 ? 'ring-2 ring-[var(--accent)]/40 shadow-[0_0_24px_var(--accent-glow)]'
                 : ''
@@ -439,8 +437,6 @@ export default function ImagePreview({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={`rounded-[var(--radius-xl)] overflow-hidden transition-all ${
-              processing ? 'opacity-50 pointer-events-none' : ''
-            } ${
               dragOverArea
                 ? 'ring-2 ring-[var(--accent)]/40 shadow-[0_0_24px_var(--accent-glow)]'
                 : ''
