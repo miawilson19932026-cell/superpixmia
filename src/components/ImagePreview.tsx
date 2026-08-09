@@ -383,7 +383,7 @@ export default function ImagePreview({
                   onClick={() => {
                     const input = document.createElement('input')
                     input.type = 'file'
-                    input.accept = 'image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/svg+xml,image/x-icon,image/tiff'
+                    input.accept = 'image/*'
                     input.multiple = true
                     input.onchange = () => {
                       if (input.files?.length && onDropFiles) {

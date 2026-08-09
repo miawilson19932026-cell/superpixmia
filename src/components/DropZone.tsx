@@ -226,7 +226,7 @@ export default function DropZone({
           )}
         </div>
 
-        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/svg+xml,image/x-icon,image/tiff"
+        <input ref={inputRef} type="file" accept="image/*"
           multiple={batch}
           onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = '' }}
           className="hidden"
@@ -372,7 +372,7 @@ export default function DropZone({
           <span>{t.dropMaxSize}</span>
         </div>
 
-        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp,image/svg+xml,image/x-icon,image/tiff"
+        <input ref={inputRef} type="file" accept="image/*"
           multiple={batch}
           onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = '' }}
           className="hidden"
