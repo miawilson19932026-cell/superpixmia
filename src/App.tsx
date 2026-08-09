@@ -379,8 +379,11 @@ export default function App() {
       const base = (images[0]?.file.name ?? 'image').replace(/\.[^.]+$/, '')
       const url = URL.createObjectURL(blob)
 
-      if (isIOS || isWeChat) {
-        // iOS Safari & WeChat don't support blob download via a.click()
+      if (isWeChat) {
+        // WeChat blocks window.open — navigate to image so user can long-press to save
+        window.location.href = url
+      } else if (isIOS) {
+        // iOS Safari doesn't support blob download via a.click()
         window.open(url, '_blank')
       } else {
         const a = document.createElement('a')
@@ -401,7 +404,9 @@ export default function App() {
       })
       const zipBlob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(zipBlob)
-      if (isIOS || isWeChat) {
+      if (isWeChat) {
+        window.location.href = url
+      } else if (isIOS) {
         window.open(url, '_blank')
       } else {
         const a = document.createElement('a')
@@ -560,8 +565,8 @@ export default function App() {
                   {isWeChat && (
                     <div className="text-center mb-2 px-3 py-1.5 rounded-[var(--radius-sm)] bg-amber-500/10 border border-amber-500/20 text-amber-400/90 text-[11px] leading-relaxed">
                       💡 {lang === 'zh'
-                        ? '微信内无法直接下载，请点击右上角 ··· → 在浏览器中打开'
-                        : 'WeChat blocks downloads — tap ··· → Open in Browser'}
+                        ? '点击下载按钮打开图片后，长按图片即可保存'
+                        : 'Tap download, then long-press the image to save'}
                     </div>
                   )}
                   <button
