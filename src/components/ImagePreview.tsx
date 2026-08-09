@@ -314,7 +314,7 @@ export default function ImagePreview({
                 : ''
             }`}
             style={{
-              background: 'rgba(14,14,28,0.92)',
+              background: 'rgba(14,14,28,0.72)',
               boxShadow: '0 0 0 1px rgba(99,102,241,0.2), 0 0 0 2px rgba(139,92,246,0.08)',
             }}
           >
@@ -446,7 +446,7 @@ export default function ImagePreview({
                 : ''
             }`}
             style={{
-              background: 'rgba(14,14,28,0.92)',
+              background: 'rgba(14,14,28,0.72)',
               boxShadow: '0 0 0 1px rgba(99,102,241,0.2), 0 0 0 2px rgba(139,92,246,0.08)',
             }}
           >
