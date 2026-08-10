@@ -8,8 +8,10 @@ const isWeChat = /MicroMessenger/i.test(navigator.userAgent)
 const isAndroidWeChat = isWeChat && /Android/i.test(navigator.userAgent)
 
 // WeChat's built-in webview (X5/XWeb) can't reliably save blob: URLs to the
-// photo album — long-press save fails with "保存失败". Convert to a base64
-// data URL for the lightbox so WeChat long-press save works.
+// photo album — long-press save fails with "保存失败". We hand WeChat a saveable
+// src: Android gets a real HTTP(S) URL via a temporary Vercel Blob upload (most
+// reliable), with a base64 data URL as fallback (usually still saves on modern
+// Android WeChat); iOS gets a base64 data URL directly.
 const WECHAT_SAVE_MAX_BYTES = 8 * 1024 * 1024
 const WECHAT_MAX_EDGE = 2560
 
@@ -164,8 +166,9 @@ export default function ImagePreview({
           saveUrl = await uploadForWechat(blob)
         } catch (e) {
           console.error('WeChat upload failed, falling back to data URL:', e)
-          // Data URL rarely saves on Android WeChat, but try it anyway and
-          // surface the browser-open hint alongside.
+          // Data URL usually saves fine on modern Android WeChat; upload is just
+          // a fallback that makes it more reliable for very large images. Keep a
+          // gentle hint (not an alarm) in case a specific device still fails.
           saveUrl = await toDataUrlForSave(blob)
           failed = true
         }
@@ -196,7 +199,18 @@ export default function ImagePreview({
       convertForWeChat(u).then(({ url, failed }) => {
         if (cancelled) return
         setSaveUrls((prev) => { const n = new Map(prev); n.set(i, url); return n })
-        if (failed) setFailedUrls((prev) => { const n = new Set(prev); n.add(u); return n })
+        if (failed) {
+          setFailedUrls((prev) => { const n = new Set(prev); n.add(u); return n })
+        } else {
+          // A successful conversion clears any earlier failure for this URL, so
+          // the hint disappears once a reliable save URL is available.
+          setFailedUrls((prev) => {
+            if (!prev.has(u)) return prev
+            const n = new Set(prev)
+            n.delete(u)
+            return n
+          })
+        }
       }).catch((e) => {
         console.error('WeChat save URL failed:', e)
         if (cancelled) return
@@ -578,11 +592,11 @@ export default function ImagePreview({
               <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/80 backdrop-blur-sm rounded-[var(--radius-sm)] text-xs text-white font-medium">
                 {displayLabel as string}
               </div>
-              {/* WeChat: real save URL failed → hint */}
+              {/* WeChat: real save URL failed → gentle hint (data URL usually still saves) */}
               {isWeChat && displayUrl && failedUrls.has(displayUrl) && (
                 <div className="absolute bottom-3 left-3 right-3 text-center">
-                  <span className="inline-block px-2 py-1 bg-black/80 rounded-[var(--radius-sm)] text-[10px] text-red-400/90">
-                    {lang === 'zh' ? '⚠️ 长按保存失败，点右上角 ··· 在浏览器中打开' : '⚠️ Tap ⋯ → Open in browser to save'}
+                  <span className="inline-block px-2 py-1 bg-black/80 rounded-[var(--radius-sm)] text-[10px] text-amber-400/90">
+                    {lang === 'zh' ? '💡 长按可保存；如失败点右上角 ··· 在浏览器中打开' : '💡 Long-press to save; else ⋯ → Open in browser'}
                   </span>
                 </div>
               )}
@@ -696,10 +710,10 @@ export default function ImagePreview({
               <div className="flex items-center gap-3">
                 <span className="text-sm text-white/50 font-medium">{lbLabel as string}</span>
                 {isWeChat && lbUrl && failedUrls.has(lbUrl) ? (
-                  <span className="text-[11px] text-red-400/80">
+                  <span className="text-[11px] text-amber-400/80">
                     {lang === 'zh'
-                      ? '⚠️ 无法直接保存，请点右上角 ··· → 在浏览器中打开'
-                      : '⚠️ Cannot save here — tap ⋯ → Open in browser'}
+                      ? '💡 长按可保存；如失败点 ⋯ → 在浏览器中打开'
+                      : '💡 Long-press to save; else ⋯ → Open in browser'}
                   </span>
                 ) : isWeChat ? (
                   <span className="text-[11px] text-amber-400/70">
