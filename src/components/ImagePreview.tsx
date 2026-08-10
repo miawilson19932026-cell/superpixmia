@@ -136,52 +136,75 @@ export default function ImagePreview({
   const lbUrl = lbItem?.resultUrl || lbItem?.originalUrl
   const lbLabel = lbItem?.resultUrl ? t.result : t.preview
 
-  // WeChat: swap blob URL → a saveable URL for the lightbox.
-  // iOS WeChat: base64 data URL works. Android WeChat: blob/data both fail —
-  // it needs a real HTTP(S) URL, so upload to Vercel Blob (temporary).
+  // WeChat: swap every shown blob URL → a saveable URL so long-press save works.
+  // iOS WeChat: base64 data URL. Android WeChat: blob/data both unsupported —
+  // needs a real HTTP(S) URL → upload to Vercel Blob (temporary).
   const wechatDataCache = useRef<Map<string, string>>(new Map())
-  const [wechatSaveUrl, setWechatSaveUrl] = useState<string | null>(null)
-  const [wechatFailed, setWechatFailed] = useState(false)
+  const wechatInFlight = useRef<Map<string, Promise<{ url: string; failed: boolean }>>>(new Map())
+  const [saveUrls, setSaveUrls] = useState<ReadonlyMap<number, string>>(new Map())
+  const [failedUrls, setFailedUrls] = useState<ReadonlySet<string>>(new Set())
 
-  const toDataUrlForSave = async (blob: Blob): Promise<string> => {
+  const toDataUrlForSave = useCallback(async (blob: Blob): Promise<string> => {
     if (blob.size > WECHAT_SAVE_MAX_BYTES) return downsampleForWeChat(blob)
     return blobToDataUrl(blob)
-  }
+  }, [])
 
-  useEffect(() => {
-    if (!lightbox || !isWeChat || !lbUrl) { setWechatSaveUrl(null); setWechatFailed(false); return }
-    let cancelled = false
-    setWechatSaveUrl(null)
-    setWechatFailed(false)
-    const cached = wechatDataCache.current.get(lbUrl)
-    if (cached) { setWechatSaveUrl(cached); return }
-    ;(async () => {
-      try {
-        const res = await fetch(lbUrl)
-        const blob = await res.blob()
-        let saveUrl: string
-        if (isAndroidWeChat) {
-          try {
-            saveUrl = await uploadForWechat(blob)
-          } catch (uploadErr) {
-            console.error('WeChat upload failed, falling back to data URL:', uploadErr)
-            // Data URL rarely saves on Android WeChat, but try it anyway and
-            // surface the browser-open hint alongside.
-            saveUrl = await toDataUrlForSave(blob)
-            if (!cancelled) setWechatFailed(true)
-          }
-        } else {
+  const convertForWeChat = useCallback(async (url: string): Promise<{ url: string; failed: boolean }> => {
+    const cached = wechatDataCache.current.get(url)
+    if (cached) return { url: cached, failed: false }
+    const inflight = wechatInFlight.current.get(url)
+    if (inflight) return inflight
+    const p = (async (): Promise<{ url: string; failed: boolean }> => {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      let saveUrl: string
+      let failed = false
+      if (isAndroidWeChat) {
+        try {
+          saveUrl = await uploadForWechat(blob)
+        } catch (e) {
+          console.error('WeChat upload failed, falling back to data URL:', e)
+          // Data URL rarely saves on Android WeChat, but try it anyway and
+          // surface the browser-open hint alongside.
           saveUrl = await toDataUrlForSave(blob)
+          failed = true
         }
-        wechatDataCache.current.set(lbUrl, saveUrl)
-        if (!cancelled) setWechatSaveUrl(saveUrl)
-      } catch (e) {
-        console.error('WeChat save URL failed:', e)
-        if (!cancelled) setWechatFailed(true)
+      } else {
+        saveUrl = await toDataUrlForSave(blob)
       }
+      wechatDataCache.current.set(url, saveUrl)
+      return { url: saveUrl, failed }
     })()
+    wechatInFlight.current.set(url, p)
+    return p
+  }, [toDataUrlForSave])
+
+  // Batch-convert shown URLs in WeChat so grid thumbs / single preview /
+  // lightbox all get a saveable src.
+  useEffect(() => {
+    if (!isWeChat || items.length === 0) { setSaveUrls(new Map()); setFailedUrls(new Set()); return }
+    let cancelled = false
+    const seeded = new Map<number, string>()
+    items.forEach((item, i) => {
+      const u = item.resultUrl || item.originalUrl
+      if (u && wechatDataCache.current.has(u)) seeded.set(i, wechatDataCache.current.get(u)!)
+    })
+    setSaveUrls(seeded)
+    items.forEach((item, i) => {
+      const u = item.resultUrl || item.originalUrl
+      if (!u || wechatDataCache.current.has(u)) return
+      convertForWeChat(u).then(({ url, failed }) => {
+        if (cancelled) return
+        setSaveUrls((prev) => { const n = new Map(prev); n.set(i, url); return n })
+        if (failed) setFailedUrls((prev) => { const n = new Set(prev); n.add(u); return n })
+      }).catch((e) => {
+        console.error('WeChat save URL failed:', e)
+        if (cancelled) return
+        setFailedUrls((prev) => { const n = new Set(prev); n.add(u); return n })
+      })
+    })
     return () => { cancelled = true }
-  }, [lightbox, lightboxIndex, lbUrl])
+  }, [isWeChat, items, convertForWeChat])
 
   const imageOfText = (idx: number) => (t.imageOf as string)
     .replace('{current}', String(idx + 1))
@@ -408,7 +431,7 @@ export default function ImagePreview({
             <div className="rounded-[var(--radius-xl)] overflow-hidden p-2 sm:p-3">
             <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
               {items.map((item, i) => {
-                const url = item.resultUrl || item.originalUrl
+                const url = saveUrls.get(i) ?? (item.resultUrl || item.originalUrl)
                 const isDragTarget = dragOverIdx === i
                 return (
                   <div
@@ -547,7 +570,7 @@ export default function ImagePreview({
               onClick={() => openLightbox(0)}
             >
               <img
-                src={displayUrl}
+                src={saveUrls.get(0) ?? displayUrl}
                 alt={displayLabel as string}
                 className="max-w-full max-h-[140px] sm:max-h-[200px] object-contain rounded-[var(--radius-sm)]"
               />
@@ -555,6 +578,14 @@ export default function ImagePreview({
               <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/80 backdrop-blur-sm rounded-[var(--radius-sm)] text-xs text-white font-medium">
                 {displayLabel as string}
               </div>
+              {/* WeChat: real save URL failed → hint */}
+              {isWeChat && displayUrl && failedUrls.has(displayUrl) && (
+                <div className="absolute bottom-3 left-3 right-3 text-center">
+                  <span className="inline-block px-2 py-1 bg-black/80 rounded-[var(--radius-sm)] text-[10px] text-red-400/90">
+                    {lang === 'zh' ? '⚠️ 长按保存失败，点右上角 ··· 在浏览器中打开' : '⚠️ Tap ⋯ → Open in browser to save'}
+                  </span>
+                </div>
+              )}
               {/* Drop hint overlay */}
               {dragOverArea && onDropFiles && (
                 <div className="absolute inset-0 bg-[var(--accent)]/10 ring-2 ring-[var(--accent)]/50 rounded-[var(--radius-xl)] flex items-center justify-center z-10 pointer-events-none">
@@ -635,7 +666,7 @@ export default function ImagePreview({
               onMouseLeave={onMouseUp}
             >
               <img
-                src={isWeChat && wechatSaveUrl ? wechatSaveUrl : lbUrl}
+                src={saveUrls.get(lightboxIndex) ?? lbUrl}
                 alt={lbLabel as string}
                 draggable={false}
                 className="max-w-full max-h-[65vh] object-contain select-none transition-transform duration-[50ms] ease-linear"
@@ -650,8 +681,8 @@ export default function ImagePreview({
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
               />
-              {/* WeChat: data URL not ready yet */}
-              {isWeChat && wechatSaveUrl == null && (
+              {/* WeChat: save URL not ready yet */}
+              {isWeChat && lbUrl && !saveUrls.has(lightboxIndex) && !failedUrls.has(lbUrl) && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                   <span className="px-3 py-1.5 bg-black/70 rounded-full text-xs text-white/80">
                     {lang === 'zh' ? '正在生成可保存图片…' : 'Preparing saveable image…'}
@@ -664,7 +695,7 @@ export default function ImagePreview({
             <div className="flex items-center justify-between px-4 py-3 border-t border-[rgba(139,92,246,0.08)]">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-white/50 font-medium">{lbLabel as string}</span>
-                {isWeChat && wechatFailed ? (
+                {isWeChat && lbUrl && failedUrls.has(lbUrl) ? (
                   <span className="text-[11px] text-red-400/80">
                     {lang === 'zh'
                       ? '⚠️ 无法直接保存，请点右上角 ··· → 在浏览器中打开'
