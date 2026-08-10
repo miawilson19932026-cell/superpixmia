@@ -157,7 +157,7 @@ export default function SeoContent() {
   return (
     <section
       aria-label={c.faqTitle}
-      className="border-t border-[var(--border)] py-12 sm:py-16"
+      className="py-12 sm:py-16"
     >
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] tracking-tight">
