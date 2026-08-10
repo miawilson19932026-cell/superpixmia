@@ -5,6 +5,48 @@ import { formatSize } from '../utils'
 
 const isWeChat = /MicroMessenger/i.test(navigator.userAgent)
 
+// WeChat's built-in webview (X5/XWeb) can't reliably save blob: URLs to the
+// photo album — long-press save fails with "保存失败". Convert to a base64
+// data URL for the lightbox so WeChat long-press save works.
+const WECHAT_SAVE_MAX_BYTES = 8 * 1024 * 1024
+const WECHAT_MAX_EDGE = 2560
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const fr = new FileReader()
+    fr.onload = () => resolve(fr.result as string)
+    fr.onerror = () => reject(fr.error)
+    fr.readAsDataURL(blob)
+  })
+}
+
+// Huge base64 strings can blow up mobile memory or fail to save. Downsample
+// oversized results (keeping alpha for PNG/WebP, JPEG for the rest).
+async function downsampleForWeChat(blob: Blob): Promise<string> {
+  const objUrl = URL.createObjectURL(blob)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = () => reject(new Error('image decode failed'))
+      el.src = objUrl
+    })
+    const scale = Math.min(1, WECHAT_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight))
+    const w = Math.max(1, Math.round(img.naturalWidth * scale))
+    const h = Math.max(1, Math.round(img.naturalHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('no 2d context')
+    ctx.drawImage(img, 0, 0, w, h)
+    const mime = blob.type === 'image/png' || blob.type === 'image/webp' ? 'image/png' : 'image/jpeg'
+    return canvas.toDataURL(mime, 0.92)
+  } finally {
+    URL.revokeObjectURL(objUrl)
+  }
+}
+
 export interface PreviewItem {
   originalUrl: string
   resultUrl: string | null
@@ -91,6 +133,32 @@ export default function ImagePreview({
   const lbItem = items[lightboxIndex]
   const lbUrl = lbItem?.resultUrl || lbItem?.originalUrl
   const lbLabel = lbItem?.resultUrl ? t.result : t.preview
+
+  // WeChat: swap blob URL → data URL so long-press save to album works
+  const wechatDataCache = useRef<Map<string, string>>(new Map())
+  const [wechatSaveUrl, setWechatSaveUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!lightbox || !isWeChat || !lbUrl) { setWechatSaveUrl(null); return }
+    let cancelled = false
+    setWechatSaveUrl(null)
+    const cached = wechatDataCache.current.get(lbUrl)
+    if (cached) { setWechatSaveUrl(cached); return }
+    ;(async () => {
+      try {
+        const res = await fetch(lbUrl)
+        const blob = await res.blob()
+        const dataUrl = blob.size > WECHAT_SAVE_MAX_BYTES
+          ? await downsampleForWeChat(blob)
+          : await blobToDataUrl(blob)
+        wechatDataCache.current.set(lbUrl, dataUrl)
+        if (!cancelled) setWechatSaveUrl(dataUrl)
+      } catch (e) {
+        console.error('WeChat save data URL failed:', e)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [lightbox, lightboxIndex, lbUrl])
 
   const imageOfText = (idx: number) => (t.imageOf as string)
     .replace('{current}', String(idx + 1))
@@ -538,18 +606,18 @@ export default function ImagePreview({
 
             {/* Image area */}
             <div
-              className="flex-1 flex items-center justify-center p-6 min-h-[200px] overflow-hidden"
+              className="flex-1 flex items-center justify-center p-6 min-h-[200px] overflow-hidden relative"
               onMouseMove={onMouseMove}
               onMouseUp={onMouseUp}
               onMouseLeave={onMouseUp}
             >
               <img
-                src={lbUrl}
+                src={isWeChat && wechatSaveUrl ? wechatSaveUrl : lbUrl}
                 alt={lbLabel as string}
                 draggable={false}
                 className="max-w-full max-h-[65vh] object-contain select-none transition-transform duration-[50ms] ease-linear"
                 style={{
-                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  transform: zoom > 1 ? `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` : undefined,
                   cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
                 }}
                 onWheel={onWheel}
@@ -559,6 +627,14 @@ export default function ImagePreview({
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
               />
+              {/* WeChat: data URL not ready yet */}
+              {isWeChat && wechatSaveUrl == null && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                  <span className="px-3 py-1.5 bg-black/70 rounded-full text-xs text-white/80">
+                    {lang === 'zh' ? '正在生成可保存图片…' : 'Preparing saveable image…'}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Bottom bar */}
