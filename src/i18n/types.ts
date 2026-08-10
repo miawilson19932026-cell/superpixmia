@@ -75,9 +75,12 @@ export interface Translations {
   catBubble: string
 }
 
-// Detect language from browser or localStorage
+// Detect language from URL param, browser, or localStorage
 export function detectLang(): Lang {
   if (typeof window === 'undefined') return 'en'
+  // URL ?lang= wins — the sitemap lists /?lang=en and /?lang=zh variants
+  const urlLang = new URLSearchParams(window.location.search).get('lang')
+  if (urlLang === 'en' || urlLang === 'zh') return urlLang
   const stored = localStorage.getItem('pixmia-lang') as Lang | null
   if (stored === 'en' || stored === 'zh') return stored
   const nav = navigator.language.toLowerCase()

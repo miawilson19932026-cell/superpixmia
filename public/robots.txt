@@ -2,6 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://superpixmia.com/sitemap.xml
+Sitemap: https://www.superpixmia.com/sitemap.xml
 
 # Crawl-delay is not set; modern crawlers respect server load

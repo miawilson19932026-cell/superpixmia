@@ -12,6 +12,7 @@ import ResizePanel from './components/ResizePanel'
 import CompressPanel from './components/CompressPanel'
 import BgRemovePanel from './components/BgRemovePanel'
 import ConvertPanel from './components/ConvertPanel'
+import SeoContent from './components/SeoContent'
 
 /* ── Gaming Icons (outline / filled) ── */
 const gameIcons: Record<ToolType, { outline: React.ReactNode; filled: React.ReactNode }> = {
@@ -762,6 +763,8 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <SeoContent />
 
       <footer className="border-t border-[var(--border)] py-4 mt-auto">
         <div className="mx-auto max-w-6xl px-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[var(--text-dim)]">
