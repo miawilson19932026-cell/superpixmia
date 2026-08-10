@@ -2,8 +2,10 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import type { DragEvent } from 'react'
 import { useTranslation } from '../i18n'
 import { formatSize } from '../utils'
+import { uploadForWechat } from '../utils/wechat'
 
 const isWeChat = /MicroMessenger/i.test(navigator.userAgent)
+const isAndroidWeChat = isWeChat && /Android/i.test(navigator.userAgent)
 
 // WeChat's built-in webview (X5/XWeb) can't reliably save blob: URLs to the
 // photo album — long-press save fails with "保存失败". Convert to a base64
@@ -134,27 +136,48 @@ export default function ImagePreview({
   const lbUrl = lbItem?.resultUrl || lbItem?.originalUrl
   const lbLabel = lbItem?.resultUrl ? t.result : t.preview
 
-  // WeChat: swap blob URL → data URL so long-press save to album works
+  // WeChat: swap blob URL → a saveable URL for the lightbox.
+  // iOS WeChat: base64 data URL works. Android WeChat: blob/data both fail —
+  // it needs a real HTTP(S) URL, so upload to Vercel Blob (temporary).
   const wechatDataCache = useRef<Map<string, string>>(new Map())
   const [wechatSaveUrl, setWechatSaveUrl] = useState<string | null>(null)
+  const [wechatFailed, setWechatFailed] = useState(false)
+
+  const toDataUrlForSave = async (blob: Blob): Promise<string> => {
+    if (blob.size > WECHAT_SAVE_MAX_BYTES) return downsampleForWeChat(blob)
+    return blobToDataUrl(blob)
+  }
 
   useEffect(() => {
-    if (!lightbox || !isWeChat || !lbUrl) { setWechatSaveUrl(null); return }
+    if (!lightbox || !isWeChat || !lbUrl) { setWechatSaveUrl(null); setWechatFailed(false); return }
     let cancelled = false
     setWechatSaveUrl(null)
+    setWechatFailed(false)
     const cached = wechatDataCache.current.get(lbUrl)
     if (cached) { setWechatSaveUrl(cached); return }
     ;(async () => {
       try {
         const res = await fetch(lbUrl)
         const blob = await res.blob()
-        const dataUrl = blob.size > WECHAT_SAVE_MAX_BYTES
-          ? await downsampleForWeChat(blob)
-          : await blobToDataUrl(blob)
-        wechatDataCache.current.set(lbUrl, dataUrl)
-        if (!cancelled) setWechatSaveUrl(dataUrl)
+        let saveUrl: string
+        if (isAndroidWeChat) {
+          try {
+            saveUrl = await uploadForWechat(blob)
+          } catch (uploadErr) {
+            console.error('WeChat upload failed, falling back to data URL:', uploadErr)
+            // Data URL rarely saves on Android WeChat, but try it anyway and
+            // surface the browser-open hint alongside.
+            saveUrl = await toDataUrlForSave(blob)
+            if (!cancelled) setWechatFailed(true)
+          }
+        } else {
+          saveUrl = await toDataUrlForSave(blob)
+        }
+        wechatDataCache.current.set(lbUrl, saveUrl)
+        if (!cancelled) setWechatSaveUrl(saveUrl)
       } catch (e) {
-        console.error('WeChat save data URL failed:', e)
+        console.error('WeChat save URL failed:', e)
+        if (!cancelled) setWechatFailed(true)
       }
     })()
     return () => { cancelled = true }
@@ -641,7 +664,13 @@ export default function ImagePreview({
             <div className="flex items-center justify-between px-4 py-3 border-t border-[rgba(139,92,246,0.08)]">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-white/50 font-medium">{lbLabel as string}</span>
-                {isWeChat ? (
+                {isWeChat && wechatFailed ? (
+                  <span className="text-[11px] text-red-400/80">
+                    {lang === 'zh'
+                      ? '⚠️ 无法直接保存，请点右上角 ··· → 在浏览器中打开'
+                      : '⚠️ Cannot save here — tap ⋯ → Open in browser'}
+                  </span>
+                ) : isWeChat ? (
                   <span className="text-[11px] text-amber-400/70">
                     👆 {lang === 'zh' ? '长按图片即可保存到相册' : 'Long-press to save'}
                   </span>

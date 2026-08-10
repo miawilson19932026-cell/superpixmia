@@ -12,6 +12,7 @@
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@vercel/blob": "^2.7.0",
     "browser-image-compression": "^2.0.2",
     "jszip": "^3.10.1",
     "react": "^19.2.8",
