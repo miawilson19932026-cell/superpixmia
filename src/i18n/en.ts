@@ -3,6 +3,8 @@ import type { Translations } from './types'
 const en: Translations = {
   brand: 'SuperPixMia',
   brandTagline: 'Free online image tools — resize, compress, remove BG & convert in your browser',
+  navHome: 'Home',
+  navHelp: 'Help',
   toolResize: 'Resize',
   toolCompress: 'Compress',
   toolRemoveBg: 'Remove BG',

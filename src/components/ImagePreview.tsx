@@ -4,8 +4,10 @@ import { useTranslation } from '../i18n'
 import { formatSize } from '../utils'
 import { uploadForWechat } from '../utils/wechat'
 
-const isWeChat = /MicroMessenger/i.test(navigator.userAgent)
-const isAndroidWeChat = isWeChat && /Android/i.test(navigator.userAgent)
+// SSR-safe: prerender runs in Node where navigator is undefined.
+const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+const isWeChat = /MicroMessenger/i.test(ua)
+const isAndroidWeChat = isWeChat && /Android/i.test(ua)
 
 // WeChat's built-in webview (X5/XWeb) can't reliably save blob: URLs to the
 // photo album — long-press save fails with "保存失败". We hand WeChat a saveable

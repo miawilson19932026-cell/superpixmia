@@ -1,25 +1,210 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- ── Homepage ── -->
   <url>
     <loc>https://www.superpixmia.com/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/?lang=en"/>
     <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/?lang=zh"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/"/>
-    <changefreq>monthly</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
   </url>
   <url>
     <loc>https://www.superpixmia.com/?lang=en</loc>
-    <changefreq>monthly</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
   </url>
   <url>
     <loc>https://www.superpixmia.com/?lang=zh</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+
+  <!-- ── Image Compressor ── -->
+  <url>
+    <loc>https://www.superpixmia.com/compress</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/compress?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/compress?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/compress"/>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
-    <lastmod>2026-08-10</lastmod>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/compress?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/compress?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+
+  <!-- ── AI Background Remover ── -->
+  <url>
+    <loc>https://www.superpixmia.com/remove-bg</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/remove-bg?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/remove-bg?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/remove-bg"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/remove-bg?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/remove-bg?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+
+  <!-- ── Image Resizer ── -->
+  <url>
+    <loc>https://www.superpixmia.com/resize</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/resize?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/resize?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/resize"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/resize?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/resize?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+
+  <!-- ── Image Format Converter ── -->
+  <url>
+    <loc>https://www.superpixmia.com/convert</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/convert?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/convert?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/convert"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/convert?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/convert?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+
+  <!-- ── Help Center ── -->
+  <url>
+    <loc>https://www.superpixmia.com/help</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/help?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/help?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/help"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+
+  <!-- ── Help: How to Remove Background ── -->
+  <url>
+    <loc>https://www.superpixmia.com/help/how-to-remove-bg</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/help/how-to-remove-bg?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/help/how-to-remove-bg?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/help/how-to-remove-bg"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help/how-to-remove-bg?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help/how-to-remove-bg?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+
+  <!-- ── Help: PNG Compression Guide ── -->
+  <url>
+    <loc>https://www.superpixmia.com/help/png-compression-guide</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/help/png-compression-guide?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/help/png-compression-guide?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/help/png-compression-guide"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help/png-compression-guide?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help/png-compression-guide?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+
+  <!-- ── Help: Image Formats Comparison ── -->
+  <url>
+    <loc>https://www.superpixmia.com/help/image-formats-comparison</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/help/image-formats-comparison?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/help/image-formats-comparison?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/help/image-formats-comparison"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help/image-formats-comparison?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help/image-formats-comparison?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
   </url>
 </urlset>

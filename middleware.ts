@@ -1,54 +1,52 @@
-// Vercel Edge Middleware — Chinese SEO: serve zh meta tags to Chinese users & Baidu spider
+// Vercel Edge Middleware — Chinese SEO: serve zh meta tags + zh structured data
+// to Chinese users & Baidu spider, per route.
+//
+// English title/desc/JSON-LD is already baked into each prerendered static page
+// by scripts/prerender.mjs. For accept-language zh, this swaps in the Chinese
+// title/description/keywords/OG and injects Chinese FAQPage/HowTo JSON-LD. The
+// SPA then hydrates into Chinese UI via ?lang= / navigator detection.
+import { getRouteSeo } from './src/lib/seo'
+import { ldToScript, zhToolLd, zhHomeFaqLd, zhArticleLd } from './src/lib/seo-jsonld'
+import type { ToolType } from './src/types'
 
-// Chinese FAQPage JSON-LD — questions mirror the visible zh FAQ in SeoContent.tsx
-// (Google surfaces FAQ rich results only when questions appear in visible content).
-const ZH_FAQ_JSONLD = `<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [{
-    "@type": "Question",
-    "name": "SuperPixMia 真的免费吗？",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "是的，SuperPixMia 完全免费，无广告、无水印、无隐藏收费。所有图片处理都在你的浏览器本地完成。"
-    }
-  }, {
-    "@type": "Question",
-    "name": "我的图片会被上传到服务器吗？",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "不会。所有图片处理 100% 在浏览器内通过 Canvas API、WebAssembly 和客户端压缩库完成，你的图片绝不会离开你的设备。"
-    }
-  }, {
-    "@type": "Question",
-    "name": "SuperPixMia 支持哪些图片格式？",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "SuperPixMia 支持 9 种图片格式：PNG、JPEG、WebP、AVIF、GIF、BMP、SVG、ICO、TIFF，可进行改尺寸、压缩、抠图和格式互转。"
-    }
-  }, {
-    "@type": "Question",
-    "name": "可以一次处理多张图片吗？",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "可以。SuperPixMia 支持最多 15 张图片的批量处理，可同时改尺寸、压缩或转换格式，并以 ZIP 压缩包形式下载。"
-    }
-  }, {
-    "@type": "Question",
-    "name": "抠图功能是怎么实现的？",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "SuperPixMia 使用 AI 抠图技术，通过 WebAssembly 在浏览器内完整运行。图片不会发送到任何外部服务器，隐私完全有保障。"
-    }
-  }]
+const TOOL_PATHS: Record<string, ToolType> = {
+  '/compress': 'compress',
+  '/remove-bg': 'remove-bg',
+  '/resize': 'resize',
+  '/convert': 'convert',
 }
-</script>`
+
+const HELP_PATHS = ['/help', '/help/how-to-remove-bg', '/help/png-compression-guide', '/help/image-formats-comparison']
+
+const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS])
+
+function escapeAttr(s: string): string {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+}
+
+// Chinese structured data per path: home gets FAQPage, tool pages get HowTo +
+// FAQPage, help articles get an Article block, /help gets nothing extra.
+function zhJsonLdBlocks(path: string): string[] {
+  if (path === '/') {
+    return [ldToScript(zhHomeFaqLd())]
+  }
+  const tool = TOOL_PATHS[path]
+  if (tool) {
+    const { howTo, faq } = zhToolLd(tool)
+    return [ldToScript(howTo), ldToScript(faq)]
+  }
+  if (path !== '/help') {
+    const article = zhArticleLd(path)
+    if (article) return [ldToScript(article)]
+  }
+  return []
+}
 
 export default async function middleware(request: Request): Promise<Response> {
   const url = new URL(request.url)
+  const path = url.pathname === '/index.html' ? '/' : url.pathname
 
-  if (url.pathname !== '/' && url.pathname !== '/index.html') {
+  if (!SEO_PATHS.has(path)) {
     return fetch(request)
   }
 
@@ -66,15 +64,21 @@ export default async function middleware(request: Request): Promise<Response> {
 
   let html = await res.text()
 
-  // Replace key SEO tags with Chinese versions for Baidu ranking
-  html = html.replace(/<title>.*?<\/title>/, '<title>SuperPixMia — 免费在线图片工具 | PNG压缩、图片压缩、AI抠图、格式转换</title>')
-  html = html.replace(/<meta name="description"[^>]*>/, '<meta name="description" content="SuperPixMia 免费在线图片处理工具，支持PNG压缩、图片压缩、AI抠图、格式转换。纯浏览器端处理，无需上传，100%保护隐私。支持9种图片格式。" />')
-  html = html.replace(/<meta name="keywords"[^>]*>/, '<meta name="keywords" content="图片工具,PNG压缩,图片压缩,在线抠图,AI抠图,图片格式转换,图片改尺寸,JPEG压缩,WebP转换,AVIF转换,批量图片处理,免上传图片工具,免费在线压缩" />')
-  html = html.replace(/<meta property="og:title"[^>]*>/, '<meta property="og:title" content="SuperPixMia — 免费在线图片工具 | PNG压缩、图片压缩、抠图、格式转换" />')
-  html = html.replace(/<meta property="og:description"[^>]*>/, '<meta property="og:description" content="免费在线图片处理工具 — PNG压缩、图片压缩、AI抠图、格式转换，浏览器端完成，无需上传，100%隐私保护。" />')
+  const seo = getRouteSeo(path)
+  const zh = seo.zh
 
-  // Inject Chinese FAQPage structured data for zh users & Baidu spider
-  html = html.replace('</head>', `${ZH_FAQ_JSONLD}\n</head>`)
+  // Replace English meta with Chinese versions
+  html = html.replace(/<title>.*?<\/title>/, `<title>${zh.title}</title>`)
+  html = html.replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${escapeAttr(zh.description)}" />`)
+  html = html.replace(/<meta name="keywords"[^>]*>/, `<meta name="keywords" content="${escapeAttr(zh.keywords)}" />`)
+  html = html.replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${escapeAttr(seo.ogTitle)}" />`)
+  html = html.replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${escapeAttr(seo.ogDescription)}" />`)
+
+  // Inject Chinese structured data for zh users & Baidu spider
+  const zhBlocks = zhJsonLdBlocks(path)
+  if (zhBlocks.length > 0) {
+    html = html.replace('</head>', `${zhBlocks.join('\n')}\n</head>`)
+  }
 
   return new Response(html, {
     status: res.status,
@@ -82,4 +86,4 @@ export default async function middleware(request: Request): Promise<Response> {
   })
 }
 
-export const config = { matcher: ['/', '/index.html'] }
+export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/help', '/help/:path*'] }

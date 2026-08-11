@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from '../i18n'
 
-const isWeChat = /MicroMessenger/i.test(navigator.userAgent)
+// SSR-safe: prerender runs in Node where navigator is undefined.
+const isWeChat = typeof navigator !== 'undefined' && /MicroMessenger/i.test(navigator.userAgent)
 
 // [frame, duration_ms] — frames 4-5 slower
 const FRAME_SEQ: [number, number][] = [

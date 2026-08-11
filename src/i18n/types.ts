@@ -3,6 +3,8 @@ import type { Lang } from '../types'
 export interface Translations {
   brand: string
   brandTagline: string
+  navHome: string
+  navHelp: string
   toolResize: string
   toolCompress: string
   toolRemoveBg: string
