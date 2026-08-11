@@ -24,7 +24,7 @@ const SPARKLES: number[][] = [
   [25, -5, 0.5, 1.8,  2.1],
 ]
 
-export default function CatMascot() {
+export default function CatMascot({ positionClass }: { positionClass?: string }) {
   const { t, lang } = useTranslation()
   const [frame, setFrame] = useState(1)
   const [winking, setWinking] = useState(false)
@@ -81,10 +81,10 @@ export default function CatMascot() {
     <>
     <button
       onClick={handleClick}
-      className="absolute -bottom-32 -left-4 sm:-bottom-44 sm:left-auto sm:-right-28 z-10 w-[150px] h-[150px] sm:w-[280px] sm:h-[280px]
+      className={`${positionClass ?? 'absolute -bottom-32 -left-4 sm:-bottom-44 sm:left-auto sm:-right-28'} z-10 w-[150px] h-[150px] sm:w-[280px] sm:h-[280px]
         rounded-full cursor-pointer select-none
         hover:scale-110 active:scale-95 transition-transform duration-200
-        animate-float"
+        animate-float`}
       title="Click me! 🐱"
       aria-label="Cat mascot"
     >

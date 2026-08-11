@@ -5,6 +5,7 @@ import { helpArticles, type HelpArticleData } from '../lib/help-articles'
 import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
 import { toolPaths } from '../lib/routes'
 import type { ToolType } from '../types'
+import CatMascot from './CatMascot'
 
 // Feather-style helpers
 const sectionIcons: Record<string, React.ReactNode> = {
@@ -197,6 +198,9 @@ export function HelpHome() {
             </Link>
           ))}
         </div>
+        <div className="flex justify-center pt-8 sm:pt-10">
+          <CatMascot positionClass="relative block" />
+        </div>
         </div>
       </div>
     </main>
@@ -327,6 +331,9 @@ export function HelpArticlePage({ data }: { data: HelpArticleData }) {
           >
             {en ? 'Start using the tools' : '立即使用工具'}
           </Link>
+        </div>
+        <div className="flex justify-center pt-8 sm:pt-10">
+          <CatMascot positionClass="relative block" />
         </div>
         </div>
       </div>
