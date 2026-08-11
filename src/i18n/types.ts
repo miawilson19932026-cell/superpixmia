@@ -37,10 +37,12 @@ export interface Translations {
   bgWhite: string
   bgBlack: string
   applyRemoveBg: string
+  bgRemoveGuide: string
   convertTitle: string
   convertTo: string
   convertSize: string
   applyConvert: string
+  convertGuide: string
   download: string
   downloading: string
   footerPrivacy: string

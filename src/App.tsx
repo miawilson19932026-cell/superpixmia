@@ -118,7 +118,7 @@ export default function App() {
   const { t, lang } = useTranslation()
 
   const [mode, setMode] = useState<Mode>('single')
-  const [activeTool, setActiveTool] = useState<ToolType>('resize')
+  const [activeTool, setActiveTool] = useState<ToolType>('compress')
   const [images, setImages] = useState<ImageItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [toolResults, setToolResults] = useState<Record<ToolType, ToolResult[]>>({

@@ -34,6 +34,9 @@ export default function ConvertPanel({ onConvert, processing }: Props) {
       {/* Format selector */}
       <div>
         <p className="text-[11px] text-[var(--text-dim)] mb-2 uppercase tracking-wide">{t.convertTo}</p>
+        {!format && (
+          <p className="text-xs text-[var(--accent)] mb-2 animate-pulse">{t.convertGuide}</p>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
           {FORMATS.map((f) => {
             const isLossyFmt = f.value === 'jpeg' || f.value === 'webp' || f.value === 'avif'

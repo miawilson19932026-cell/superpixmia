@@ -131,13 +131,16 @@ export default function BgRemovePanel({ resultUrl, onRemoveBg, processing, progr
 
       {/* Action button */}
       {!resultUrl && (
-        <button
-          onClick={() => onRemoveBg()}
-          disabled={processing}
-          className="w-full py-2.5 btn-gradient text-sm font-medium rounded-[var(--radius-md)] disabled:opacity-40 disabled:pointer-events-none"
-        >
-          {processing ? t.removingBg : t.removeBgBtn}
-        </button>
+        <div>
+          <p className="text-xs text-center text-[var(--accent)] mb-2 animate-pulse">{t.bgRemoveGuide}</p>
+          <button
+            onClick={() => onRemoveBg()}
+            disabled={processing}
+            className="w-full py-2.5 btn-gradient text-sm font-medium rounded-[var(--radius-md)] disabled:opacity-40 disabled:pointer-events-none"
+          >
+            {processing ? t.removingBg : t.removeBgBtn}
+          </button>
+        </div>
       )}
     </div>
   )
