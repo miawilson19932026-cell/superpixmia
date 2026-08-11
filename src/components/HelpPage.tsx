@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import { useSeoMeta } from '../lib/useSeoMeta'
 import { helpArticles, type HelpArticleData } from '../lib/help-articles'
@@ -39,6 +39,29 @@ function useLang() {
   return lang
 }
 
+// "Back" button — returns to the page the user came from, or home on direct entry.
+function BackButton() {
+  const navigate = useNavigate()
+  const { lang } = useTranslation()
+  const goBack = () => {
+    // React Router keeps an idx on history.state; idx > 0 means there's an
+    // in-app page to go back to. Direct visits (idx 0/undefined) go home.
+    if (typeof window !== 'undefined' && (window.history.state?.idx ?? 0) > 0) navigate(-1)
+    else navigate('/')
+  }
+  return (
+    <button
+      onClick={goBack}
+      className="inline-flex items-center gap-1.5 rounded-full glass border border-white/[0.08] px-3 py-1.5 text-xs font-medium text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+        <path d="M19 12H5M12 19l-7-7 7-7" />
+      </svg>
+      {lang === 'zh' ? '返回' : 'Back'}
+    </button>
+  )
+}
+
 export function HelpHome() {
   useSeoMeta()
   const lang = useLang()
@@ -47,6 +70,9 @@ export function HelpHome() {
   return (
     <main className="flex-1 px-3 sm:px-6 py-8 sm:py-12 pb-24 sm:pb-6">
       <div className="mx-auto max-w-3xl">
+        <div className="mb-6">
+          <BackButton />
+        </div>
         <div className="text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[var(--text-dim)]">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
@@ -100,6 +126,9 @@ export function HelpArticlePage({ data }: { data: HelpArticleData }) {
   return (
     <main className="flex-1 px-3 sm:px-6 py-8 sm:py-12 pb-24 sm:pb-6">
       <div className="mx-auto max-w-3xl">
+        <div className="mb-6">
+          <BackButton />
+        </div>
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 text-xs text-[var(--text-dim)]">
           <Link to="/" className="hover:text-[var(--text-primary)]">{en ? 'Home' : '首页'}</Link>

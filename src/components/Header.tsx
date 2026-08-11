@@ -57,8 +57,25 @@ export default function Header() {
             <NavLink to="/" end onClick={closeMenu} className={({ isActive }) => linkClass(isActive)}>
               {t.navHome}
             </NavLink>
-            <NavLink to="/help" onClick={closeMenu} className={({ isActive }) => linkClass(isActive)}>
-              {t.navHelp}
+            {/* Help = compact question-mark icon */}
+            <NavLink
+              to="/help"
+              onClick={closeMenu}
+              title={t.navHelp}
+              aria-label={t.navHelp}
+              className={({ isActive }) => `
+                shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
+                ${isActive
+                  ? 'glass-active text-[var(--accent)]'
+                  : 'text-[var(--text-dim)] hover:text-[var(--text-primary)] hover:bg-white/[0.04]'
+                }
+              `}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                <path d="M12 17h.01" />
+              </svg>
             </NavLink>
           </nav>
 
