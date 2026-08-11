@@ -1,15 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
-import { toolPathList } from '../lib/routes'
-import type { ToolType } from '../types'
-
-const toolNavLabelKey: Record<ToolType, string> = {
-  resize: 'toolResize',
-  compress: 'toolCompress',
-  'remove-bg': 'toolRemoveBg',
-  convert: 'toolConvert',
-}
 
 export default function Header() {
   const { t, lang, toggleLang } = useTranslation()
@@ -66,16 +57,6 @@ export default function Header() {
             <NavLink to="/" end onClick={closeMenu} className={({ isActive }) => linkClass(isActive)}>
               {t.navHome}
             </NavLink>
-            {toolPathList.map(({ tool, path }) => (
-              <NavLink
-                key={tool}
-                to={path}
-                onClick={closeMenu}
-                className={({ isActive }) => linkClass(isActive)}
-              >
-                {t[toolNavLabelKey[tool] as keyof typeof t] as string}
-              </NavLink>
-            ))}
             <NavLink to="/help" onClick={closeMenu} className={({ isActive }) => linkClass(isActive)}>
               {t.navHelp}
             </NavLink>
@@ -111,11 +92,6 @@ export default function Header() {
             <MobileNavLink to="/" onClick={closeMenu} active={pathname === '/'}>
               {t.navHome}
             </MobileNavLink>
-            {toolPathList.map(({ tool, path }) => (
-              <MobileNavLink key={tool} to={path} onClick={closeMenu} active={pathname === path}>
-                {t[toolNavLabelKey[tool] as keyof typeof t] as string}
-              </MobileNavLink>
-            ))}
             <MobileNavLink to="/help" onClick={closeMenu} active={pathname.startsWith('/help')}>
               {t.navHelp}
             </MobileNavLink>
