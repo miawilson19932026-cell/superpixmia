@@ -176,6 +176,23 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     ogTitle: 'Image Formats Compared — PNG vs JPEG vs WebP vs AVIF',
     ogDescription: 'A practical comparison of image formats: when to use each, size vs quality tradeoffs, browser support.',
   },
+  '/help/resize-image-guide': {
+    en: {
+      title: 'How to Resize an Image Online — Keep Quality & Proportions',
+      description:
+        'Learn how to resize images online without losing quality — pixel dimensions, aspect ratios, resize vs crop, and the right sizes for web, email, and social media.',
+      keywords: 'resize image, image resizer, resize online, aspect ratio, resize without losing quality',
+    },
+    zh: {
+      title: '如何在线调整图片尺寸 — 保持画质与比例',
+      description:
+        '详解如何在线调整图片尺寸：像素尺寸与分辨率、保持比例的技巧、缩放与裁剪的区别，以及网页、邮件、社交平台的最合适尺寸。',
+      keywords: '调整图片尺寸,在线改图片大小,图片缩放,宽高比,不失真缩放',
+    },
+    canonical: `${SITE}/help/resize-image-guide`,
+    ogTitle: 'How to Resize an Image Online — Keep Quality & Proportions',
+    ogDescription: 'Resize images online without losing quality — pixel dimensions, aspect ratios, and the right sizes for every use.',
+  },
 }
 
 export function getRouteSeo(pathname: string): RouteSeo {

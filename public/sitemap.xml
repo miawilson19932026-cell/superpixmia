@@ -207,4 +207,27 @@
     <priority>0.7</priority>
     <lastmod>2026-08-11</lastmod>
   </url>
+
+  <!-- ── Help: Resize Image Guide ── -->
+  <url>
+    <loc>https://www.superpixmia.com/help/resize-image-guide</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/help/resize-image-guide?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/help/resize-image-guide?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/help/resize-image-guide"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help/resize-image-guide?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/help/resize-image-guide?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-08-11</lastmod>
+  </url>
 </urlset>

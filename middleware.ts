@@ -16,7 +16,7 @@ const TOOL_PATHS: Record<string, ToolType> = {
   '/convert': 'convert',
 }
 
-const HELP_PATHS = ['/help', '/help/how-to-remove-bg', '/help/png-compression-guide', '/help/image-formats-comparison']
+const HELP_PATHS = ['/help', '/help/how-to-remove-bg', '/help/png-compression-guide', '/help/image-formats-comparison', '/help/resize-image-guide']
 
 const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS])
 

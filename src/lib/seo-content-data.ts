@@ -487,10 +487,12 @@ export const helpArticleLinks: Record<'en' | 'zh', { path: string; title: string
     { path: '/help/how-to-remove-bg', title: 'How to remove an image background' },
     { path: '/help/png-compression-guide', title: 'PNG compression guide' },
     { path: '/help/image-formats-comparison', title: 'Image formats compared' },
+    { path: '/help/resize-image-guide', title: 'How to resize an image without losing quality' },
   ],
   zh: [
     { path: '/help/how-to-remove-bg', title: '如何免费在线抠图去背景' },
     { path: '/help/png-compression-guide', title: 'PNG 压缩完全指南' },
     { path: '/help/image-formats-comparison', title: '图片格式对比' },
+    { path: '/help/resize-image-guide', title: '如何在线调整图片尺寸' },
   ],
 }

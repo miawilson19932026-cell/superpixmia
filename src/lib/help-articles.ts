@@ -428,4 +428,138 @@ export const helpArticles: HelpArticleData[] = [
       },
     ],
   },
+  {
+    path: '/help/resize-image-guide',
+    title: {
+      en: 'How to Resize an Image Online — Keep Quality & Proportions',
+      zh: '如何在线调整图片尺寸 — 保持画质与比例',
+    },
+    description: {
+      en: 'Learn how to resize images online without losing quality — pixel dimensions, aspect ratios, resize vs crop, and the right sizes for web, email, and social media.',
+      zh: '详解如何在线调整图片尺寸：像素尺寸与分辨率、保持比例的技巧、缩放与裁剪的区别，以及网页、邮件、社交平台的最合适尺寸。',
+    },
+    updated: '2026-08-11',
+    sections: [
+      {
+        heading: {
+          en: 'Why resizing matters',
+          zh: '为什么要调整图片尺寸',
+        },
+        body: [
+          {
+            en: 'Resizing changes an image\'s pixel dimensions (width × height). It affects three things at once: file size (fewer pixels = smaller file, faster loading), physical fit (matching a target layout exactly), and usability — oversized images are the #1 reason pages feel slow. Most photos taken on modern phones are 3000–8000px wide, far more than any screen needs.',
+            zh: '调整尺寸就是改变图片的像素尺寸（宽 × 高）。它同时影响三件事：文件大小（像素越少文件越小、加载越快）、尺寸适配（精确匹配目标布局）、以及可用性——超大图片是网页变慢的头号原因。现在的手机拍出的照片通常宽达 3000~8000 像素，远超任何屏幕的需要。',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'Common use cases — pick the right size',
+          zh: '常见场景 — 选对目标尺寸',
+        },
+        body: [
+          {
+            en: 'There is no single "correct" size — it depends on where the image will be shown. These are reliable starting points for the most common situations.',
+            zh: '不存在一个"万能尺寸"——取决于图片要显示在哪里。下面是常见场景的可靠起点。',
+          },
+        ],
+        bullets: {
+          en: [
+            'Web & blog images: 1200–1600px on the long edge is usually plenty',
+            'Social media: each platform has its own sweet spot (e.g. 1200×630 for shares)',
+            'Email attachments: under 1–2MB per file is a safe ceiling',
+            'Product/e-commerce photos: 2000px on the long edge balances detail and size',
+            'Avatars & icons: 400–800px is plenty for sharp display',
+          ],
+          zh: [
+            '网页和博客图片：长边 1200~1600px 通常足够',
+            '社交媒体：每个平台都有自己的最佳尺寸（比如分享图 1200×630）',
+            '邮件附件：每张控制在 1~2MB 以内比较稳妥',
+            '电商商品图：长边 2000px 在细节和体积之间较均衡',
+            '头像和图标：400~800px 已经足够清晰',
+          ],
+        },
+      },
+      {
+        heading: {
+          en: 'Aspect ratio — keep proportions or they\'ll stretch',
+          zh: '宽高比 — 锁定比例才不会变形',
+        },
+        body: [
+          {
+            en: 'The aspect ratio is width divided by height (for example 4:3 or 16:9). When you resize, keeping the ratio locked scales the image evenly — it never gets distorted. Unlock it and the image can be squashed or stretched. A landscape photo forced into a square without cropping will look squashed; crop it instead.',
+            zh: '宽高比就是宽除以高（比如 4:3、16:9）。缩放时锁定比例，图片会等比缩放——永远不会变形。解锁比例则可以拉伸压扁。把横版照片强行塞进正方形而不裁剪，看起来就是被压扁的；这时应该用裁剪。',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'Resize vs crop — two different jobs',
+          zh: '缩放 vs 裁剪 — 两种不同的需求',
+        },
+        body: [
+          {
+            en: 'Resizing scales the whole image down: everything stays, just smaller. Cropping cuts away parts of the image to change its shape or remove clutter. Use resize when you want the same picture at a smaller size; use crop when you want a different shape (e.g. a square avatar) or to remove unwanted edges. Often you crop first, then resize to the exact target dimensions.',
+            zh: '缩放是把整张图等比缩小——内容都还在，只是变小。裁剪是切掉图片的一部分，用来改变形状或去掉杂物。想要同一张图更小就用缩放；想要不同的形状（比如方形头像）或去掉多余边缘就用裁剪。通常是先裁剪，再缩放到精确的目标尺寸。',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: 'How to resize with SuperPixMia',
+          zh: '如何用 SuperPixMia 调整尺寸',
+        },
+        body: [
+          {
+            en: 'Open the Resize tool, drop your image, and enter the exact width/height (preset sizes are one click). Keep the ratio locked unless you deliberately want to distort. Everything runs locally in your browser — your photos never leave your device. After resizing, you can convert the result to WebP in the same session for an even smaller file.',
+            zh: '打开「调整尺寸」工具，拖入图片，输入精确的宽高（预设尺寸一键选择）。除非你故意要变形，否则保持比例锁定。全程在你的浏览器本地运行——照片不会离开你的设备。缩放后还可以在同一次会话里把结果转成 WebP，体积更小。',
+          },
+        ],
+        bullets: {
+          en: [
+            'Preset sizes for social & web (square, 1200×630, thumbnails)',
+            'Custom width/height with the aspect ratio locked by default',
+            'Batch up to 15 images to the same size, ZIP download',
+            'Resize first, then convert to WebP for the smallest file',
+          ],
+          zh: [
+            '社交与网页预设尺寸（方形、1200×630、缩略图）',
+            '自定义宽高，默认锁定宽高比',
+            '一次最多 15 张统一缩放，支持 ZIP 下载',
+            '先缩放，再转 WebP，体积最小',
+          ],
+        },
+      },
+    ],
+    faqs: [
+      {
+        q: { en: 'Does resizing lose quality?', zh: '缩放会损失画质吗？' },
+        a: {
+          en: 'Scaling down rarely causes visible loss — the image simply has fewer pixels. Upscaling (making a small image bigger) does soften it, because the extra pixels are interpolated guesses. Keep originals large and resize down for the best results.',
+          zh: '缩小尺寸几乎不会有肉眼可见的画质损失——只是像素变少了。放大（把小图变大）才会变模糊，因为多出来的像素都是插值猜出来的。保留原始大图、只做缩小，效果最好。',
+        },
+      },
+      {
+        q: { en: 'How do I resize without stretching?', zh: '怎么缩放才不会变形？' },
+        a: {
+          en: 'Keep the aspect ratio locked. That scales width and height together, so the image is never squashed or stretched. To change the shape, crop rather than unlock the ratio.',
+          zh: '锁定宽高比。这样宽和高同步缩放，图片永远不会被压扁或拉长。想改变形状时用裁剪，而不是解锁比例。',
+        },
+      },
+      {
+        q: { en: 'What size should I resize to?', zh: '应该缩放到多大？' },
+        a: {
+          en: 'For web content, 1200–1600px on the long edge covers almost every use. For email, aim under 1–2MB per file. For print, keep as large as possible. When in doubt, resize to the platform\'s recommended dimensions.',
+          zh: '网页内容长边 1200~1600px 基本覆盖所有场景。邮件每张控制在 1~2MB 内。印刷则尽量保留大尺寸。拿不准时，按平台推荐尺寸来。',
+        },
+      },
+      {
+        q: { en: 'Can I resize many images at once?', zh: '可以一次调整多张吗？' },
+        a: {
+          en: 'Yes, up to 15 images in one batch, all to the same dimensions, downloadable together as a ZIP.',
+          zh: '可以，一次最多 15 张，统一缩放到相同尺寸，支持打包成 ZIP 下载。',
+        },
+      },
+    ],
+  },
 ]

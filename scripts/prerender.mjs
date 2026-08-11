@@ -30,6 +30,7 @@ const ROUTES = [
   { path: '/help/how-to-remove-bg', tool: null, article: 'how-to-remove-bg' },
   { path: '/help/png-compression-guide', tool: null, article: 'png-compression-guide' },
   { path: '/help/image-formats-comparison', tool: null, article: 'image-formats-comparison' },
+  { path: '/help/resize-image-guide', tool: null, article: 'resize-image-guide' },
 ]
 
 function escapeAttr(s) {
