@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
+import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
+import { toolPaths } from '../lib/routes'
 
 export default function Header() {
   const { t, lang, toggleLang } = useTranslation()
@@ -143,13 +145,40 @@ export default function Header() {
           </div>
 
           {/* Nav links */}
-          <nav className="flex-1 p-3 space-y-1">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             <MobileNavLink to="/" onClick={closeMenu} active={pathname === '/'}>
               {t.navHome}
             </MobileNavLink>
             <MobileNavLink to="/help" onClick={closeMenu} active={pathname.startsWith('/help')}>
               {t.navHelp}
             </MobileNavLink>
+
+            {/* Tools — compact icon grid */}
+            <p className="pt-3 pb-1 text-[10px] uppercase tracking-[0.18em] text-[var(--text-dim)]">
+              {lang === 'zh' ? '工具' : 'Tools'}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {TOOL_KEYS.map((tool) => {
+                const isActive = pathname === toolPaths[tool]
+                const icons = toolIcons[tool]
+                const label = t[toolLabelKey[tool] as keyof typeof t] as string
+                return (
+                  <NavLink
+                    key={tool}
+                    to={toolPaths[tool]}
+                    onClick={closeMenu}
+                    className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition-all ${
+                      isActive
+                        ? 'glass-active text-[var(--accent)]'
+                        : 'text-[var(--text-dim)] hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <span className="h-4 w-4 shrink-0">{isActive ? icons.filled : icons.outline}</span>
+                    <span className="truncate">{label}</span>
+                  </NavLink>
+                )
+              })}
+            </div>
           </nav>
 
           {/* Lang toggle */}
