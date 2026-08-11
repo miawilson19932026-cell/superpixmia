@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 
@@ -9,6 +9,14 @@ export default function Header() {
 
   // Close the mobile menu when navigating
   const closeMenu = () => setMenuOpen(false)
+
+  // Lock page scroll while the mobile drawer is open (it overlays content)
+  useEffect(() => {
+    if (!menuOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [menuOpen])
 
   // Desktop link style: pill, highlighted when the current route matches.
   const linkClass = (active: boolean) => `
@@ -103,9 +111,39 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile dropdown nav */}
-        {menuOpen && (
-          <nav className="lg:hidden pb-3 space-y-1">
+      </div>
+
+      {/* Mobile drawer: slide-in from the right — overlays content, no layout shift */}
+      <div
+        className={`lg:hidden fixed inset-0 z-[100] transition-opacity duration-300 ${
+          menuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeMenu} />
+
+        {/* Panel */}
+        <div
+          className={`absolute right-0 top-0 bottom-0 w-[78%] max-w-xs flex flex-col border-l border-white/[0.08] glass shadow-2xl transition-transform duration-300 ease-out ${
+            menuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          {/* Drawer header */}
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/[0.06]">
+            <span className="text-sm font-black tracking-wider text-gradient">SuperPixMia</span>
+            <button
+              onClick={closeMenu}
+              aria-label="Close menu"
+              className="flex items-center justify-center w-8 h-8 rounded-full glass hover:border-white/[0.14] transition-all"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-4 h-4">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Nav links */}
+          <nav className="flex-1 p-3 space-y-1">
             <MobileNavLink to="/" onClick={closeMenu} active={pathname === '/'}>
               {t.navHome}
             </MobileNavLink>
@@ -113,7 +151,18 @@ export default function Header() {
               {t.navHelp}
             </MobileNavLink>
           </nav>
-        )}
+
+          {/* Lang toggle */}
+          <div className="p-3 border-t border-white/[0.06]">
+            <button
+              onClick={toggleLang}
+              className="w-full flex items-center justify-center gap-2 rounded-[var(--radius-sm)] glass px-3 py-2.5 text-sm font-medium text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all"
+            >
+              <span>{lang === 'zh' ? 'English' : '中文'}</span>
+              <span className="text-[10px] uppercase tracking-widest text-[var(--text-dim)]/70">{lang}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   )
