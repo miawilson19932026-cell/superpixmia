@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useTranslation } from './i18n'
 import type { ToolType } from './types'
 import ParticleBg from './components/ParticleBg'
@@ -33,11 +34,22 @@ function HomePage() {
   )
 }
 
+// Scroll to top on every route change — SPA navigation doesn't reset scroll
+// position by default, so CTA links (e.g. help → home) would land mid-page.
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   const { t } = useTranslation()
 
   return (
     <div className="min-h-screen flex flex-col">
+      <ScrollToTop />
       <ParticleBg />
       <div className="scanlines" />
 

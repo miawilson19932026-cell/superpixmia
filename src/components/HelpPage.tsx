@@ -1,7 +1,10 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import { useSeoMeta } from '../lib/useSeoMeta'
 import { helpArticles, type HelpArticleData } from '../lib/help-articles'
+import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
+import { toolPaths } from '../lib/routes'
+import type { ToolType } from '../types'
 
 // Feather-style helpers
 const sectionIcons: Record<string, React.ReactNode> = {
@@ -62,6 +65,85 @@ function BackButton() {
   )
 }
 
+// Help-side navigation: tools (with icons) + guide links.
+// Desktop = sticky left sidebar; mobile = horizontal tool bar above content.
+function HelpNav() {
+  const navigate = useNavigate()
+  const { t, lang } = useTranslation()
+  const { pathname } = useLocation()
+  const en = lang === 'en'
+
+  const renderToolButton = (tool: ToolType, vertical: boolean) => {
+    const isActive = pathname === toolPaths[tool]
+    const icons = toolIcons[tool]
+    const label = t[toolLabelKey[tool] as keyof typeof t] as string
+    return (
+      <button
+        key={tool}
+        onClick={() => navigate(toolPaths[tool])}
+        className={
+          vertical
+            ? `flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                isActive
+                  ? 'glass-active text-[var(--accent)]'
+                  : 'text-[var(--text-dim)] hover:text-[var(--text-primary)] hover:bg-white/[0.04]'
+              }`
+            : `flex flex-col items-center gap-1 rounded-xl glass border border-white/[0.06] px-2 py-2.5 text-[11px] font-medium transition-all ${
+                isActive ? 'glass-active text-[var(--accent)]' : 'text-[var(--text-dim)]'
+              }`
+        }
+      >
+        <span className="h-4 w-4 shrink-0">{isActive ? icons.filled : icons.outline}</span>
+        <span className={vertical ? '' : 'whitespace-nowrap'}>{label}</span>
+      </button>
+    )
+  }
+
+  return (
+    <>
+      {/* Mobile: horizontal tool bar */}
+      <div className="lg:hidden mb-6">
+        <div className="grid grid-cols-4 gap-2">
+          {TOOL_KEYS.map((tool) => renderToolButton(tool, false))}
+        </div>
+      </div>
+
+      {/* Desktop: sticky left sidebar */}
+      <aside className="hidden lg:block w-52 shrink-0">
+        <div className="sticky top-24 space-y-6">
+          <div>
+            <p className="mb-2 text-[10px] uppercase tracking-[0.18em] text-[var(--text-dim)]">
+              {en ? 'Tools' : '工具'}
+            </p>
+            <div className="space-y-1">{TOOL_KEYS.map((tool) => renderToolButton(tool, true))}</div>
+          </div>
+          <div>
+            <p className="mb-2 text-[10px] uppercase tracking-[0.18em] text-[var(--text-dim)]">
+              {en ? 'Guides' : '教程'}
+            </p>
+            <div className="space-y-1">
+              {helpArticles.map((a) => {
+                const isActive = pathname === a.path
+                return (
+                  <Link
+                    key={a.path}
+                    to={a.path}
+                    className={`block rounded-lg px-3 py-1.5 text-[13px] leading-snug transition-all ${
+                      isActive ? 'text-[var(--accent)]' : 'text-[var(--text-dim)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    {a.title[lang]}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  )
+}
+
 export function HelpHome() {
   useSeoMeta()
   const lang = useLang()
@@ -69,7 +151,9 @@ export function HelpHome() {
 
   return (
     <main className="flex-1 px-3 sm:px-6 py-8 sm:py-12 pb-24 sm:pb-6">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-5xl lg:flex lg:gap-8">
+        <HelpNav />
+        <div className="flex-1 max-w-3xl mx-auto w-full">
         <div className="mb-6">
           <BackButton />
         </div>
@@ -113,6 +197,7 @@ export function HelpHome() {
             </Link>
           ))}
         </div>
+        </div>
       </div>
     </main>
   )
@@ -125,7 +210,9 @@ export function HelpArticlePage({ data }: { data: HelpArticleData }) {
 
   return (
     <main className="flex-1 px-3 sm:px-6 py-8 sm:py-12 pb-24 sm:pb-6">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-5xl lg:flex lg:gap-8">
+        <HelpNav />
+        <div className="flex-1 max-w-3xl mx-auto w-full">
         <div className="mb-6">
           <BackButton />
         </div>
@@ -240,6 +327,7 @@ export function HelpArticlePage({ data }: { data: HelpArticleData }) {
           >
             {en ? 'Start using the tools' : '立即使用工具'}
           </Link>
+        </div>
         </div>
       </div>
     </main>
