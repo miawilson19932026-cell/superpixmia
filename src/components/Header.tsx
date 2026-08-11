@@ -24,8 +24,8 @@ export default function Header() {
       <div className="mx-auto max-w-6xl px-3 sm:px-6">
         <div className="flex items-center justify-between py-2 sm:py-3">
           {/* Left: Brand + Tagline */}
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <NavLink to="/" onClick={closeMenu} className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <NavLink to="/" onClick={closeMenu} className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink-0">
               <img src="/logo.svg" alt="SuperPixMia" className="h-10 sm:h-12 w-auto shrink-0" />
             </NavLink>
 
