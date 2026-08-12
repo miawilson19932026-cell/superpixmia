@@ -12,6 +12,7 @@ const toolLabelKey: Record<ToolType, string> = {
   compress: 'toolCompress',
   'remove-bg': 'toolRemoveBg',
   convert: 'toolConvert',
+  watermark: 'toolWatermark',
 }
 
 interface Props {

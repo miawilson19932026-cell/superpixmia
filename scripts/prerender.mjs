@@ -19,13 +19,14 @@ import { StaticRouter } from 'react-router'
 const SITE = 'https://www.superpixmia.com'
 const DIST = resolve('dist')
 
-// All routes: home, 4 tool pages, help center, 3 help articles.
+// All routes: home, 5 tool pages, help center, 4 help articles.
 const ROUTES = [
   { path: '/', tool: null, article: null },
   { path: '/compress', tool: 'compress', article: null },
   { path: '/remove-bg', tool: 'remove-bg', article: null },
   { path: '/resize', tool: 'resize', article: null },
   { path: '/convert', tool: 'convert', article: null },
+  { path: '/watermark', tool: 'watermark', article: null },
   { path: '/help', tool: null, article: null },
   { path: '/help/how-to-remove-bg', tool: null, article: 'how-to-remove-bg' },
   { path: '/help/png-compression-guide', tool: null, article: 'png-compression-guide' },

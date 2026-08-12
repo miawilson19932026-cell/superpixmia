@@ -464,6 +464,92 @@ export const toolContent: Record<ToolType, Record<'en' | 'zh', Content>> = {
       ],
     },
   },
+  watermark: {
+    en: {
+      h1: 'Free Online Watermark Maker',
+      headline: 'Add Text or Logo Watermark to Images Online',
+      intro:
+        'Protect your photos before sharing with a text or logo watermark. Choose any of 9 corner positions or tile the watermark across the whole image, adjust opacity and size to balance branding with visibility. Batch watermark up to 15 images at once. 100% in your browser, no upload.',
+      privacy:
+        'Watermarking happens locally in your browser — the original and watermarked images never leave your device. Adding your name or logo before sharing keeps your work attributed without giving it to any third party.',
+      howToTitle: 'How to add a watermark to an image online',
+      howToSteps: [
+        {
+          title: 'Upload your image',
+          desc: 'Drop any PNG, JPEG, or WebP image into the watermark tool. You can add up to 15 images for batch watermarking.',
+        },
+        {
+          title: 'Enter text or upload a logo',
+          desc: 'Type your name, brand, or website, or upload a PNG logo with transparency. Pick a corner position or enable tiling to cover the whole image.',
+        },
+        {
+          title: 'Adjust opacity & download',
+          desc: 'Fine-tune opacity and size so the watermark is visible but not distracting. Click Download to save, or get everything as a ZIP in batch mode.',
+        },
+      ],
+      faqTitle: 'Image Watermark FAQ',
+      faqs: [
+        {
+          q: 'Is the watermark tool free?',
+          a: 'Yes — free, no ads, no watermark on the result, and no account. Everything runs locally in your browser.',
+        },
+        {
+          q: 'Can I watermark images with a logo?',
+          a: 'Yes. Upload a PNG logo (preferably with a transparent background) and the tool scales and places it at your chosen position, or tiles it across the image.',
+        },
+        {
+          q: 'How do I protect photos from being reused?',
+          a: 'Add a text watermark with your name, brand, or website in a corner, or use tiling so the watermark repeats across the whole image. Combined with a visible opacity, this strongly discourages unauthorized reuse.',
+        },
+        {
+          q: 'What is the best watermark opacity?',
+          a: 'It depends on the image. Around 40–60% keeps a text watermark readable without hiding the photo; you can fine-tune with the slider and preview the result instantly.',
+        },
+      ],
+    },
+    zh: {
+      h1: '免费图片加水印工具',
+      headline: '在线为图片添加文字或 Logo 水印',
+      intro:
+        '分享前给照片加上文字或 Logo 水印，保护你的作品版权。可选 9 个角落位置，或平铺覆盖整张图片，自由调节不透明度和大小，兼顾品牌露出与画面美观。支持一次批量处理最多 15 张。全程浏览器本地处理，免上传。',
+      privacy:
+        '加水印全程在浏览器本地完成，原图和水印后的图片都不会离开你的设备。分享前加上你的名字或 Logo，既保留署名，也无需把图片交给任何第三方。',
+      howToTitle: '如何在线给图片加水印',
+      howToSteps: [
+        {
+          title: '上传图片',
+          desc: '把任意 PNG、JPEG、WebP 图片拖入水印工具，最多可添加 15 张批量加水印。',
+        },
+        {
+          title: '输入文字或上传 Logo',
+          desc: '输入你的名字、品牌或网址，或上传带透明通道的 PNG Logo。选择一个角落位置，或开启平铺让水印覆盖整张图片。',
+        },
+        {
+          title: '调节透明度并下载',
+          desc: '精细调节不透明度和大小，让水印清晰可见又不喧宾夺主。点击「下载」保存，批量模式可打包成 ZIP。',
+        },
+      ],
+      faqTitle: '图片水印常见问题',
+      faqs: [
+        {
+          q: '水印工具免费吗？',
+          a: '完全免费，无广告、结果无水印、无需注册。所有处理都在浏览器本地完成。',
+        },
+        {
+          q: '可以用 Logo 加水印吗？',
+          a: '可以。上传 PNG Logo（建议带透明背景），工具会按比例缩放并放到你选择的位置，或平铺覆盖整张图片。',
+        },
+        {
+          q: '怎样防止图片被转发盗用？',
+          a: '在角落添加包含你名字、品牌或网址的文字水印，或使用平铺模式让水印重复覆盖整张图片。配合合适的不透明度，能有效阻止他人盗用。',
+        },
+        {
+          q: '水印不透明度调到多少合适？',
+          a: '取决于图片内容。一般 40%~60% 能让文字水印清晰可读又不遮挡照片，你可以在预览中随时微调。',
+        },
+      ],
+    },
+  },
 }
 
 // Cross-link labels for the "other tools" block on tool pages
@@ -473,12 +559,14 @@ export const otherToolsLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     compress: 'Compress image',
     'remove-bg': 'Remove background',
     convert: 'Convert format',
+    watermark: 'Add watermark',
   },
   zh: {
     resize: '图片改尺寸',
     compress: '图片压缩',
     'remove-bg': 'AI 抠图',
     convert: '格式转换',
+    watermark: '图片加水印',
   },
 }
 

@@ -8,6 +8,7 @@ export const toolPaths: Record<ToolType, string> = {
   compress: '/compress',
   'remove-bg': '/remove-bg',
   convert: '/convert',
+  watermark: '/watermark',
 }
 
 export const toolPathList: { tool: ToolType; path: string }[] = Object.entries(toolPaths).map(

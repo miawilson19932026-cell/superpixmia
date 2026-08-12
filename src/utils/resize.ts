@@ -110,7 +110,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   })
 }
 
-function canvasToBlob(
+export function canvasToBlob(
   canvas: HTMLCanvasElement,
   format: OutputFormat,
   quality = 0.92

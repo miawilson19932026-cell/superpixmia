@@ -108,6 +108,23 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     ogTitle: 'Free Image Converter — Convert PNG, JPEG, WebP & More',
     ogDescription: 'Convert images between 9 formats online for free. Perfect for favicons, social media, or web optimization. No upload.',
   },
+  '/watermark': {
+    en: {
+      title: 'Free Online Watermark Maker — Add Text or Logo Watermark to Images',
+      description:
+        'Add a text or logo watermark to your images online for free. Choose any of 9 corner positions or tile the watermark across the whole image, adjust opacity and size, and protect your photos before sharing — 100% in your browser, no upload.',
+      keywords: 'add watermark, watermark image, image watermark, text watermark, logo watermark, protect photos, watermark maker, batch watermark',
+    },
+    zh: {
+      title: '图片加水印 - 在线添加文字或 Logo 水印，免费免上传',
+      description:
+        '免费在线图片加水印工具，支持文字水印和 Logo 水印。可选择任意角落位置或平铺整张图片，自由调节不透明度与大小。分享前保护你的照片版权。浏览器本地处理，无需上传。',
+      keywords: '图片加水印,水印工具,文字水印,Logo水印,图片防盗,加水印防转载,批量加水印',
+    },
+    canonical: `${SITE}/watermark`,
+    ogTitle: 'Free Online Watermark Maker — Add Text or Logo Watermark',
+    ogDescription: 'Add a text or logo watermark to images online for free. Corner or tiled, adjustable opacity and size. 100% in your browser, no upload.',
+  },
   '/help': {
     en: {
       title: 'Help Center — SuperPixMia Guides & Tutorials',

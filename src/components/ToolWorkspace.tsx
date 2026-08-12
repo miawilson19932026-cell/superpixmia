@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
-import { resizeImage, compressImage, convertImage, getResultExtension } from '../utils'
+import { resizeImage, compressImage, convertImage, getResultExtension, watermarkImage } from '../utils'
+import type { WatermarkOptions } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
 import JSZip from 'jszip'
 import DropZone from './DropZone'
@@ -11,6 +12,7 @@ import ResizePanel from './ResizePanel'
 import CompressPanel from './CompressPanel'
 import BgRemovePanel from './BgRemovePanel'
 import ConvertPanel from './ConvertPanel'
+import WatermarkPanel from './WatermarkPanel'
 import { toolPaths } from '../lib/routes'
 import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
 
@@ -47,6 +49,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     compress: [],
     'remove-bg': [],
     convert: [],
+    watermark: [],
   })
   const [processingTools, setProcessingTools] = useState<Set<ToolType>>(new Set())
   const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null)
@@ -99,7 +102,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const clearAllResults = useCallback(() => {
     setToolResults((prev) => {
       Object.values(prev).forEach((arr) => arr.forEach((r) => { if (r) URL.revokeObjectURL(r.url) }))
-      return { resize: [], compress: [], 'remove-bg': [], convert: [] }
+      return { resize: [], compress: [], 'remove-bg': [], convert: [], watermark: [] }
     })
     setProcessingTools(new Set())
   }, [])
@@ -277,6 +280,24 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     markDone('convert')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
+  const handleWatermark = useCallback(async (opts: WatermarkOptions) => {
+    markProcessing('watermark')
+    const targets = mode === 'batch'
+      ? images.map((img, i) => ({ img, idx: i }))
+      : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
+
+    setProcessingProgress({ current: 0, total: targets.length })
+    for (const { img, idx } of targets) {
+      try {
+        const blob = await watermarkImage(img.file, opts)
+        saveToolResult('watermark', blob, idx)
+      } catch (e) { console.error('Watermark failed:', e) }
+      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
+    }
+    setProcessingProgress(null)
+    markDone('watermark')
+  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
+
   const handleRemoveBg = useCallback(async (index?: number) => {
     const idx = index ?? currentIndex
     const img = images[idx]
@@ -392,7 +413,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const processNewGate = useRef(false)
   useEffect(() => {
     if (mode !== 'batch' || imageCount === 0 || isProcessing) return
-    if (activeTool === 'remove-bg' || activeTool === 'convert') return
+    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'watermark') return
     const resultsLen = toolResults[activeTool].length
     const hasPending = resultsLen < imageCount || toolResults[activeTool].slice(0, imageCount).some(r => !r)
     if (!hasPending) return
@@ -600,6 +621,13 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
               processing={isProcessing}
               hasResult={hasResult}
               batch={mode === 'batch'}
+            />
+          )}
+          {activeTool === 'watermark' && (
+            <WatermarkPanel
+              onWatermark={handleWatermark}
+              processing={isProcessing}
+              hasResult={hasResult}
             />
           )}
           {activeTool === 'remove-bg' && (

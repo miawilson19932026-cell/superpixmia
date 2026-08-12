@@ -31,6 +31,10 @@ const toolNames: Record<ToolType, { en: string; zh: string }> = {
     en: 'SuperPixMia Online Image Format Converter',
     zh: 'SuperPixMia 在线图片格式转换工具',
   },
+  watermark: {
+    en: 'SuperPixMia Online Image Watermark Maker',
+    zh: 'SuperPixMia 在线图片加水印工具',
+  },
 }
 
 const toolHowToName: Record<ToolType, { en: string; zh: string }> = {
@@ -38,6 +42,7 @@ const toolHowToName: Record<ToolType, { en: string; zh: string }> = {
   'remove-bg': { en: 'How to Remove Image Backgrounds Online with SuperPixMia', zh: '如何用 SuperPixMia 在线去除图片背景' },
   resize: { en: 'How to Resize Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线调整图片尺寸' },
   convert: { en: 'How to Convert Image Formats Online with SuperPixMia', zh: '如何用 SuperPixMia 在线转换图片格式' },
+  watermark: { en: 'How to Add a Watermark to Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线给图片加水印' },
 }
 
 const toolKeywords: Record<ToolType, { en: string[]; zh: string[] }> = {
@@ -45,6 +50,7 @@ const toolKeywords: Record<ToolType, { en: string[]; zh: string[] }> = {
   'remove-bg': { en: ['remove background', 'background removal'], zh: ['抠图', '去除背景'] },
   resize: { en: ['resize', 'image dimensions'], zh: ['改尺寸', '调整尺寸'] },
   convert: { en: ['convert', 'format conversion'], zh: ['转换', '格式互转'] },
+  watermark: { en: ['watermark', 'add watermark'], zh: ['加水印', '图片水印'] },
 }
 
 function organizationLd(): object {

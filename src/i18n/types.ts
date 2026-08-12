@@ -9,6 +9,7 @@ export interface Translations {
   toolCompress: string
   toolRemoveBg: string
   toolConvert: string
+  toolWatermark: string
   dropTitle: string
   dropHint: string
   dropBrowse: string
@@ -45,6 +46,18 @@ export interface Translations {
   convertSize: string
   applyConvert: string
   convertGuide: string
+  watermarkTitle: string
+  watermarkText: string
+  watermarkImage: string
+  watermarkTextPlaceholder: string
+  watermarkTextHint: string
+  watermarkLogo: string
+  watermarkLogoHint: string
+  watermarkPosition: string
+  watermarkTiled: string
+  watermarkOpacity: string
+  watermarkSize: string
+  watermarkColor: string
   download: string
   downloading: string
   footerPrivacy: string
@@ -66,6 +79,7 @@ export interface Translations {
   toolCompressDesc: string
   toolRemoveBgDesc: string
   toolConvertDesc: string
+  toolWatermarkDesc: string
   dropIconAlt: string
   // Batch mode
   modeSingle: string
