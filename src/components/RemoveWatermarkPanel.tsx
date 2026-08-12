@@ -163,7 +163,11 @@ export default function RemoveWatermarkPanel({ file, onRemoveWatermark, processi
     const out = new Uint8Array(w * h)
     for (let i = 0; i < w * h; i++) out[i] = imgData.data[i * 4 + 3] > 128 ? 1 : 0
     onRemoveWatermark(out, w, h)
-  }, [onRemoveWatermark])
+    // Clear the brush overlay once the mask is submitted — otherwise the pink
+    // strokes stay on the canvas next to the (now clean) result preview and
+    // users think the watermark wasn't actually removed.
+    clearMask()
+  }, [onRemoveWatermark, clearMask])
 
   // Lucide-style icon wrapper (stroke-based, matches the rest of the app)
   const icon = (paths: React.ReactNode) => (
