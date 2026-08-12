@@ -14,6 +14,7 @@ const toolLabelKey: Record<ToolType, string> = {
   convert: 'toolConvert',
   watermark: 'toolWatermark',
   crop: 'toolCrop',
+  rotate: 'toolRotate',
 }
 
 interface Props {

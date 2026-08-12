@@ -1,4 +1,4 @@
-export type ToolType = 'resize' | 'compress' | 'remove-bg' | 'convert' | 'watermark' | 'crop'
+export type ToolType = 'resize' | 'compress' | 'remove-bg' | 'convert' | 'watermark' | 'crop' | 'rotate'
 
 export interface ImageState {
   originalFile: File | null

@@ -125,6 +125,8 @@ export default function CropPanel({ file, originalWidth, originalHeight, onCrop,
   const [imgUrl, setImgUrl] = useState<string | null>(null)
   const [ratio, setRatio] = useState<RatioKey>('free')
   const [rect, setRect] = useState<NormRect>({ x: 0, y: 0, w: 1, h: 1 })
+  const [pxW, setPxW] = useState('')
+  const [pxH, setPxH] = useState('')
   const areaRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ mode: DragMode; sx: number; sy: number; rect: NormRect } | null>(null)
 
@@ -134,8 +136,8 @@ export default function CropPanel({ file, originalWidth, originalHeight, onCrop,
     return () => URL.revokeObjectURL(url)
   }, [file])
 
-  const pxW = Math.max(1, Math.round(rect.w * originalWidth))
-  const pxH = Math.max(1, Math.round(rect.h * originalHeight))
+  const boxW = Math.max(1, Math.round(rect.w * originalWidth))
+  const boxH = Math.max(1, Math.round(rect.h * originalHeight))
 
   const toNorm = (e: PointerEvent): { nx: number; ny: number } | null => {
     const el = areaRef.current
@@ -193,9 +195,36 @@ export default function CropPanel({ file, originalWidth, originalHeight, onCrop,
     onCrop({
       x: Math.round(rect.x * originalWidth),
       y: Math.round(rect.y * originalHeight),
-      width: pxW,
-      height: pxH,
+      width: boxW,
+      height: boxH,
     })
+  }
+
+  // Exact-pixel crop: the box becomes the requested output size (scaled down
+  // proportionally if the source is too small), centered on the image.
+  const applyPxSize = () => {
+    if (!originalWidth || !originalHeight) return
+    const W = Math.max(1, Number(pxW) || 0)
+    const H = Math.max(1, Number(pxH) || 0)
+    if (!W && !H) return
+    // A blank dimension keeps the source aspect ratio.
+    let tW = W
+    let tH = H
+    if (!tW) tW = tH * (originalWidth / originalHeight)
+    if (!tH) tH = tW * (originalHeight / originalWidth)
+    let nw = tW / originalWidth
+    let nh = tH / originalHeight
+    const over = Math.max(nw, nh, 1)
+    nw /= over
+    nh /= over
+    setRect({
+      x: (1 - nw) / 2,
+      y: (1 - nh) / 2,
+      w: nw,
+      h: nh,
+    })
+    setPxW('')
+    setPxH('')
   }
 
   const handleCursor = (m: DragMode) =>
@@ -279,7 +308,7 @@ export default function CropPanel({ file, originalWidth, originalHeight, onCrop,
         </div>
       </div>
 
-      <p className="text-center text-xs font-mono tabular-nums text-[var(--text-dim)]">{pxW} × {pxH} px</p>
+      <p className="text-center text-xs font-mono tabular-nums text-[var(--text-dim)]">{boxW} × {boxH} px</p>
       <p className="text-center text-[11px] text-[var(--text-dim)] leading-relaxed">{t.cropDragHint}</p>
 
       {/* Aspect-ratio presets */}
@@ -291,6 +320,38 @@ export default function CropPanel({ file, originalWidth, originalHeight, onCrop,
               {key === 'free' ? t.cropFree : key}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Exact pixel size */}
+      <div>
+        <p className="text-[11px] text-[var(--text-dim)] mb-2 uppercase tracking-wide">{t.cropPxTitle}</p>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={1}
+            placeholder="宽 px"
+            value={pxW}
+            onChange={(e) => setPxW(e.target.value)}
+            className="w-full min-w-0 bg-[var(--bg-input)] border border-[var(--border)] hover:border-[var(--border-hover)] focus:border-[var(--accent)]
+              text-[var(--text-primary)] text-sm rounded-[var(--radius-sm)] px-3 py-2 outline-none transition-colors"
+          />
+          <span className="text-[var(--text-dim)]">×</span>
+          <input
+            type="number"
+            min={1}
+            placeholder="高 px"
+            value={pxH}
+            onChange={(e) => setPxH(e.target.value)}
+            className="w-full min-w-0 bg-[var(--bg-input)] border border-[var(--border)] hover:border-[var(--border-hover)] focus:border-[var(--accent)]
+              text-[var(--text-primary)] text-sm rounded-[var(--radius-sm)] px-3 py-2 outline-none transition-colors"
+          />
+          <button
+            onClick={applyPxSize}
+            className="shrink-0 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] border border-[var(--accent)]/25 text-[var(--accent)] hover:border-[var(--accent)]/50 transition-all"
+          >
+            {t.cropPxApply}
+          </button>
         </div>
       </div>
 

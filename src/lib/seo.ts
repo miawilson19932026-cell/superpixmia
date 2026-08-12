@@ -142,6 +142,23 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     ogTitle: 'Free Online Image Cropper — Crop Photos to Any Ratio',
     ogDescription: 'Crop images online for free with a draggable box. Preset ratios for social media or free crop, no quality loss. 100% in your browser.',
   },
+  '/rotate': {
+    en: {
+      title: 'Free Online Image Rotator — Rotate, Flip & Straighten Photos',
+      description:
+        'Rotate images online for free — 90° clockwise or counterclockwise, 180°, or any angle with a fine-tune slider to straighten tilted photos. Mirror left-right or top-bottom. All processed in your browser, no upload, no quality loss.',
+      keywords: 'rotate image, image rotator, flip image, mirror photo, straighten photo, rotate photo online, flip horizontal, flip vertical',
+    },
+    zh: {
+      title: '图片旋转 - 在线旋转、翻转照片，免费免上传',
+      description:
+        '免费在线图片旋转工具：一键顺时针/逆时针 90°、180°，或拖动滑竿任意角度微调，把拍歪的照片转正。支持水平/垂直镜像翻转。浏览器本地处理，无损，无需上传。',
+      keywords: '图片旋转,旋转图片,照片翻转,镜像,水平翻转,垂直翻转,照片转正,免费旋转工具',
+    },
+    canonical: `${SITE}/rotate`,
+    ogTitle: 'Free Online Image Rotator — Rotate, Flip & Straighten Photos',
+    ogDescription: 'Rotate images 90° or any angle to straighten photos, and mirror left-right or top-bottom. 100% in your browser, no upload.',
+  },
   '/help': {
     en: {
       title: 'Help Center — SuperPixMia Guides & Tutorials',

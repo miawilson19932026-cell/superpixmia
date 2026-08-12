@@ -162,6 +162,29 @@
     <lastmod>2026-08-12</lastmod>
   </url>
 
+  <!-- ── Image Rotator ── -->
+  <url>
+    <loc>https://www.superpixmia.com/rotate</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/rotate?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/rotate?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/rotate"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/rotate?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/rotate?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
+
   <!-- ── Help Center ── -->
   <url>
     <loc>https://www.superpixmia.com/help</loc>

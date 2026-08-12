@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
-import { resizeImage, compressImage, convertImage, getResultExtension, watermarkImage, cropImage } from '../utils'
-import type { WatermarkOptions, CropRect } from '../utils'
+import { resizeImage, compressImage, convertImage, getResultExtension, watermarkImage, cropImage, rotateImage } from '../utils'
+import type { WatermarkOptions, CropRect, RotateOptions } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
 import JSZip from 'jszip'
 import DropZone from './DropZone'
@@ -14,6 +14,7 @@ import BgRemovePanel from './BgRemovePanel'
 import ConvertPanel from './ConvertPanel'
 import WatermarkPanel from './WatermarkPanel'
 import CropPanel from './CropPanel'
+import RotatePanel from './RotatePanel'
 import { toolPaths } from '../lib/routes'
 import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
 
@@ -52,6 +53,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     convert: [],
     watermark: [],
     crop: [],
+    rotate: [],
   })
   const [processingTools, setProcessingTools] = useState<Set<ToolType>>(new Set())
   const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null)
@@ -104,7 +106,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const clearAllResults = useCallback(() => {
     setToolResults((prev) => {
       Object.values(prev).forEach((arr) => arr.forEach((r) => { if (r) URL.revokeObjectURL(r.url) }))
-      return { resize: [], compress: [], 'remove-bg': [], convert: [], watermark: [], crop: [] }
+      return { resize: [], compress: [], 'remove-bg': [], convert: [], watermark: [], crop: [], rotate: [] }
     })
     setProcessingTools(new Set())
   }, [])
@@ -331,6 +333,24 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     markDone('crop')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
+  const handleRotate = useCallback(async (opts: RotateOptions) => {
+    markProcessing('rotate')
+    const targets = mode === 'batch'
+      ? images.map((img, i) => ({ img, idx: i }))
+      : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
+
+    setProcessingProgress({ current: 0, total: targets.length })
+    for (const { img, idx } of targets) {
+      try {
+        const blob = await rotateImage(img.file, opts)
+        saveToolResult('rotate', blob, idx)
+      } catch (e) { console.error('Rotate failed:', e) }
+      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
+    }
+    setProcessingProgress(null)
+    markDone('rotate')
+  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
+
   const handleRemoveBg = useCallback(async (index?: number) => {
     const idx = index ?? currentIndex
     const img = images[idx]
@@ -446,7 +466,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const processNewGate = useRef(false)
   useEffect(() => {
     if (mode !== 'batch' || imageCount === 0 || isProcessing) return
-    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'watermark' || activeTool === 'crop') return
+    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'watermark' || activeTool === 'crop' || activeTool === 'rotate') return
     const resultsLen = toolResults[activeTool].length
     const hasPending = resultsLen < imageCount || toolResults[activeTool].slice(0, imageCount).some(r => !r)
     if (!hasPending) return
@@ -669,6 +689,13 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
               originalWidth={currentImage?.width ?? 0}
               originalHeight={currentImage?.height ?? 0}
               onCrop={handleCrop}
+              processing={isProcessing}
+              hasResult={hasResult}
+            />
+          )}
+          {activeTool === 'rotate' && (
+            <RotatePanel
+              onRotate={handleRotate}
               processing={isProcessing}
               hasResult={hasResult}
             />

@@ -636,6 +636,92 @@ export const toolContent: Record<ToolType, Record<'en' | 'zh', Content>> = {
       ],
     },
   },
+  rotate: {
+    en: {
+      h1: 'Free Online Image Rotator',
+      headline: 'Rotate, Flip & Straighten Photos Online',
+      intro:
+        'Rotate images to fix their orientation or straighten a tilted photo. One-click 90° clockwise or counterclockwise, 180° for upside-down shots, or a fine-tune slider for any angle. Mirror left-right or top-bottom to flip your image. All processed in your browser, no upload, no quality loss.',
+      privacy:
+        'Rotating happens entirely in your browser — your photo never leaves your device. Safe for private photos, scans, and documents.',
+      howToTitle: 'How to rotate an image online',
+      howToSteps: [
+        {
+          title: 'Upload your image',
+          desc: 'Drop any PNG, JPEG, WebP, or other supported image into the rotator.',
+        },
+        {
+          title: 'Rotate, flip, or straighten',
+          desc: 'Tap 90° clockwise or counterclockwise for quick turns, tap 180° to flip upside down, or drag the slider to fine-tune any angle. Mirror horizontally or vertically to flip the image.',
+        },
+        {
+          title: 'Download the result',
+          desc: 'The rotation is applied instantly in your browser. Click Download to save the rotated image.',
+        },
+      ],
+      faqTitle: 'Image Rotation FAQ',
+      faqs: [
+        {
+          q: 'Is the image rotator free?',
+          a: 'Yes — free, no ads, no watermark, and no account. Everything runs locally in your browser.',
+        },
+        {
+          q: 'Can I rotate to any angle, not just 90°?',
+          a: 'Yes. Drag the free-angle slider between -180° and 180° to straighten a tilted photo. Non-90° rotations add white corners so nothing gets cut off.',
+        },
+        {
+          q: 'What does the mirror button do?',
+          a: 'Mirror horizontal flips the image left-right (like looking in a mirror), and mirror vertical flips it top-bottom. This is also called flipping the image.',
+        },
+        {
+          q: 'Does rotating lose quality?',
+          a: 'No. Rotation re-encodes the same pixels — 90° steps keep full resolution, and free angles keep the original sharpness, just at a slightly larger canvas size.',
+        },
+      ],
+    },
+    zh: {
+      h1: '免费图片旋转工具',
+      headline: '在线旋转、翻转、转正照片',
+      intro:
+        '旋转图片修正方向，或把拍歪的照片转正。一键顺时针/逆时针 90°、180° 翻转倒置照片，或用滑竿任意角度微调。支持水平/垂直镜像翻转图片。全程浏览器本地处理，免上传，无损画质。',
+      privacy:
+        '旋转全程在浏览器内完成，你的照片绝不会上传服务器。处理私人照片、扫描件和文档都非常安全。',
+      howToTitle: '如何在线旋转图片',
+      howToSteps: [
+        {
+          title: '上传图片',
+          desc: '把任意 PNG、JPEG、WebP 等图片拖入旋转工具。',
+        },
+        {
+          title: '旋转、翻转或转正',
+          desc: '点击顺时针/逆时针 90° 快速转方向，点 180° 把倒置的照片翻过来，或用滑竿微调任意角度。水平/垂直镜像可翻转图片。',
+        },
+        {
+          title: '下载结果',
+          desc: '旋转在浏览器内即时生效，点击「下载」保存旋转后的图片。',
+        },
+      ],
+      faqTitle: '图片旋转常见问题',
+      faqs: [
+        {
+          q: '旋转工具免费吗？',
+          a: '完全免费，无广告、无水印、无需注册。所有处理都在浏览器本地完成。',
+        },
+        {
+          q: '可以旋转任意角度，不只 90° 吗？',
+          a: '可以。拖动 -180°~180° 的自由角度滑竿，就能把拍歪的照片转正。非 90° 旋转会补充白色边角，保证图片不被切掉。',
+        },
+        {
+          q: '镜像按钮是做什么的？',
+          a: '水平镜像把图片左右翻转（像照镜子），垂直镜像把图片上下翻转。也就是常说的图片翻转。',
+        },
+        {
+          q: '旋转会损失画质吗？',
+          a: '不会。旋转只是重排像素——90° 分档保持完整分辨率，任意角度也保留原始清晰度，只是画布略大一些。',
+        },
+      ],
+    },
+  },
 }
 
 // Cross-link labels for the "other tools" block on tool pages
@@ -647,6 +733,7 @@ export const otherToolsLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     convert: 'Convert format',
     watermark: 'Add watermark',
     crop: 'Crop image',
+    rotate: 'Rotate image',
   },
   zh: {
     resize: '图片改尺寸',
@@ -655,6 +742,7 @@ export const otherToolsLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     convert: '格式转换',
     watermark: '图片加水印',
     crop: '图片裁剪',
+    rotate: '图片旋转',
   },
 }
 

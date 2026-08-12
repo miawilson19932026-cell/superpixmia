@@ -1,5 +1,7 @@
 export { resizeImage, compressImage, convertImage, formatSize, getOutputFormat, getResultExtension, canvasToBlob } from './resize'
 export { watermarkImage } from './watermark'
 export { cropImage } from './crop'
+export { rotateImage } from './rotate'
+export type { RotateOptions } from './rotate'
 export type { CropRect } from './crop'
 export type { WatermarkOptions, WatermarkPosition } from './watermark'

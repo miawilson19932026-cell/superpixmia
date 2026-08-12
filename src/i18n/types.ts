@@ -11,6 +11,7 @@ export interface Translations {
   toolConvert: string
   toolWatermark: string
   toolCrop: string
+  toolRotate: string
   dropTitle: string
   dropHint: string
   dropBrowse: string
@@ -65,6 +66,16 @@ export interface Translations {
   cropApply: string
   cropHint: string
   cropDragHint: string
+  cropPxTitle: string
+  cropPxApply: string
+  rotateTitle: string
+  rotateLeft: string
+  rotateRight: string
+  rotateFlipH: string
+  rotateFlipV: string
+  rotateAngle: string
+  rotateReset: string
+  rotateHint: string
   download: string
   downloading: string
   footerPrivacy: string
@@ -88,6 +99,7 @@ export interface Translations {
   toolConvertDesc: string
   toolWatermarkDesc: string
   toolCropDesc: string
+  toolRotateDesc: string
   dropIconAlt: string
   // Batch mode
   modeSingle: string
