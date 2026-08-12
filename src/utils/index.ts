@@ -2,6 +2,7 @@ export { resizeImage, compressImage, convertImage, formatSize, getOutputFormat, 
 export { watermarkImage } from './watermark'
 export { cropImage } from './crop'
 export { rotateImage } from './rotate'
+export { removeWatermark } from './removeWatermark'
 export type { RotateOptions } from './rotate'
 export type { CropRect } from './crop'
 export type { WatermarkOptions, WatermarkPosition } from './watermark'

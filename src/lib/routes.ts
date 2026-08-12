@@ -9,6 +9,7 @@ export const toolPaths: Record<ToolType, string> = {
   'remove-bg': '/remove-bg',
   convert: '/convert',
   watermark: '/watermark',
+  'remove-watermark': '/remove-watermark',
   crop: '/crop',
   rotate: '/rotate',
 }

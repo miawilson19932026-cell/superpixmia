@@ -36,6 +36,10 @@ const toolNames: Record<ToolType, { en: string; zh: string }> = {
     en: 'SuperPixMia Online Image Watermark Maker',
     zh: 'SuperPixMia 在线图片加水印工具',
   },
+  'remove-watermark': {
+    en: 'SuperPixMia Online Image Watermark Remover',
+    zh: 'SuperPixMia 在线去水印工具',
+  },
   crop: {
     en: 'SuperPixMia Online Image Cropper',
     zh: 'SuperPixMia 在线图片裁剪工具',
@@ -52,6 +56,7 @@ const toolHowToName: Record<ToolType, { en: string; zh: string }> = {
   resize: { en: 'How to Resize Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线调整图片尺寸' },
   convert: { en: 'How to Convert Image Formats Online with SuperPixMia', zh: '如何用 SuperPixMia 在线转换图片格式' },
   watermark: { en: 'How to Add a Watermark to Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线给图片加水印' },
+  'remove-watermark': { en: 'How to Remove a Watermark from an Image Online with SuperPixMia', zh: '如何用 SuperPixMia 在线去除图片水印' },
   crop: { en: 'How to Crop Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线裁剪图片' },
   rotate: { en: 'How to Rotate and Flip Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线旋转翻转图片' },
 }
@@ -62,6 +67,7 @@ const toolKeywords: Record<ToolType, { en: string[]; zh: string[] }> = {
   resize: { en: ['resize', 'image dimensions'], zh: ['改尺寸', '调整尺寸'] },
   convert: { en: ['convert', 'format conversion'], zh: ['转换', '格式互转'] },
   watermark: { en: ['watermark', 'add watermark'], zh: ['加水印', '图片水印'] },
+  'remove-watermark': { en: ['remove watermark', 'erase watermark'], zh: ['去水印', '去除水印', '清除水印'] },
   crop: { en: ['crop', 'image cropping'], zh: ['裁剪', '图片裁剪'] },
   rotate: { en: ['rotate', 'flip image'], zh: ['旋转', '图片翻转'] },
 }

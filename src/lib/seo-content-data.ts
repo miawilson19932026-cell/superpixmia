@@ -550,6 +550,92 @@ export const toolContent: Record<ToolType, Record<'en' | 'zh', Content>> = {
       ],
     },
   },
+  'remove-watermark': {
+    en: {
+      h1: 'Free Online Watermark Remover',
+      headline: 'Erase Watermarks, Stamps & Text in Seconds',
+      intro:
+        'Remove watermarks, stamps, logos, and stray text from images online for free. Paint over the mark with a brush and the tool rebuilds the covered area from the surrounding pixels so it blends back into the background. Great for cleaning up screenshots, downloads, and photos you own. All processing happens in your browser — nothing is uploaded.',
+      privacy:
+        'Everything runs locally in your browser — your images never leave your device. Safe for private photos, screenshots, and documents.',
+      howToTitle: 'How to remove a watermark online',
+      howToSteps: [
+        {
+          title: 'Upload your image',
+          desc: 'Drop any PNG, JPEG, WebP, or other supported image into the watermark remover.',
+        },
+        {
+          title: 'Paint over the watermark',
+          desc: 'Use the brush to cover the watermark, stamp, or text you want to remove. Adjust the brush size as needed; Erase fixes any overshoot and Undo is one tap away.',
+        },
+        {
+          title: 'Remove & download',
+          desc: 'Click "Remove Watermark" and the covered area is rebuilt from the surrounding pixels. Download the clean image.',
+        },
+      ],
+      faqTitle: 'Watermark Removal FAQ',
+      faqs: [
+        {
+          q: 'Is the watermark remover free?',
+          a: 'Yes — free, no ads, and no account. Everything runs locally in your browser, so there is no per-image limit.',
+        },
+        {
+          q: 'Does it work on any background?',
+          a: 'It works best when the area behind the watermark is flat or lightly textured — plain white, solid colors, or simple gradients. On busy photo backgrounds the result is softer, so try a smaller brush and cover the mark precisely.',
+        },
+        {
+          q: 'Which marks can it remove?',
+          a: 'Text watermarks, logo stamps, timestamps, and stray marks. Paint exactly over the mark — any overshoot is removed with the Erase brush.',
+        },
+        {
+          q: 'Is my image uploaded to a server?',
+          a: 'No. All processing happens in your browser via Canvas. Your image never leaves your device.',
+        },
+      ],
+    },
+    zh: {
+      h1: '免费在线去水印工具',
+      headline: '涂抹即可去除图片水印、印章和文字',
+      intro:
+        '免费在线去除图片水印。用笔刷涂抹覆盖要移除的水印、印章、Logo 或多余文字，工具会用周围的像素把被盖住的区域重新补回来，自然地融入背景。适合清理截图、下载的图片和自己拍摄的照片。全程浏览器本地处理，图片不会上传。',
+      privacy:
+        '所有处理都在浏览器本地完成，你的图片绝不会上传服务器。处理私人照片、截图和文档都非常安全。',
+      howToTitle: '如何在线去水印',
+      howToSteps: [
+        {
+          title: '上传图片',
+          desc: '把任意 PNG、JPEG、WebP 等图片拖入去水印工具。',
+        },
+        {
+          title: '涂抹覆盖水印',
+          desc: '用笔刷涂满要移除的水印、印章或文字。可调节笔刷大小，涂多了用「擦除」修掉，随时可撤销上一步。',
+        },
+        {
+          title: '去水印并下载',
+          desc: '点击「开始去水印」，工具用周围像素把覆盖区域补全。下载处理后的图片即可。',
+        },
+      ],
+      faqTitle: '去水印常见问题',
+      faqs: [
+        {
+          q: '去水印工具免费吗？',
+          a: '完全免费，无广告、无需注册。所有处理都在浏览器本地完成，没有张数限制。',
+        },
+        {
+          q: '什么背景下去水印效果好？',
+          a: '水印下方的背景越简单效果越好——纯白、纯色或简单的渐变背景最佳。背景复杂的照片效果会柔和一些，可以尝试用小笔刷精确覆盖水印。',
+        },
+        {
+          q: '能去除哪些标记？',
+          a: '文字水印、Logo 印章、时间戳和多余的标记都可以。用笔刷精确涂满水印即可，涂多了用「擦除」修掉。',
+        },
+        {
+          q: '图片会被上传到服务器吗？',
+          a: '不会。所有处理都在浏览器内通过 Canvas 完成，图片不会离开你的设备。',
+        },
+      ],
+    },
+  },
   crop: {
     en: {
       h1: 'Free Online Image Cropper',
@@ -732,6 +818,7 @@ export const otherToolsLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     'remove-bg': 'Remove background',
     convert: 'Convert format',
     watermark: 'Add watermark',
+    'remove-watermark': 'Remove watermark',
     crop: 'Crop image',
     rotate: 'Rotate image',
   },
@@ -741,6 +828,7 @@ export const otherToolsLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     'remove-bg': 'AI 抠图',
     convert: '格式转换',
     watermark: '图片加水印',
+    'remove-watermark': '图片去水印',
     crop: '图片裁剪',
     rotate: '图片旋转',
   },

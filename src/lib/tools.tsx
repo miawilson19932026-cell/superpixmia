@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { ToolType } from '../types'
 
 // Order used by the tool switcher and the help-side navigation.
-export const TOOL_KEYS: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'watermark', 'crop', 'rotate']
+export const TOOL_KEYS: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'watermark', 'remove-watermark', 'crop', 'rotate']
 
 // i18n key for each tool's display label.
 export const toolLabelKey: Record<ToolType, string> = {
@@ -11,6 +11,7 @@ export const toolLabelKey: Record<ToolType, string> = {
   'remove-bg': 'toolRemoveBg',
   convert: 'toolConvert',
   watermark: 'toolWatermark',
+  'remove-watermark': 'toolRemoveWatermark',
   crop: 'toolCrop',
   rotate: 'toolRotate',
 }
@@ -102,6 +103,23 @@ export const toolIcons: Record<ToolType, { outline: ReactNode; filled: ReactNode
         <path d="M12 3.5s6 6.1 6 10a6 6 0 11-12 0c0-3.9 6-10 6-10z" fill="currentColor" opacity="0.12" />
         <path d="M12 3.5s6 6.1 6 10a6 6 0 11-12 0c0-3.9 6-10 6-10z" />
         <text x="12" y="15" textAnchor="middle" fill="currentColor" fontSize="7" fontWeight="700">WM</text>
+      </svg>
+    ),
+  },
+  'remove-watermark': {
+    outline: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="8" width="16" height="8" rx="2" />
+        <path d="M7 4l10 16" />
+        <circle cx="17" cy="5" r="1.1" opacity="0.55" />
+      </svg>
+    ),
+    filled: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="8" width="16" height="8" rx="2" fill="currentColor" opacity="0.12" />
+        <rect x="4" y="8" width="16" height="8" rx="2" />
+        <path d="M7 4l10 16" strokeWidth={3.2} opacity="0.25" />
+        <path d="M7 4l10 16" />
       </svg>
     ),
   },

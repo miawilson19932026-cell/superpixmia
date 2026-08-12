@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
-import { resizeImage, compressImage, convertImage, getResultExtension, watermarkImage, cropImage, rotateImage } from '../utils'
+import { resizeImage, compressImage, convertImage, getResultExtension, watermarkImage, cropImage, rotateImage, removeWatermark } from '../utils'
 import type { WatermarkOptions, CropRect, RotateOptions } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
 import JSZip from 'jszip'
@@ -15,6 +15,7 @@ import ConvertPanel from './ConvertPanel'
 import WatermarkPanel from './WatermarkPanel'
 import CropPanel from './CropPanel'
 import RotatePanel from './RotatePanel'
+import RemoveWatermarkPanel from './RemoveWatermarkPanel'
 import { toolPaths } from '../lib/routes'
 import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
 
@@ -52,6 +53,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     'remove-bg': [],
     convert: [],
     watermark: [],
+    'remove-watermark': [],
     crop: [],
     rotate: [],
   })
@@ -106,7 +108,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const clearAllResults = useCallback(() => {
     setToolResults((prev) => {
       Object.values(prev).forEach((arr) => arr.forEach((r) => { if (r) URL.revokeObjectURL(r.url) }))
-      return { resize: [], compress: [], 'remove-bg': [], convert: [], watermark: [], crop: [], rotate: [] }
+      return { resize: [], compress: [], 'remove-bg': [], convert: [], watermark: [], 'remove-watermark': [], crop: [], rotate: [] }
     })
     setProcessingTools(new Set())
   }, [])
@@ -302,6 +304,24 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     markDone('watermark')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
+  const handleRemoveWatermark = useCallback(async (mask: Uint8Array, maskWidth: number, maskHeight: number) => {
+    markProcessing('remove-watermark')
+    const targets = mode === 'batch'
+      ? images.map((img, i) => ({ img, idx: i }))
+      : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
+
+    setProcessingProgress({ current: 0, total: targets.length })
+    for (const { img, idx } of targets) {
+      try {
+        const blob = await removeWatermark(img.file, mask, maskWidth, maskHeight)
+        saveToolResult('remove-watermark', blob, idx)
+      } catch (e) { console.error('Remove watermark failed:', e) }
+      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
+    }
+    setProcessingProgress(null)
+    markDone('remove-watermark')
+  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
+
   const handleCrop = useCallback(async (rect: CropRect) => {
     markProcessing('crop')
     const targets = mode === 'batch'
@@ -466,7 +486,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const processNewGate = useRef(false)
   useEffect(() => {
     if (mode !== 'batch' || imageCount === 0 || isProcessing) return
-    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'watermark' || activeTool === 'crop' || activeTool === 'rotate') return
+    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'watermark' || activeTool === 'remove-watermark' || activeTool === 'crop' || activeTool === 'rotate') return
     const resultsLen = toolResults[activeTool].length
     const hasPending = resultsLen < imageCount || toolResults[activeTool].slice(0, imageCount).some(r => !r)
     if (!hasPending) return
@@ -679,6 +699,14 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
           {activeTool === 'watermark' && (
             <WatermarkPanel
               onWatermark={handleWatermark}
+              processing={isProcessing}
+              hasResult={hasResult}
+            />
+          )}
+          {activeTool === 'remove-watermark' && (
+            <RemoveWatermarkPanel
+              file={currentImage!.file}
+              onRemoveWatermark={handleRemoveWatermark}
               processing={isProcessing}
               hasResult={hasResult}
             />

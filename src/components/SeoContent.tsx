@@ -44,9 +44,14 @@ const toolIcons: Record<string, React.ReactNode> = {
       <path d="M8 7h11M8 7l3-3M8 7l3 3" /><path d="M16 17H5M16 17l-3-3M16 17l-3 3" />
     </svg>
   ),
+  'remove-watermark': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-4.5 h-4.5">
+      <rect x="4" y="8" width="16" height="8" rx="2" /><path d="M7 4l10 16" />
+    </svg>
+  ),
 }
 
-const toolKeyList: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'watermark', 'crop', 'rotate']
+const toolKeyList: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'watermark', 'remove-watermark', 'crop', 'rotate']
 
 const homeToolLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
   en: {
@@ -55,6 +60,7 @@ const homeToolLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     'remove-bg': 'AI Background Remover',
     convert: 'Image Format Converter',
     watermark: 'Image Watermark Maker',
+    'remove-watermark': 'Image Watermark Remover',
     crop: 'Image Cropper',
     rotate: 'Image Rotator',
   },
@@ -64,6 +70,7 @@ const homeToolLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     'remove-bg': 'AI 抠图',
     convert: '图片格式转换',
     watermark: '图片加水印',
+    'remove-watermark': '图片去水印',
     crop: '图片裁剪',
     rotate: '图片旋转',
   },

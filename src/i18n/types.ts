@@ -12,6 +12,7 @@ export interface Translations {
   toolWatermark: string
   toolCrop: string
   toolRotate: string
+  toolRemoveWatermark: string
   dropTitle: string
   dropHint: string
   dropBrowse: string
@@ -76,6 +77,15 @@ export interface Translations {
   rotateAngle: string
   rotateReset: string
   rotateHint: string
+  removeWmTitle: string
+  removeWmHint: string
+  removeWmBrush: string
+  removeWmPaint: string
+  removeWmErase: string
+  removeWmUndo: string
+  removeWmClear: string
+  removeWmApply: string
+  removeWmResultHint: string
   download: string
   downloading: string
   footerPrivacy: string
@@ -98,6 +108,7 @@ export interface Translations {
   toolRemoveBgDesc: string
   toolConvertDesc: string
   toolWatermarkDesc: string
+  toolRemoveWatermarkDesc: string
   toolCropDesc: string
   toolRotateDesc: string
   dropIconAlt: string

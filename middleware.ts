@@ -15,6 +15,7 @@ const TOOL_PATHS: Record<string, ToolType> = {
   '/resize': 'resize',
   '/convert': 'convert',
   '/watermark': 'watermark',
+  '/remove-watermark': 'remove-watermark',
   '/crop': 'crop',
   '/rotate': 'rotate',
 }
@@ -92,4 +93,4 @@ export default async function middleware(request: Request): Promise<Response> {
   })
 }
 
-export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/watermark', '/crop', '/rotate', '/help', '/help/:path*', '/blog', '/blog/:path*'] }
+export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/watermark', '/remove-watermark', '/crop', '/rotate', '/help', '/help/:path*', '/blog', '/blog/:path*'] }

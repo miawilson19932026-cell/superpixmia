@@ -127,6 +127,23 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     ogTitle: 'Free Online Watermark Maker — Add Text or Logo Watermark',
     ogDescription: 'Add a text or logo watermark to images online for free. Corner or tiled, adjustable opacity and size. 100% in your browser, no upload.',
   },
+  '/remove-watermark': {
+    en: {
+      title: 'Free Online Watermark Remover — Erase Watermarks, Stamps & Text',
+      description:
+        'Remove watermarks, stamps, logos, and stray text from images online for free. Paint over the mark with a brush and the tool rebuilds the covered area from the surrounding pixels. Works great on flat and light backgrounds. 100% in your browser, no upload, no per-image limit.',
+      keywords: 'remove watermark, watermark remover, erase watermark, remove stamp, remove text from image, clean image online',
+    },
+    zh: {
+      title: '在线去水印 - 免费去除图片水印，涂抹即可',
+      description:
+        '免费在线去水印工具。用笔刷涂抹覆盖水印、印章或多余文字，工具自动用周围像素把覆盖区域补全，自然融入背景。适合清理截图、下载的图片。纯浏览器处理，免上传，不限张数。',
+      keywords: '去水印,在线去水印,去除水印,图片去水印,清除水印,去印章,去图片上的文字',
+    },
+    canonical: `${SITE}/remove-watermark`,
+    ogTitle: 'Free Online Watermark Remover — Erase Watermarks & Text',
+    ogDescription: 'Paint over a watermark with a brush and it\'s rebuilt from the surrounding pixels. Free, 100% in your browser, no upload.',
+  },
   '/crop': {
     en: {
       title: 'Free Online Image Cropper — Crop Photos to Any Size or Ratio',

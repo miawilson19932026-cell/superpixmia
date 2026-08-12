@@ -27,6 +27,7 @@ const ROUTES = [
   { path: '/resize', tool: 'resize', article: null },
   { path: '/convert', tool: 'convert', article: null },
   { path: '/watermark', tool: 'watermark', article: null },
+  { path: '/remove-watermark', tool: 'remove-watermark', article: null },
   { path: '/crop', tool: 'crop', article: null },
   { path: '/rotate', tool: 'rotate', article: null },
   { path: '/help', tool: null, article: null },

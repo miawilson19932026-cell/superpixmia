@@ -64,6 +64,7 @@ export default function App() {
         <Route path="/resize" element={<ToolPage tool="resize" />} />
         <Route path="/convert" element={<ToolPage tool="convert" />} />
         <Route path="/watermark" element={<ToolPage tool="watermark" />} />
+        <Route path="/remove-watermark" element={<ToolPage tool="remove-watermark" />} />
         <Route path="/crop" element={<ToolPage tool="crop" />} />
         <Route path="/rotate" element={<ToolPage tool="rotate" />} />
         <Route path="/help" element={<HelpHome />} />
