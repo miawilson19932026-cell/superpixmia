@@ -184,7 +184,7 @@ export default function RemoveWatermarkPanel({ file, onRemoveWatermark, processi
 
       {/* Brush editor: image canvas + red mask overlay, sized identically */}
       <div
-        className="relative select-none"
+        className="relative w-fit select-none"
         style={{ touchAction: 'none' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -195,13 +195,15 @@ export default function RemoveWatermarkPanel({ file, onRemoveWatermark, processi
           ref={stageRef}
           className="block max-w-full max-h-[55vh] w-auto h-auto rounded-lg cursor-crosshair"
         />
-        {dims && (
-          <canvas
-            ref={maskRef}
-            className="absolute inset-0 w-full h-full rounded-lg pointer-events-none"
-            style={{ opacity: 0.65 }}
-          />
-        )}
+        {/* Unconditional render: the ref must be non-null by the time img.onload
+            sets mask.width/height (it runs before setDims commits the mask to the
+            DOM). A conditional render here made maskRef.current null → the mask
+            layer never appeared and painting had no effect. */}
+        <canvas
+          ref={maskRef}
+          className="absolute inset-0 w-full h-full rounded-lg pointer-events-none"
+          style={{ opacity: 0.65 }}
+        />
       </div>
 
       <p className="text-center text-[11px] text-[var(--text-dim)] leading-relaxed">{t.removeWmHint}</p>
