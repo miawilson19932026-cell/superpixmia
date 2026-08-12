@@ -94,6 +94,8 @@ const en: Translations = {
   removeWmClear: 'Clear',
   removeWmApply: 'Remove Watermark',
   removeWmResultHint: 'Done — paint more areas or download below',
+  removeWmDone: 'Watermark removed',
+  removeWmRedo: 'Repaint',
   download: 'Download',
   downloading: 'Processing...',
   footerPrivacy: '100% browser-based — your images never leave your device',

@@ -94,6 +94,8 @@ const zh: Translations = {
   removeWmClear: '清除',
   removeWmApply: '开始去水印',
   removeWmResultHint: '处理完成——可继续涂抹其他区域，或点击下方下载',
+  removeWmDone: '水印已去除',
+  removeWmRedo: '重新涂抹',
   download: '下载',
   downloading: '处理中...',
   footerPrivacy: '100% 浏览器端处理 — 你的图片不会离开你的设备',

@@ -87,6 +87,8 @@ export interface Translations {
   removeWmClear: string
   removeWmApply: string
   removeWmResultHint: string
+  removeWmDone: string
+  removeWmRedo: string
   download: string
   downloading: string
   footerPrivacy: string

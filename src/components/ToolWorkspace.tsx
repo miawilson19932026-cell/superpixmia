@@ -706,6 +706,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
           {activeTool === 'remove-watermark' && (
             <RemoveWatermarkPanel
               file={currentImage!.file}
+              resultUrl={activeResult?.url ?? null}
               onRemoveWatermark={handleRemoveWatermark}
               processing={isProcessing}
               hasResult={hasResult}
