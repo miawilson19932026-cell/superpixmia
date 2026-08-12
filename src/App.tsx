@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
 import { useTranslation } from './i18n'
 import type { ToolType } from './types'
 import ParticleBg from './components/ParticleBg'
@@ -7,9 +7,11 @@ import Header from './components/Header'
 import ToolWorkspace from './components/ToolWorkspace'
 import SeoContent from './components/SeoContent'
 import { HelpHome, HelpArticlePage } from './components/HelpPage'
+import { BlogHome, BlogArticlePage } from './components/BlogPage'
 import { useSeoMeta } from './lib/useSeoMeta'
 import { HOME_TOOL } from './lib/routes'
 import { helpArticles } from './lib/help-articles'
+import { blogArticles } from './lib/blog-articles'
 
 // A tool page = focused tool workspace + its per-tool SEO content block.
 // The workspace is the exact same component used on the homepage — only the
@@ -45,7 +47,7 @@ function ScrollToTop() {
 }
 
 export default function App() {
-  const { t } = useTranslation()
+  const { t, lang } = useTranslation()
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -68,13 +70,20 @@ export default function App() {
         {helpArticles.map((a) => (
           <Route key={a.path} path={a.path} element={<HelpArticlePage data={a} />} />
         ))}
+        <Route path="/blog" element={<BlogHome />} />
+        {blogArticles.map((a) => (
+          <Route key={a.path} path={a.path} element={<BlogArticlePage data={a} />} />
+        ))}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       <footer className="border-t border-[var(--border)] py-4 mt-auto">
         <div className="mx-auto max-w-6xl px-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[var(--text-dim)]">
           <span>{t.footerPrivacy}</span>
-          <span className="hidden sm:inline">·</span>
+          <span className="flex items-center gap-3">
+            <Link to="/blog" className="hover:text-[var(--text-primary)] transition-colors">{lang === 'zh' ? '博客' : 'Blog'}</Link>
+            <Link to="/help" className="hover:text-[var(--text-primary)] transition-colors">{lang === 'zh' ? '帮助' : 'Help'}</Link>
+          </span>
           <span>{t.footerNoServer}</span>
         </div>
       </footer>

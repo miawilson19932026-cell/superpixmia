@@ -21,14 +21,17 @@ const TOOL_PATHS: Record<string, ToolType> = {
 
 const HELP_PATHS = ['/help', '/help/how-to-remove-bg', '/help/png-compression-guide', '/help/image-formats-comparison', '/help/resize-image-guide']
 
-const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS])
+const BLOG_PATHS = ['/blog', '/blog/wechat-images-blurry']
+
+const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS, ...BLOG_PATHS])
 
 function escapeAttr(s: string): string {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 }
 
 // Chinese structured data per path: home gets FAQPage, tool pages get HowTo +
-// FAQPage, help articles get an Article block, /help gets nothing extra.
+// FAQPage, help articles + blog posts get an Article block, /help and /blog
+// list pages get nothing extra.
 function zhJsonLdBlocks(path: string): string[] {
   if (path === '/') {
     return [ldToScript(zhHomeFaqLd())]
@@ -38,7 +41,7 @@ function zhJsonLdBlocks(path: string): string[] {
     const { howTo, faq } = zhToolLd(tool)
     return [ldToScript(howTo), ldToScript(faq)]
   }
-  if (path !== '/help') {
+  if (path !== '/help' && path !== '/blog') {
     const article = zhArticleLd(path)
     if (article) return [ldToScript(article)]
   }
@@ -89,4 +92,4 @@ export default async function middleware(request: Request): Promise<Response> {
   })
 }
 
-export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/watermark', '/crop', '/rotate', '/help', '/help/:path*'] }
+export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/watermark', '/crop', '/rotate', '/help', '/help/:path*', '/blog', '/blog/:path*'] }

@@ -10,6 +10,7 @@
 import type { ToolType } from '../types'
 import { homeContent, toolContent } from './seo-content-data'
 import { helpArticles } from './help-articles'
+import { blogArticles } from './blog-articles'
 import { getRouteSeo } from './seo'
 
 const SITE = 'https://www.superpixmia.com'
@@ -184,7 +185,7 @@ export function articlePageLd(pathname: string, title: string, description: stri
 }
 
 export function zhArticleLd(pathname: string): object | null {
-  const article = helpArticles.find((a) => a.path === pathname)
+  const article = [...helpArticles, ...blogArticles].find((a) => a.path === pathname)
   if (!article) return null
   return {
     '@context': 'https://schema.org',

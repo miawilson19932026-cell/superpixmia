@@ -7,8 +7,8 @@ import { toolPaths } from '../lib/routes'
 import type { ToolType } from '../types'
 import CatMascot from './CatMascot'
 
-// Feather-style helpers
-const sectionIcons: Record<string, React.ReactNode> = {
+// Feather-style helpers (exported for reuse by the blog module)
+export const sectionIcons: Record<string, React.ReactNode> = {
   question: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
       <circle cx="12" cy="12" r="10" /><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.35-1 .9-1 1.7M12 17h.01" />
@@ -36,22 +36,22 @@ const sectionIcons: Record<string, React.ReactNode> = {
   ),
 }
 
-const sectionIconKeys = ['question', 'lightbulb', 'wrench', 'list', 'info']
+export const sectionIconKeys = ['question', 'lightbulb', 'wrench', 'list', 'info']
 
-function useLang() {
+export function useLang() {
   const { lang } = useTranslation()
   return lang
 }
 
-// "Back" button — returns to the page the user came from, or home on direct entry.
-function BackButton() {
+// "Back" button — returns to the page the user came from, or `fallback` on direct entry.
+export function BackButton({ fallback = '/' }: { fallback?: string }) {
   const navigate = useNavigate()
   const { lang } = useTranslation()
   const goBack = () => {
     // React Router keeps an idx on history.state; idx > 0 means there's an
-    // in-app page to go back to. Direct visits (idx 0/undefined) go home.
+    // in-app page to go back to. Direct visits (idx 0/undefined) go to fallback.
     if (typeof window !== 'undefined' && (window.history.state?.idx ?? 0) > 0) navigate(-1)
-    else navigate('/')
+    else navigate(fallback)
   }
   return (
     <button

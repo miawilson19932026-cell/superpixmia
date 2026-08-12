@@ -299,4 +299,48 @@
     <priority>0.7</priority>
     <lastmod>2026-08-11</lastmod>
   </url>
+
+  <!-- ── Blog ── -->
+  <url>
+    <loc>https://www.superpixmia.com/blog</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/blog?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/blog?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/blog"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/blog?lang=en</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/blog?lang=zh</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/blog/wechat-images-blurry</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.superpixmia.com/blog/wechat-images-blurry?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://www.superpixmia.com/blog/wechat-images-blurry?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.superpixmia.com/blog/wechat-images-blurry"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/blog/wechat-images-blurry?lang=en</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
+  <url>
+    <loc>https://www.superpixmia.com/blog/wechat-images-blurry?lang=zh</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-08-12</lastmod>
+  </url>
 </urlset>

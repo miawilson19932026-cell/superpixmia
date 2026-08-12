@@ -19,7 +19,7 @@ import { StaticRouter } from 'react-router'
 const SITE = 'https://www.superpixmia.com'
 const DIST = resolve('dist')
 
-// All routes: home, 7 tool pages, help center, 4 help articles.
+// All routes: home, 7 tool pages, help center + 4 help articles, blog + posts.
 const ROUTES = [
   { path: '/', tool: null, article: null },
   { path: '/compress', tool: 'compress', article: null },
@@ -34,6 +34,8 @@ const ROUTES = [
   { path: '/help/png-compression-guide', tool: null, article: 'png-compression-guide' },
   { path: '/help/image-formats-comparison', tool: null, article: 'image-formats-comparison' },
   { path: '/help/resize-image-guide', tool: null, article: 'resize-image-guide' },
+  { path: '/blog', tool: null, article: null },
+  { path: '/blog/wechat-images-blurry', tool: null, article: 'wechat-images-blurry' },
 ]
 
 function escapeAttr(s) {
@@ -49,6 +51,7 @@ try {
   const seo = await vite.ssrLoadModule('/src/lib/seo.ts')
   const seoJsonLd = await vite.ssrLoadModule('/src/lib/seo-jsonld.ts')
   const { helpArticles } = await vite.ssrLoadModule('/src/lib/help-articles.ts')
+  const { blogArticles } = await vite.ssrLoadModule('/src/lib/blog-articles.ts')
 
   for (const route of ROUTES) {
     console.log(`  · rendering ${route.path} …`)
@@ -97,8 +100,10 @@ try {
       ldBlocks = seoJsonLd.toolPageLd(route.tool)
     } else if (route.path === '/help') {
       ldBlocks = seoJsonLd.articlePageLd('/help', 'SuperPixMia Help Center', 'Guides and tutorials for compressing images, removing backgrounds, resizing, and converting formats.')
+    } else if (route.path === '/blog') {
+      ldBlocks = seoJsonLd.articlePageLd('/blog', 'Image Tips & Tutorials — SuperPixMia Blog', 'Practical, jargon-free answers to the image problems you actually run into, each with a free browser-based fix.')
     } else if (route.article) {
-      const article = helpArticles.find((a) => a.path === route.path)
+      const article = [...helpArticles, ...blogArticles].find((a) => a.path === route.path)
       ldBlocks = article
         ? seoJsonLd.articlePageLd(route.path, article.title.en, article.description.en)
         : seoJsonLd.homePageLd()

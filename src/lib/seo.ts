@@ -5,6 +5,8 @@
 // SeoContent.tsx and the help articles — Google surfaces rich results only when
 // the same text appears in visible DOM.
 
+import { blogArticles } from './blog-articles'
+
 export interface SeoMeta {
   title: string
   description: string
@@ -244,6 +246,43 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     ogTitle: 'How to Resize an Image Online — Keep Quality & Proportions',
     ogDescription: 'Resize images online without losing quality — pixel dimensions, aspect ratios, and the right sizes for every use.',
   },
+  '/blog': {
+    en: {
+      title: 'Image Tips & Tutorials — SuperPixMia Blog',
+      description:
+        'Practical, jargon-free answers to the image problems you actually run into — blurry WeChat photos, which format to pick, compressing without losing quality. Each tutorial links to a free tool that fixes it in your browser.',
+      keywords: 'image tips, image tutorial, wechat image blurry, compress image, image format guide',
+    },
+    zh: {
+      title: '图片知识库 — SuperPixMia 博客',
+      description:
+        '用大白话回答你真正会遇到的图片问题：微信发图为什么变糊、图片格式怎么选、压缩怎么不损画质。每篇教程都配一个浏览器里免费解决的工具。',
+      keywords: '图片技巧,图片教程,微信图片模糊,图片压缩,图片格式',
+    },
+    canonical: `${SITE}/blog`,
+    ogTitle: 'Image Tips & Tutorials — SuperPixMia Blog',
+    ogDescription: 'Practical answers to the image problems you actually run into, each with a free browser-based fix.',
+  },
+}
+
+// Blog posts get their SEO entries from the same blog-articles.ts data source
+// (title/description), so a new post only needs editing one file.
+for (const a of blogArticles) {
+  SEO_ROUTES[a.path] = {
+    en: {
+      title: a.title.en,
+      description: a.description.en,
+      keywords: 'wechat image, image quality, image compression, image tips, 图片清晰度, 微信图片',
+    },
+    zh: {
+      title: a.title.zh,
+      description: a.description.zh,
+      keywords: '微信图片,图片模糊,图片清晰度,图片压缩,图片技巧',
+    },
+    canonical: `${SITE}${a.path}`,
+    ogTitle: a.title.en,
+    ogDescription: a.description.en,
+  }
 }
 
 export function getRouteSeo(pathname: string): RouteSeo {
