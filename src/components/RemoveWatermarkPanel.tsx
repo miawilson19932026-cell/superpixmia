@@ -165,11 +165,25 @@ export default function RemoveWatermarkPanel({ file, onRemoveWatermark, processi
     onRemoveWatermark(out, w, h)
   }, [onRemoveWatermark])
 
+  // Lucide-style icon wrapper (stroke-based, matches the rest of the app)
+  const icon = (paths: React.ReactNode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
+      {paths}
+    </svg>
+  )
+
   const modeBtn = (active: boolean) =>
-    `py-2.5 text-sm font-medium rounded-[var(--radius-md)] border transition-all ${
+    `flex flex-col items-center justify-center gap-1 py-2 rounded-[var(--radius-md)] border transition-all ${
       active
         ? 'border-[var(--accent)] bg-[var(--accent-glow)] text-[var(--accent)]'
         : 'border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text-primary)]'
+    }`
+
+  const plainBtn = (enabled: boolean) =>
+    `flex flex-col items-center justify-center gap-1 py-2 rounded-[var(--radius-md)] border transition-all ${
+      enabled
+        ? 'border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text-primary)]'
+        : 'border-[var(--border)]/40 text-[var(--text-dim)]/40 pointer-events-none'
     }`
 
   const sliderClass =
@@ -219,31 +233,31 @@ export default function RemoveWatermarkPanel({ file, onRemoveWatermark, processi
         <span className="text-sm font-mono tabular-nums text-[var(--text-dim)] shrink-0">{brush}</span>
       </div>
 
-      {/* Paint / Erase / Undo / Clear */}
+      {/* Paint / Erase / Undo / Clear — icon + label */}
       <div className="grid grid-cols-4 gap-1.5">
-        <button onClick={() => setMode('paint')} className={modeBtn(mode === 'paint')}>{t.removeWmPaint}</button>
-        <button onClick={() => setMode('erase')} className={modeBtn(mode === 'erase')}>{t.removeWmErase}</button>
-        <button
-          onClick={undo}
-          disabled={!canUndo}
-          className={`py-2.5 text-sm font-medium rounded-[var(--radius-md)] border transition-all ${
-            canUndo
-              ? 'border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text-primary)]'
-              : 'border-[var(--border)]/40 text-[var(--text-dim)]/40 pointer-events-none'
-          }`}
-        >
-          {t.removeWmUndo}
+        <button onClick={() => setMode('paint')} className={modeBtn(mode === 'paint')}>
+          {icon(
+            <><path d="m9.06 11.9 8.07-8.06a2.85 2.83 0 1 1 4.03 4.03l-8.06 8.08" /><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" /></>
+          )}
+          <span className="text-[11px] leading-none">{t.removeWmPaint}</span>
         </button>
-        <button
-          onClick={clearMask}
-          disabled={!hasMask}
-          className={`py-2.5 text-sm font-medium rounded-[var(--radius-md)] border transition-all ${
-            hasMask
-              ? 'border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text-primary)]'
-              : 'border-[var(--border)]/40 text-[var(--text-dim)]/40 pointer-events-none'
-          }`}
-        >
-          {t.removeWmClear}
+        <button onClick={() => setMode('erase')} className={modeBtn(mode === 'erase')}>
+          {icon(
+            <><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" /><path d="M22 21H7" /><path d="m5 11 9 9" /></>
+          )}
+          <span className="text-[11px] leading-none">{t.removeWmErase}</span>
+        </button>
+        <button onClick={undo} disabled={!canUndo} className={plainBtn(canUndo)}>
+          {icon(
+            <><path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" /></>
+          )}
+          <span className="text-[11px] leading-none">{t.removeWmUndo}</span>
+        </button>
+        <button onClick={clearMask} disabled={!hasMask} className={plainBtn(hasMask)}>
+          {icon(
+            <><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><path d="M10 11v6" /><path d="M14 11v6" /></>
+          )}
+          <span className="text-[11px] leading-none">{t.removeWmClear}</span>
         </button>
       </div>
 
