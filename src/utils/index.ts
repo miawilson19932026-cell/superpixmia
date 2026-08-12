@@ -1,1 +1,1 @@
-export { resizeImage, compressImage, convertImage, formatSize, getOutputFormat } from './resize'
+export { resizeImage, compressImage, convertImage, formatSize, getOutputFormat, getResultExtension } from './resize'

@@ -56,9 +56,33 @@ async function downsampleForWeChat(blob: Blob): Promise<string> {
 export interface PreviewItem {
   originalUrl: string
   resultUrl: string | null
+  resultMime: string | null
   originalSize: number
   resultSize: number | null
   fileName: string
+}
+
+// Browsers can't decode ICO in an <img> tag (ICO is only used for favicons),
+// so a converted ICO result shows a placeholder tile instead of a broken image.
+const isIconMime = (mime: string | null) =>
+  mime === 'image/x-icon' || mime === 'image/vnd.microsoft.icon'
+
+function IcoResultTile({ large = false, hint }: { large?: boolean; hint?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 text-center">
+      <div
+        className={`${large ? 'w-16 h-16 sm:w-20 sm:h-20' : 'w-9 h-9'} flex items-center justify-center rounded-xl bg-[var(--accent)]/12 text-[var(--accent)]`}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={`${large ? 'w-9 h-9 sm:w-11 sm:h-11' : 'w-5 h-5'}`}>
+          <rect x="3" y="3" width="18" height="18" rx="4" />
+          <path d="M3 15.5 8 11l4 3.5 3.5-2.5L21 16" />
+          <circle cx="9" cy="8" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      </div>
+      <span className="text-[10px] font-bold tracking-[0.2em] text-[var(--accent)]">.ICO</span>
+      {hint && <span className="text-[10px] text-[var(--text-dim)]">{hint}</span>}
+    </div>
+  )
 }
 
 interface Props {
@@ -191,11 +215,15 @@ export default function ImagePreview({
     let cancelled = false
     const seeded = new Map<number, string>()
     items.forEach((item, i) => {
+      if (item.resultUrl && isIconMime(item.resultMime)) return
       const u = item.resultUrl || item.originalUrl
       if (u && wechatDataCache.current.has(u)) seeded.set(i, wechatDataCache.current.get(u)!)
     })
     setSaveUrls(seeded)
     items.forEach((item, i) => {
+      // ICO results render as a placeholder tile, never an <img>, so no
+      // saveable URL is needed for them.
+      if (item.resultUrl && isIconMime(item.resultMime)) return
       const u = item.resultUrl || item.originalUrl
       if (!u || wechatDataCache.current.has(u)) return
       convertForWeChat(u).then(({ url, failed }) => {
@@ -468,11 +496,17 @@ export default function ImagePreview({
                         border-2 border-transparent hover:border-[rgba(139,92,246,0.2)] transition-all cursor-pointer group
                       "
                     >
-                      <img
-                        src={url}
-                        alt={item.fileName}
-                        className="w-full h-full object-cover"
-                      />
+                      {item.resultUrl && isIconMime(item.resultMime) ? (
+                        <div className="w-full h-full flex items-center justify-center bg-[var(--bg-input)]/30">
+                          <IcoResultTile />
+                        </div>
+                      ) : (
+                        <img
+                          src={url}
+                          alt={item.fileName}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
 
                       {/* Delete button — top-right inside the rounded corner */}
                       {onDelete && (
@@ -585,11 +619,18 @@ export default function ImagePreview({
               className="relative flex items-center justify-center p-3 min-h-[100px] sm:min-h-[140px] group cursor-pointer"
               onClick={() => openLightbox(0)}
             >
-              <img
-                src={saveUrls.get(0) ?? displayUrl}
-                alt={displayLabel as string}
-                className="max-w-full max-h-[140px] sm:max-h-[200px] object-contain rounded-[var(--radius-sm)]"
-              />
+              {current.resultUrl && isIconMime(current.resultMime) ? (
+                <IcoResultTile
+                  large
+                  hint={lang === 'zh' ? 'Favicon 图标已生成' : 'Favicon icon ready'}
+                />
+              ) : (
+                <img
+                  src={saveUrls.get(0) ?? displayUrl}
+                  alt={displayLabel as string}
+                  className="max-w-full max-h-[140px] sm:max-h-[200px] object-contain rounded-[var(--radius-sm)]"
+                />
+              )}
               {/* Label */}
               <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/80 backdrop-blur-sm rounded-[var(--radius-sm)] text-xs text-white font-medium">
                 {displayLabel as string}
@@ -681,24 +722,31 @@ export default function ImagePreview({
               onMouseUp={onMouseUp}
               onMouseLeave={onMouseUp}
             >
-              <img
-                src={saveUrls.get(lightboxIndex) ?? lbUrl}
-                alt={lbLabel as string}
-                draggable={false}
-                className="max-w-full max-h-[65vh] object-contain select-none transition-transform duration-[50ms] ease-linear"
-                style={{
-                  transform: zoom > 1 ? `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` : undefined,
-                  cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
-                }}
-                onWheel={onWheel}
-                onDoubleClick={onDoubleClick}
-                onMouseDown={onMouseDown}
-                onTouchStart={onTouchStart}
-                onTouchMove={onTouchMove}
-                onTouchEnd={onTouchEnd}
-              />
-              {/* WeChat: save URL not ready yet */}
-              {isWeChat && lbUrl && !saveUrls.has(lightboxIndex) && !failedUrls.has(lbUrl) && (
+              {lbItem?.resultUrl && isIconMime(lbItem.resultMime) ? (
+                <IcoResultTile
+                  large
+                  hint={lang === 'zh' ? 'Favicon 图标已生成' : 'Favicon icon ready'}
+                />
+              ) : (
+                <img
+                  src={saveUrls.get(lightboxIndex) ?? lbUrl}
+                  alt={lbLabel as string}
+                  draggable={false}
+                  className="max-w-full max-h-[65vh] object-contain select-none transition-transform duration-[50ms] ease-linear"
+                  style={{
+                    transform: zoom > 1 ? `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` : undefined,
+                    cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                  }}
+                  onWheel={onWheel}
+                  onDoubleClick={onDoubleClick}
+                  onMouseDown={onMouseDown}
+                  onTouchStart={onTouchStart}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}
+                />
+              )}
+              {/* WeChat: save URL not ready yet (ICO results skip this — they're a placeholder tile) */}
+              {isWeChat && lbUrl && !(lbItem?.resultUrl && isIconMime(lbItem.resultMime)) && !saveUrls.has(lightboxIndex) && !failedUrls.has(lbUrl) && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                   <span className="px-3 py-1.5 bg-black/70 rounded-full text-xs text-white/80">
                     {lang === 'zh' ? '正在生成可保存图片…' : 'Preparing saveable image…'}

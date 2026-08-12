@@ -249,3 +249,18 @@ export function getOutputFormat(file: File): OutputFormat {
   if (type === 'image/x-icon' || type === 'image/vnd.microsoft.icon') return 'ico'
   return 'png'
 }
+
+// Result blob MIME → download file extension. canvas.toBlob can yield any of
+// these; ICO/BMP come from our custom encoders, the rest from native toBlob.
+export function getResultExtension(blob: Blob): string {
+  switch (blob.type) {
+    case 'image/png': return 'png'
+    case 'image/jpeg': return 'jpg'
+    case 'image/webp': return 'webp'
+    case 'image/avif': return 'avif'
+    case 'image/bmp': return 'bmp'
+    case 'image/x-icon':
+    case 'image/vnd.microsoft.icon': return 'ico'
+    default: return 'png'
+  }
+}

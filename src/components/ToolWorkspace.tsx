@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
-import { resizeImage, compressImage, convertImage } from '../utils'
+import { resizeImage, compressImage, convertImage, getResultExtension } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
 import JSZip from 'jszip'
 import DropZone from './DropZone'
@@ -323,7 +323,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     if (mode === 'single' || validResults.length === 1) {
       const result = validResults[0]
       const blob = result.blob
-      const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/jpeg' ? 'jpg' : 'webp'
+      const ext = getResultExtension(blob)
       const base = (images[0]?.file.name ?? 'image').replace(/\.[^.]+$/, '')
       const url = URL.createObjectURL(blob)
 
@@ -348,7 +348,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
       results.forEach((result, idx) => {
         if (!result) return
         const blob = result.blob
-        const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/jpeg' ? 'jpg' : 'webp'
+        const ext = getResultExtension(blob)
         const base = (images[idx]?.file.name ?? `image-${idx + 1}`).replace(/\.[^.]+$/, '')
         zip.file(`${base}-pixmia.${ext}`, blob)
       })
@@ -441,6 +441,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const previewItems = useMemo(() => images.map((img, i) => ({
     originalUrl: img.url,
     resultUrl: toolResults[activeTool][i]?.url ?? null,
+    resultMime: toolResults[activeTool][i]?.blob.type ?? null,
     originalSize: img.file.size,
     resultSize: toolResults[activeTool][i]?.blob.size ?? null,
     fileName: img.file.name,
