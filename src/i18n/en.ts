@@ -4,6 +4,7 @@ const en: Translations = {
   brand: 'SuperPixMia',
   brandTagline: 'Free online image tools — resize, compress, remove BG & convert in your browser',
   navHome: 'Home',
+  navBlog: 'Blog',
   navHelp: 'Help',
   toolResize: 'Resize',
   toolCompress: 'Compress',

@@ -4,6 +4,7 @@ const zh: Translations = {
   brand: 'SuperPixMia',
   brandTagline: '免费在线图片工具 — 浏览器端改尺寸、压缩、抠图、格式转换一站式处理',
   navHome: '首页',
+  navBlog: '博客',
   navHelp: '帮助中心',
   toolResize: '改尺寸',
   toolCompress: '压缩',

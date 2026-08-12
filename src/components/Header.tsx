@@ -67,6 +67,9 @@ export default function Header() {
             <NavLink to="/" end onClick={closeMenu} className={({ isActive }) => linkClass(isActive)}>
               {t.navHome}
             </NavLink>
+            <NavLink to="/blog" onClick={closeMenu} className={({ isActive }) => linkClass(isActive)}>
+              {t.navBlog}
+            </NavLink>
             {/* Help = compact question-mark icon */}
             <NavLink
               to="/help"
@@ -148,6 +151,9 @@ export default function Header() {
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             <MobileNavLink to="/" onClick={closeMenu} active={pathname === '/'}>
               {t.navHome}
+            </MobileNavLink>
+            <MobileNavLink to="/blog" onClick={closeMenu} active={pathname.startsWith('/blog')}>
+              {t.navBlog}
             </MobileNavLink>
             <MobileNavLink to="/help" onClick={closeMenu} active={pathname.startsWith('/help')}>
               {t.navHelp}

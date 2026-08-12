@@ -4,6 +4,7 @@ export interface Translations {
   brand: string
   brandTagline: string
   navHome: string
+  navBlog: string
   navHelp: string
   toolResize: string
   toolCompress: string
