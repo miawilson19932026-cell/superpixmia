@@ -46,7 +46,7 @@ const toolIcons: Record<string, React.ReactNode> = {
   ),
 }
 
-const toolKeyList: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'watermark']
+const toolKeyList: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'watermark', 'crop']
 
 const homeToolLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
   en: {
@@ -55,6 +55,7 @@ const homeToolLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     'remove-bg': 'AI Background Remover',
     convert: 'Image Format Converter',
     watermark: 'Image Watermark Maker',
+    crop: 'Image Cropper',
   },
   zh: {
     resize: '图片改尺寸',
@@ -62,6 +63,7 @@ const homeToolLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     'remove-bg': 'AI 抠图',
     convert: '图片格式转换',
     watermark: '图片加水印',
+    crop: '图片裁剪',
   },
 }
 

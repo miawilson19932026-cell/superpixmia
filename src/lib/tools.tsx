@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { ToolType } from '../types'
 
 // Order used by the tool switcher and the help-side navigation.
-export const TOOL_KEYS: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'watermark']
+export const TOOL_KEYS: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'watermark', 'crop']
 
 // i18n key for each tool's display label.
 export const toolLabelKey: Record<ToolType, string> = {
@@ -11,6 +11,7 @@ export const toolLabelKey: Record<ToolType, string> = {
   'remove-bg': 'toolRemoveBg',
   convert: 'toolConvert',
   watermark: 'toolWatermark',
+  crop: 'toolCrop',
 }
 
 /* ── Gaming Icons (outline / filled) ── */
@@ -100,6 +101,23 @@ export const toolIcons: Record<ToolType, { outline: ReactNode; filled: ReactNode
         <path d="M12 3.5s6 6.1 6 10a6 6 0 11-12 0c0-3.9 6-10 6-10z" fill="currentColor" opacity="0.12" />
         <path d="M12 3.5s6 6.1 6 10a6 6 0 11-12 0c0-3.9 6-10 6-10z" />
         <text x="12" y="15" textAnchor="middle" fill="currentColor" fontSize="7" fontWeight="700">WM</text>
+      </svg>
+    ),
+  },
+  crop: {
+    outline: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 2v14a2 2 0 002 2h14" />
+        <path d="M18 22V8a2 2 0 00-2-2H2" />
+        <path d="M6 6h-1M19 18v1" opacity="0.5" />
+      </svg>
+    ),
+    filled: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 2v14a2 2 0 002 2h14" />
+        <path d="M18 22V8a2 2 0 00-2-2H2" />
+        <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" opacity="0.12" stroke="none" />
+        <rect x="7" y="7" width="10" height="10" rx="1.5" strokeDasharray="2.5 2" opacity="0.7" />
       </svg>
     ),
   },

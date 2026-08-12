@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
-import { resizeImage, compressImage, convertImage, getResultExtension, watermarkImage } from '../utils'
-import type { WatermarkOptions } from '../utils'
+import { resizeImage, compressImage, convertImage, getResultExtension, watermarkImage, cropImage } from '../utils'
+import type { WatermarkOptions, CropRect } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
 import JSZip from 'jszip'
 import DropZone from './DropZone'
@@ -13,6 +13,7 @@ import CompressPanel from './CompressPanel'
 import BgRemovePanel from './BgRemovePanel'
 import ConvertPanel from './ConvertPanel'
 import WatermarkPanel from './WatermarkPanel'
+import CropPanel from './CropPanel'
 import { toolPaths } from '../lib/routes'
 import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
 
@@ -50,6 +51,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     'remove-bg': [],
     convert: [],
     watermark: [],
+    crop: [],
   })
   const [processingTools, setProcessingTools] = useState<Set<ToolType>>(new Set())
   const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null)
@@ -102,7 +104,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const clearAllResults = useCallback(() => {
     setToolResults((prev) => {
       Object.values(prev).forEach((arr) => arr.forEach((r) => { if (r) URL.revokeObjectURL(r.url) }))
-      return { resize: [], compress: [], 'remove-bg': [], convert: [], watermark: [] }
+      return { resize: [], compress: [], 'remove-bg': [], convert: [], watermark: [], crop: [] }
     })
     setProcessingTools(new Set())
   }, [])
@@ -298,6 +300,37 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     markDone('watermark')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
+  const handleCrop = useCallback(async (rect: CropRect) => {
+    markProcessing('crop')
+    const targets = mode === 'batch'
+      ? images.map((img, i) => ({ img, idx: i }))
+      : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
+
+    setProcessingProgress({ current: 0, total: targets.length })
+    for (const { img, idx } of targets) {
+      try {
+        // In batch mode the box was drawn on the current image, so re-normalize
+        // it against that image and scale it to every other image's pixels.
+        let r = rect
+        if (mode === 'batch' && currentImage) {
+          const nx = rect.x / currentImage.width
+          const ny = rect.y / currentImage.height
+          r = {
+            x: nx * img.width,
+            y: ny * img.height,
+            width: (rect.width / currentImage.width) * img.width,
+            height: (rect.height / currentImage.height) * img.height,
+          }
+        }
+        const blob = await cropImage(img.file, r)
+        saveToolResult('crop', blob, idx)
+      } catch (e) { console.error('Crop failed:', e) }
+      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
+    }
+    setProcessingProgress(null)
+    markDone('crop')
+  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
+
   const handleRemoveBg = useCallback(async (index?: number) => {
     const idx = index ?? currentIndex
     const img = images[idx]
@@ -413,7 +446,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const processNewGate = useRef(false)
   useEffect(() => {
     if (mode !== 'batch' || imageCount === 0 || isProcessing) return
-    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'watermark') return
+    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'watermark' || activeTool === 'crop') return
     const resultsLen = toolResults[activeTool].length
     const hasPending = resultsLen < imageCount || toolResults[activeTool].slice(0, imageCount).some(r => !r)
     if (!hasPending) return
@@ -626,6 +659,16 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
           {activeTool === 'watermark' && (
             <WatermarkPanel
               onWatermark={handleWatermark}
+              processing={isProcessing}
+              hasResult={hasResult}
+            />
+          )}
+          {activeTool === 'crop' && (
+            <CropPanel
+              file={currentImage!.file}
+              originalWidth={currentImage?.width ?? 0}
+              originalHeight={currentImage?.height ?? 0}
+              onCrop={handleCrop}
               processing={isProcessing}
               hasResult={hasResult}
             />

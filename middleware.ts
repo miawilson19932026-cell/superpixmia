@@ -15,6 +15,7 @@ const TOOL_PATHS: Record<string, ToolType> = {
   '/resize': 'resize',
   '/convert': 'convert',
   '/watermark': 'watermark',
+  '/crop': 'crop',
 }
 
 const HELP_PATHS = ['/help', '/help/how-to-remove-bg', '/help/png-compression-guide', '/help/image-formats-comparison', '/help/resize-image-guide']
@@ -87,4 +88,4 @@ export default async function middleware(request: Request): Promise<Response> {
   })
 }
 
-export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/watermark', '/help', '/help/:path*'] }
+export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/watermark', '/crop', '/help', '/help/:path*'] }

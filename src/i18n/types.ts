@@ -10,6 +10,7 @@ export interface Translations {
   toolRemoveBg: string
   toolConvert: string
   toolWatermark: string
+  toolCrop: string
   dropTitle: string
   dropHint: string
   dropBrowse: string
@@ -58,6 +59,12 @@ export interface Translations {
   watermarkOpacity: string
   watermarkSize: string
   watermarkColor: string
+  cropTitle: string
+  cropRatio: string
+  cropFree: string
+  cropApply: string
+  cropHint: string
+  cropDragHint: string
   download: string
   downloading: string
   footerPrivacy: string
@@ -80,6 +87,7 @@ export interface Translations {
   toolRemoveBgDesc: string
   toolConvertDesc: string
   toolWatermarkDesc: string
+  toolCropDesc: string
   dropIconAlt: string
   // Batch mode
   modeSingle: string

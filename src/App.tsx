@@ -62,6 +62,7 @@ export default function App() {
         <Route path="/resize" element={<ToolPage tool="resize" />} />
         <Route path="/convert" element={<ToolPage tool="convert" />} />
         <Route path="/watermark" element={<ToolPage tool="watermark" />} />
+        <Route path="/crop" element={<ToolPage tool="crop" />} />
         <Route path="/help" element={<HelpHome />} />
         {helpArticles.map((a) => (
           <Route key={a.path} path={a.path} element={<HelpArticlePage data={a} />} />

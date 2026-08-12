@@ -125,6 +125,23 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     ogTitle: 'Free Online Watermark Maker — Add Text or Logo Watermark',
     ogDescription: 'Add a text or logo watermark to images online for free. Corner or tiled, adjustable opacity and size. 100% in your browser, no upload.',
   },
+  '/crop': {
+    en: {
+      title: 'Free Online Image Cropper — Crop Photos to Any Size or Ratio',
+      description:
+        'Crop images online for free with a draggable selection box. Pick a preset ratio — 1:1, 4:3, 3:4, 16:9, or 9:16 — or crop freely, then download without any quality loss. Perfect for social media, thumbnails, and profile photos. 100% in your browser, no upload.',
+      keywords: 'crop image, image cropper, crop photo, crop to 1:1, 16:9 crop, crop picture online, free photo cropper',
+    },
+    zh: {
+      title: '图片裁剪 - 在线自由裁剪图片比例，免费免上传',
+      description:
+        '免费在线图片裁剪工具，用可拖拽选框自由选择保留区域。内置 1:1、4:3、3:4、16:9、9:16 常用比例，适合发朋友圈、小红书、视频封面和头像，也支持自由裁剪。无损输出，浏览器本地处理。',
+      keywords: '图片裁剪,裁剪图片,在线裁剪,1:1裁剪,16:9裁剪,照片裁剪,免费裁剪工具',
+    },
+    canonical: `${SITE}/crop`,
+    ogTitle: 'Free Online Image Cropper — Crop Photos to Any Ratio',
+    ogDescription: 'Crop images online for free with a draggable box. Preset ratios for social media or free crop, no quality loss. 100% in your browser.',
+  },
   '/help': {
     en: {
       title: 'Help Center — SuperPixMia Guides & Tutorials',

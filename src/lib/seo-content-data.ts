@@ -550,6 +550,92 @@ export const toolContent: Record<ToolType, Record<'en' | 'zh', Content>> = {
       ],
     },
   },
+  crop: {
+    en: {
+      h1: 'Free Online Image Cropper',
+      headline: 'Crop Photos Online to Any Size or Ratio',
+      intro:
+        'Cut out exactly the part of your image you want with a draggable crop box. Pick a ready-made ratio — 1:1 for avatars, 16:9 for video covers, 9:16 for stories — or crop completely free. No quality loss, works in your browser, and batch crops up to 15 images at once.',
+      privacy:
+        'Cropping happens entirely in your browser — your original stays on your device and never gets uploaded. Safe for private photos, documents, and designs.',
+      howToTitle: 'How to crop an image online',
+      howToSteps: [
+        {
+          title: 'Upload your image',
+          desc: 'Drop any PNG, JPEG, WebP, or other supported image into the cropper. The crop box starts at the full image.',
+        },
+        {
+          title: 'Drag the box to your composition',
+          desc: 'Drag anywhere inside the box to move it, pull a corner to resize. Pick a preset ratio like 1:1 or 16:9 to snap the box to that shape.',
+        },
+        {
+          title: 'Apply and download',
+          desc: 'Click Apply Crop. The selected area is cut out at full resolution, then download your cropped image.',
+        },
+      ],
+      faqTitle: 'Image Crop FAQ',
+      faqs: [
+        {
+          q: 'Is the image cropper free?',
+          a: 'Yes — free, no ads, no watermark, and no account. Everything runs locally in your browser.',
+        },
+        {
+          q: 'Does cropping lose quality?',
+          a: 'No. Cropping only cuts out a region of the original pixels — the selected area keeps its full resolution and quality. Nothing is resized or compressed.',
+        },
+        {
+          q: 'What is the difference between resize and crop?',
+          a: 'Resize scales the whole image, which can stretch or distort proportions. Crop cuts away parts of the image you do not want, so the remaining area keeps its original shape and sharpness.',
+        },
+        {
+          q: 'Can I crop to a specific ratio?',
+          a: 'Yes. Choose a preset like 1:1, 4:3, 3:4, 16:9, or 9:16 and the box snaps to that ratio. You can also crop completely free.',
+        },
+      ],
+    },
+    zh: {
+      h1: '免费图片裁剪工具',
+      headline: '在线把图片裁成任意比例',
+      intro:
+        '用可拖拽的裁剪框，精确裁出你想要的那部分画面。内置 1:1 头像、16:9 视频封面、9:16 竖屏等常用比例，也支持完全自由裁剪。无损输出、浏览器本地运行，一次可批量裁剪最多 15 张。',
+      privacy:
+        '裁剪全程在浏览器内完成，原图只停留在你的设备上，绝不会上传。处理私人照片、文档和设计稿都非常安全。',
+      howToTitle: '如何在线裁剪图片',
+      howToSteps: [
+        {
+          title: '上传图片',
+          desc: '把任意 PNG、JPEG、WebP 等图片拖入裁剪工具，裁剪框默认覆盖整张图。',
+        },
+        {
+          title: '拖动选框选择构图',
+          desc: '在选框内拖动可移动位置，拉动四角可调整大小。选择 1:1、16:9 等预设比例，选框会自动吸附到该比例。',
+        },
+        {
+          title: '应用并下载',
+          desc: '点击「应用裁剪」，选区会以完整分辨率裁出，然后下载裁剪后的图片。',
+        },
+      ],
+      faqTitle: '图片裁剪常见问题',
+      faqs: [
+        {
+          q: '裁剪工具免费吗？',
+          a: '完全免费，无广告、无水印、无需注册。所有处理都在浏览器本地完成。',
+        },
+        {
+          q: '裁剪会损失画质吗？',
+          a: '不会。裁剪只是切掉原图中不需要的部分，选中的区域保持完整的像素和画质，不会缩放或压缩。',
+        },
+        {
+          q: '改尺寸和裁剪有什么区别？',
+          a: '改尺寸是缩放整张图片，比例可能被拉伸变形。裁剪是切掉不想要的边缘，保留的部分保持原始比例和清晰度。',
+        },
+        {
+          q: '可以按固定比例裁剪吗？',
+          a: '可以。选择 1:1、4:3、3:4、16:9、9:16 等预设，选框会自动吸附到对应比例，也可以完全自由裁剪。',
+        },
+      ],
+    },
+  },
 }
 
 // Cross-link labels for the "other tools" block on tool pages
@@ -560,6 +646,7 @@ export const otherToolsLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     'remove-bg': 'Remove background',
     convert: 'Convert format',
     watermark: 'Add watermark',
+    crop: 'Crop image',
   },
   zh: {
     resize: '图片改尺寸',
@@ -567,6 +654,7 @@ export const otherToolsLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
     'remove-bg': 'AI 抠图',
     convert: '格式转换',
     watermark: '图片加水印',
+    crop: '图片裁剪',
   },
 }
 
