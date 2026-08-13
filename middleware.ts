@@ -22,7 +22,7 @@ const TOOL_PATHS: Record<string, ToolType> = {
 
 const HELP_PATHS = ['/help', '/help/how-to-remove-bg', '/help/png-compression-guide', '/help/image-formats-comparison', '/help/resize-image-guide']
 
-const BLOG_PATHS = ['/blog', '/blog/wechat-images-blurry']
+const BLOG_PATHS = ['/blog', '/blog/wechat-images-blurry', '/blog/how-ai-sees-images']
 
 const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS, ...BLOG_PATHS])
 

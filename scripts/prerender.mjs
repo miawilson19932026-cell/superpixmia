@@ -37,6 +37,7 @@ const ROUTES = [
   { path: '/help/resize-image-guide', tool: null, article: 'resize-image-guide' },
   { path: '/blog', tool: null, article: null },
   { path: '/blog/wechat-images-blurry', tool: null, article: 'wechat-images-blurry' },
+  { path: '/blog/how-ai-sees-images', tool: null, article: 'how-ai-sees-images' },
 ]
 
 function escapeAttr(s) {

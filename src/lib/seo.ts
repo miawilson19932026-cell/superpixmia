@@ -289,12 +289,12 @@ for (const a of blogArticles) {
     en: {
       title: a.title.en,
       description: a.description.en,
-      keywords: 'wechat image, image quality, image compression, image tips, 图片清晰度, 微信图片',
+      keywords: a.keywords?.en ?? 'image tips, image tutorial, image compression, image quality',
     },
     zh: {
       title: a.title.zh,
       description: a.description.zh,
-      keywords: '微信图片,图片模糊,图片清晰度,图片压缩,图片技巧',
+      keywords: a.keywords?.zh ?? '图片技巧,图片教程,图片压缩,图片清晰度',
     },
     canonical: `${SITE}${a.path}`,
     ogTitle: a.title.en,
