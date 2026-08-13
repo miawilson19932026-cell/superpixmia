@@ -1,10 +1,14 @@
-// Vercel Edge Middleware — Chinese SEO: serve zh meta tags + zh structured data
-// to Chinese users & Baidu spider, per route.
+// Vercel Edge Middleware — Chinese SEO + crawler-aware share cards.
 //
-// English title/desc/JSON-LD is already baked into each prerendered static page
-// by scripts/prerender.mjs. For accept-language zh, this swaps in the Chinese
-// title/description/keywords/OG and injects Chinese FAQPage/HowTo JSON-LD. The
-// SPA then hydrates into Chinese UI via ?lang= / navigator detection.
+// 1. Chinese SEO: serve zh meta tags + zh structured data to Chinese users &
+//    Baidu spider, per route. English title/desc/JSON-LD is already baked into
+//    each prerendered static page by scripts/prerender.mjs. For accept-language
+//    zh, swap in the Chinese title/description/keywords/OG + Chinese JSON-LD.
+//    The SPA then hydrates into Chinese UI via ?lang= / navigator detection.
+// 2. Crawler-aware og:image: WeChat / China keep the Chinese square card
+//    (og-image-square.jpg, the static default), while overseas platform
+//    crawlers (Facebook/WhatsApp/Twitter/LinkedIn/Discord/…) get the ENGLISH
+//    landscape card (og-image.jpg, 1200×630).
 import { getRouteSeo } from './src/lib/seo'
 import { ldToScript, zhToolLd, zhHomeFaqLd, zhArticleLd } from './src/lib/seo-jsonld'
 import type { ToolType } from './src/types'
@@ -58,9 +62,13 @@ export default async function middleware(request: Request): Promise<Response> {
   }
 
   const acceptLang = request.headers.get('accept-language') || ''
+  const ua = request.headers.get('user-agent') || ''
   const isChinese = /^zh|,zh|zh-/i.test(acceptLang)
+  // Overseas platform crawlers → serve the ENGLISH share card. WeChat / Baidu /
+  // regular users keep the Chinese square (static default in index.html).
+  const isForeignCrawler = /facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Discordbot|Slackbot|TelegramBot|Redditbot|Pinterest/i.test(ua)
 
-  if (!isChinese) {
+  if (!isChinese && !isForeignCrawler) {
     return fetch(request)
   }
 
@@ -70,6 +78,23 @@ export default async function middleware(request: Request): Promise<Response> {
   }
 
   let html = await res.text()
+
+  // Foreign crawlers: swap the Chinese square (WeChat) for the ENGLISH landscape
+  // card. twitter:image already points at the English og-image.jpg in index.html.
+  if (isForeignCrawler) {
+    html = html.replace(
+      /<meta property="og:image"[^>]*>/,
+      '<meta property="og:image" content="https://www.superpixmia.com/og-image.jpg" />'
+    )
+    html = html.replace(
+      /<meta property="og:image:width"[^>]*>/,
+      '<meta property="og:image:width" content="1200" />'
+    )
+    html = html.replace(
+      /<meta property="og:image:height"[^>]*>/,
+      '<meta property="og:image:height" content="630" />'
+    )
+  }
 
   const seo = getRouteSeo(path)
   const zh = seo.zh
