@@ -7,11 +7,12 @@
   ],
   "headers": [
     {
-      "source": "/og-image.*",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Cache-Control", "value": "public, max-age=86400, immutable" }
-      ]
+      "source": "/og-image-square.jpg",
+      "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+    },
+    {
+      "source": "/og-image.jpg",
+      "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
     }
   ],
   "functions": {
