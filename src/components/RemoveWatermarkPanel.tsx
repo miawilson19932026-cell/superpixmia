@@ -28,10 +28,6 @@ export default function RemoveWatermarkPanel({ file, resultUrl, onRemoveWatermar
   const [mode, setMode] = useState<'paint' | 'erase'>('paint')
   const [canUndo, setCanUndo] = useState(false)
   const [hasMask, setHasMask] = useState(false)
-  // After Apply, swap the canvas to the de-watermarked result so the user sees
-  // the outcome right where they painted (otherwise the untouched original
-  // stays on screen and reads as "didn't work").
-  const [showResult, setShowResult] = useState(false)
 
   const refreshMaskState = () => setHasMask(hasMaskRef.current)
 
@@ -64,10 +60,10 @@ export default function RemoveWatermarkPanel({ file, resultUrl, onRemoveWatermar
   }, [file])
 
   // When a processed result exists, paint it onto the canvas. Any previous
-  // brush strokes are already cleared by apply() — the result replaces them.
+  // brush strokes are already cleared by apply() — the result replaces them
+  // and becomes the base image for the next brush round.
   useEffect(() => {
-    if (!resultUrl) { setShowResult(false); return }
-    setShowResult(true)
+    if (!resultUrl) return
     const stage = stageRef.current
     if (!stage) return
     const img = new Image()
@@ -191,29 +187,6 @@ export default function RemoveWatermarkPanel({ file, resultUrl, onRemoveWatermar
     clearMask()
   }, [onRemoveWatermark, clearMask])
 
-  // Swap the canvas back to the original and reset the mask, so the user can
-  // start over if the result isn't quite right.
-  const redo = useCallback(() => {
-    setShowResult(false)
-    const stage = stageRef.current
-    if (!stage) return
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      if (!stageRef.current) return
-      stageRef.current.getContext('2d')!.drawImage(img, 0, 0, stageRef.current.width, stageRef.current.height)
-      const mask = maskRef.current
-      if (!mask) return
-      mask.getContext('2d')!.clearRect(0, 0, mask.width, mask.height)
-      undoStackRef.current = []
-      hasMaskRef.current = false
-      setCanUndo(false)
-      setHasMask(false)
-    }
-    img.src = url
-  }, [file])
-
   // Lucide-style icon wrapper (stroke-based, matches the rest of the app)
   const icon = (paths: React.ReactNode) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
@@ -271,23 +244,15 @@ export default function RemoveWatermarkPanel({ file, resultUrl, onRemoveWatermar
 
       <p className="text-center text-[11px] text-[var(--text-dim)] leading-relaxed">{t.removeWmHint}</p>
 
-      {showResult ? (
-        /* Result state: the canvas now shows the de-watermarked image, so the
-           original (watermark still visible) never lingers and confuses users. */
-        <div className="space-y-3">
-          <div className="flex items-center justify-center gap-2 py-3 rounded-[var(--radius-md)] border border-emerald-500/25 bg-emerald-500/10 text-emerald-400/90 text-sm font-medium">
-            ✓ {t.removeWmDone}
-          </div>
-          <button
-            onClick={redo}
-            className="w-full py-3 glass backdrop-blur-xl border border-[var(--accent)]/25 text-sm font-semibold rounded-[var(--radius-md)] active:scale-[0.98] transition-all"
-          >
-            {t.removeWmRedo}
-          </button>
+      {/* Success banner: keeps the result obvious while staying non-blocking so
+          the user can keep painting more watermarks. */}
+      {hasResult && !processing && (
+        <div className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-[var(--radius-md)] border border-emerald-500/25 bg-emerald-500/10 text-emerald-400/90 text-sm font-medium leading-snug">
+          ✓ {t.removeWmDone} · {t.removeWmResultHint}
         </div>
-      ) : (
-        <>
-          {/* Brush size */}
+      )}
+
+      {/* Brush size */}
           <div className="flex items-center gap-3">
             <label className="block text-[11px] text-[var(--text-dim)] uppercase tracking-wide shrink-0">{t.removeWmBrush}</label>
             <input
@@ -334,11 +299,6 @@ export default function RemoveWatermarkPanel({ file, resultUrl, onRemoveWatermar
             {processing ? t.processing : t.removeWmApply}
           </button>
 
-          {!processing && hasResult && (
-            <p className="text-xs text-center text-[var(--text-dim)]">{t.removeWmResultHint}</p>
-          )}
-        </>
-      )}
     </div>
   )
 }

@@ -8,7 +8,7 @@
 // All work happens in the browser; nothing is ever uploaded.
 import { canvasToBlob, getOutputFormat } from './resize'
 
-function loadImage(file: File): Promise<HTMLImageElement> {
+function loadImage(file: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
@@ -21,7 +21,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 }
 
 export async function removeWatermark(
-  file: File,
+  file: Blob,
   mask: Uint8Array,
   maskWidth: number,
   maskHeight: number,

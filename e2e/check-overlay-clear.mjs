@@ -1,10 +1,10 @@
-// Regression for the watermark-remover UX chain:
+// Regression for the watermark-remover UX chain (continuous brushing):
 //  1. brush strokes appear on the overlay while painting
 //  2. after Apply, the overlay is cleared AND the canvas swaps to the result
 //     image (so the original watermark never lingers and reads as "didn't work")
-//  3. the result state shows "Watermark removed" + a "Repaint" button and hides
-//     the brush tools
-//  4. Repaint restores the original (watermark visible again) and the tools.
+//  3. a "Watermark removed" banner appears, the brush tools STAY visible and
+//     there is no blocking "Repaint" block
+//  4. a second brush + Apply works — removal accumulates until the user is done
 // Runs on live or local URL (PAGE_URL env). Pink-stamp image from gen-pink-png.mjs.
 import puppeteer from 'puppeteer-core'
 import { fileURLToPath } from 'node:url'
@@ -91,25 +91,34 @@ await sleep(400)
 const after = await overlayHasStrokes()
 const doneShown = await page.evaluate(() => /水印已去除|Watermark removed/.test(document.body.textContent || ''))
 const redoShown = await page.evaluate(() => /重新涂抹|Repaint/.test(document.body.textContent || ''))
-const toolsHidden = !(await hasBrushTools())
+const toolsVisible = await hasBrushTools()
 
-// Repaint restores the original
-await buttonByText('重新涂抹|Repaint')
-let restored = false
-for (let i = 0; i < 30; i++) {
-  await sleep(300)
+// ── Round 2: continuous brushing — brush another area and Apply again ──
+const stage2 = await page.evaluate(() => {
+  const s = document.querySelector('canvas.cursor-crosshair')
+  const r = s.getBoundingClientRect()
+  return { left: r.left, top: r.top, width: r.width, height: r.height, bw: s.width, bh: s.height }
+})
+const a2 = mapToScreen(stage2, 100, 150)
+const b2 = mapToScreen(stage2, 130, 150)
+await page.mouse.move(a2.x, a2.y); await page.mouse.down()
+await page.mouse.move(b2.x, b2.y, { steps: 6 }); await page.mouse.up()
+await sleep(300)
+const clicked2 = await buttonByText('开始去水印|Remove Watermark$')
+if (!clicked2) throw new Error('apply button not found on round 2')
+let whiteAfter2 = false
+for (let i = 0; i < 40; i++) {
+  await sleep(400)
   const p = await probePixel()
-  if (p && p.r > 200 && p.b < 200) { restored = true; break }
+  if (p && p.r > 200 && p.g > 200 && p.b > 200) { whiteAfter2 = true; break }
 }
-const toolsBack = await hasBrushTools()
 
-console.log('overlay has strokes while painting :', before === 1 ? 'YES' : before === 0 ? 'NO ✗' : 'not-found')
+console.log('overlay has strokes while painting  :', before === 1 ? 'YES' : before === 0 ? 'NO ✗' : 'not-found')
 console.log('canvas shows original before apply  :', bufBefore && bufBefore.b < 200 ? 'YES (pink)' : 'unexpected')
 console.log('canvas shows result after apply     :', white ? 'YES ✓ (watermark gone on canvas)' : 'NO ✗')
 console.log('overlay cleared after apply         :', after === 0 ? 'YES ✓' : after === 1 ? 'NO ✗' : 'not-found')
 console.log('"removed" message shown             :', doneShown ? 'YES ✓' : 'NO ✗')
-console.log('"repaint" button shown              :', redoShown ? 'YES ✓' : 'NO ✗')
-console.log('brush tools hidden in result state  :', toolsHidden ? 'YES ✓' : 'NO ✗')
-console.log('repaint restores original canvas    :', restored ? 'YES ✓' : 'NO ✗')
-console.log('brush tools back after repaint      :', toolsBack ? 'YES ✓' : 'NO ✗')
+console.log('no blocking "repaint" block         :', !redoShown ? 'YES ✓' : 'NO ✗')
+console.log('brush tools still visible after apply:', toolsVisible ? 'YES ✓' : 'NO ✗')
+console.log('round-2 apply keeps result          :', whiteAfter2 ? 'YES ✓' : 'NO ✗')
 await browser.close()

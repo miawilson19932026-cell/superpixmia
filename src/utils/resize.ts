@@ -239,7 +239,7 @@ export function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
-export function getOutputFormat(file: File): OutputFormat {
+export function getOutputFormat(file: Blob): OutputFormat {
   const type = file.type
   if (type === 'image/png') return 'png'
   if (type === 'image/jpeg') return 'jpeg'

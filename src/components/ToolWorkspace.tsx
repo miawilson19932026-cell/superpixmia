@@ -313,14 +313,18 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     setProcessingProgress({ current: 0, total: targets.length })
     for (const { img, idx } of targets) {
       try {
-        const blob = await removeWatermark(img.file, mask, maskWidth, maskHeight)
+        // Iterative removal: continue from the last de-watermarked result so the
+        // user can brush → remove → brush → remove repeatedly. First apply uses
+        // the original image; every later apply only fills the newly painted mask.
+        const base = toolResults['remove-watermark'][idx]?.blob ?? img.file
+        const blob = await removeWatermark(base, mask, maskWidth, maskHeight)
         saveToolResult('remove-watermark', blob, idx)
       } catch (e) { console.error('Remove watermark failed:', e) }
       setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
     }
     setProcessingProgress(null)
     markDone('remove-watermark')
-  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
+  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone, toolResults])
 
   const handleCrop = useCallback(async (rect: CropRect) => {
     markProcessing('crop')
