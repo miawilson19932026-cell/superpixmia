@@ -24,7 +24,57 @@ const SPARKLES: number[][] = [
   [25, -5, 0.5, 1.8,  2.1],
 ]
 
-export default function CatMascot({ positionClass }: { positionClass?: string }) {
+type Dot = { top: string; left: string; w: number; bg: number; d: string; delay: string }
+
+// Dot trail from the cat's mouth toward the bubble — two orientations:
+//  DOTS_LEFT → bubble sits to the RIGHT of the cat (default) → trail LEFT toward it
+//  DOTS_UP   → bubble sits BELOW the cat (help/blog, cat centered) → trail UP toward it
+const DOTS_LEFT: Dot[] = [
+  { top: '58%', left: '-42px', w: 16, bg: 0.22, d: '2.0s', delay: '0s' },
+  { top: '48%', left: '-34px', w: 22, bg: 0.18, d: '2.5s', delay: '0.4s' },
+  { top: '38%', left: '-26px', w: 28, bg: 0.15, d: '2.2s', delay: '0.8s' },
+  { top: '28%', left: '-18px', w: 24, bg: 0.13, d: '2.8s', delay: '0.2s' },
+  { top: '18%', left: '-10px', w: 20, bg: 0.11, d: '2.6s', delay: '0.6s' },
+]
+const DOTS_UP: Dot[] = [
+  { top: '-34px', left: '54%', w: 16, bg: 0.22, d: '2.0s', delay: '0s' },
+  { top: '-26px', left: '46%', w: 22, bg: 0.18, d: '2.5s', delay: '0.4s' },
+  { top: '-18px', left: '52%', w: 28, bg: 0.15, d: '2.2s', delay: '0.8s' },
+  { top: '-12px', left: '48%', w: 24, bg: 0.13, d: '2.8s', delay: '0.2s' },
+  { top: '-6px',  left: '50%', w: 20, bg: 0.11, d: '2.6s', delay: '0.6s' },
+]
+
+// Glass tail connecting the bubble to the cat (transform differs per orientation)
+const TAIL_STYLE = {
+  width: '18px',
+  height: '16px',
+  clipPath: 'polygon(100% 0%, 25% 35%, 0% 50%, 25% 65%, 100% 100%)',
+  background: 'rgba(255,255,255,0.06)',
+  backdropFilter: 'blur(20px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+  border: '2.5px solid rgba(255,255,255,0.14)',
+  borderRight: 'none',
+  borderRadius: '40% 0 0 40%',
+} as const
+
+const renderDots = (dots: Dot[], extraCls = '') =>
+  dots.map((dot, i) => (
+    <span
+      key={i}
+      className={`absolute rounded-full ${extraCls}`}
+      style={{
+        top: dot.top,
+        left: dot.left,
+        width: `${dot.w}px`,
+        height: `${dot.w}px`,
+        background: `rgba(255,255,255,${dot.bg})`,
+        border: '1px solid rgba(255,255,255,0.06)',
+        animation: `bubbleDot${1 + (i % 3)} ${dot.d} ease-in-out ${dot.delay} infinite`,
+      }}
+    />
+  ))
+
+export default function CatMascot({ positionClass, bubbleBelow }: { positionClass?: string; bubbleBelow?: boolean }) {
   const { t, lang } = useTranslation()
   const [frame, setFrame] = useState(1)
   const [winking, setWinking] = useState(false)
@@ -117,53 +167,38 @@ export default function CatMascot({ positionClass }: { positionClass?: string })
         draggable={false}
       />
 
-      {/* Speech bubble + tail + dots wrapper */}
-      <div className="absolute top-[2%] left-[48%] sm:-top-[12%] sm:left-[75%] z-20 animate-float pointer-events-none">
-        {/* Bubble dots trail from mouth */}
-        {[
-          { top: '58%', left: '-42px', w: 16, bg: 0.22, d: '2.0s', delay: '0s' },
-          { top: '48%', left: '-34px', w: 22, bg: 0.18, d: '2.5s', delay: '0.4s' },
-          { top: '38%', left: '-26px', w: 28, bg: 0.15, d: '2.2s', delay: '0.8s' },
-          { top: '28%', left: '-18px', w: 24, bg: 0.13, d: '2.8s', delay: '0.2s' },
-          { top: '18%', left: '-10px', w: 20, bg: 0.11, d: '2.6s', delay: '0.6s' },
-        ].map((dot, i) => (
-          <span
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              top: dot.top,
-              left: dot.left,
-              width: `${dot.w}px`,
-              height: `${dot.w}px`,
-              background: `rgba(255,255,255,${dot.bg})`,
-              border: '1px solid rgba(255,255,255,0.06)',
-              animation: `bubbleDot${1 + (i % 3)} ${dot.d} ease-in-out ${dot.delay} infinite`,
-            }}
-          />
-        ))}
+      {/* Speech bubble + tail + dots wrapper.
+          Mobile placement depends on the cat's position:
+          - default (cat bottom-left): bubble sits to the RIGHT of the cat, wide.
+          - bubbleBelow (help/blog, cat centered): bubble sits BELOW the cat, wide.
+          Desktop (sm+) is unchanged everywhere: above-right of the cat. */}
+      <div className={`absolute z-20 animate-float pointer-events-none ${
+        bubbleBelow
+          ? 'top-full mt-2 inset-x-0 flex justify-center sm:top-[-12%] sm:left-[75%] sm:inset-x-auto sm:block sm:mt-0'
+          : 'top-[2%] left-full ml-2.5 sm:top-[-12%] sm:left-[75%] sm:ml-0'
+      }`}>
+        {/* Bubble dots trail from the cat's mouth (LEFT-trail on mobile, shown always) */}
+        {renderDots(DOTS_LEFT, bubbleBelow ? 'hidden sm:block' : '')}
+        {/* Up-pointing dots for the below-cat bubble (mobile only) */}
+        {bubbleBelow && renderDots(DOTS_UP, 'sm:hidden')}
 
-        {/* Tail — irregular point at bottom-left, angled */}
+        {/* Tail — irregular glass point connecting the bubble to the cat */}
         <div
-          className="absolute bottom-[12%] left-0"
-          style={{
-            width: '18px',
-            height: '16px',
-            transform: 'translateX(-14px) rotate(-15deg)',
-            clipPath: 'polygon(100% 0%, 25% 35%, 0% 50%, 25% 65%, 100% 100%)',
-            background: 'rgba(255,255,255,0.06)',
-            backdropFilter: 'blur(20px) saturate(140%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(140%)',
-            border: '2.5px solid rgba(255,255,255,0.14)',
-            borderRight: 'none',
-            borderRadius: '40% 0 0 40%',
-          }}
+          className={`absolute bottom-[12%] left-0 ${bubbleBelow ? 'hidden sm:block' : ''}`}
+          style={{ ...TAIL_STYLE, transform: 'translateX(-14px) rotate(-15deg)' }}
         />
+        {bubbleBelow && (
+          <div
+            className="absolute top-0 left-1/2 sm:hidden"
+            style={{ ...TAIL_STYLE, transform: 'translate(-50%, -14px) rotate(75deg)' }}
+          />
+        )}
 
         <button
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           className="relative px-5 py-3.5 sm:px-6 sm:py-4
-            min-w-[130px] sm:min-w-[220px] max-w-[calc(100vw-1.5rem)]
+            min-w-[190px] sm:min-w-[220px] max-w-[calc(100vw-1.5rem)]
             pointer-events-auto cursor-pointer
             hover:scale-105 active:scale-95 transition-all duration-200"
           style={{

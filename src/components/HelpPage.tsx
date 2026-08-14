@@ -199,7 +199,7 @@ export function HelpHome() {
           ))}
         </div>
         <div className="flex justify-center pt-8 sm:pt-10">
-          <CatMascot positionClass="relative block" />
+          <CatMascot positionClass="relative block" bubbleBelow />
         </div>
         </div>
       </div>
@@ -333,7 +333,7 @@ export function HelpArticlePage({ data }: { data: HelpArticleData }) {
           </Link>
         </div>
         <div className="flex justify-center pt-8 sm:pt-10">
-          <CatMascot positionClass="relative block" />
+          <CatMascot positionClass="relative block" bubbleBelow />
         </div>
         </div>
       </div>

@@ -81,7 +81,7 @@ export function BlogHome() {
           </Link>
         </div>
         <div className="flex justify-center pt-8 sm:pt-10">
-          <CatMascot positionClass="relative block" />
+          <CatMascot positionClass="relative block" bubbleBelow />
         </div>
       </div>
     </main>
@@ -215,7 +215,7 @@ export function BlogArticlePage({ data }: { data: BlogArticleData }) {
           </Link>
         </div>
         <div className="flex justify-center pt-8 sm:pt-10">
-          <CatMascot positionClass="relative block" />
+          <CatMascot positionClass="relative block" bubbleBelow />
         </div>
       </div>
     </main>
