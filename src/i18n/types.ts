@@ -124,6 +124,44 @@ export interface Translations {
   imageOf: string
   clearAll: string
   catBubble: string
+  // Studio — combined single-image editor (/studio)
+  studioTagline: string
+  studioPickTitle: string
+  studioPickHint: string
+  studioOpen: string
+  studioUploadNew: string
+  studioToolsLabel: string
+  studioRotate: string
+  studioCrop: string
+  studioText: string
+  studioLogo: string
+  studioPencil: string
+  studioHeal: string
+  studioCutout: string
+  studioRemove: string
+  studioResize: string
+  studioApply: string
+  studioUndo: string
+  studioDownload: string
+  studioDownloading: string
+  studioClear: string
+  studioReset: string
+  studioApplied: string
+  studioBrushSize: string
+  studioColor: string
+  studioTextPlaceholder: string
+  studioLogoHint: string
+  studioSelectLogo: string
+  studioOpacity: string
+  studioTolerance: string
+  studioAngle: string
+  studioWidth: string
+  studioHeight: string
+  studioLockRatio: string
+  studioFlipH: string
+  studioFlipV: string
+  studioErase: string
+  studioFree: string
 }
 
 // Detect language from URL param, browser, or localStorage

@@ -1,5 +1,4 @@
-import type { OutputFormat } from '../types'
-import { canvasToBlob } from './resize'
+import { canvasToBlob, getOutputFormat } from './resize'
 
 export interface RotateOptions {
   angle: number   // degrees clockwise; any value incl. 90/180/270 steps
@@ -7,7 +6,7 @@ export interface RotateOptions {
   flipY: boolean  // mirror top-bottom
 }
 
-function loadImage(file: File): Promise<HTMLImageElement> {
+function loadImage(blob: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
@@ -15,15 +14,15 @@ function loadImage(file: File): Promise<HTMLImageElement> {
       resolve(img)
     }
     img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = URL.createObjectURL(file)
+    img.src = URL.createObjectURL(blob)
   })
 }
 
 // Rotate (and optionally mirror) the source image. The canvas is sized to the
 // rotated bounding box so nothing is clipped; non-90° angles leave white corners
 // (a solid white base keeps JPEG from turning those pixels black on encode).
-export async function rotateImage(file: File, options: RotateOptions): Promise<Blob> {
-  const img = await loadImage(file)
+export async function rotateImage(blob: Blob, options: RotateOptions): Promise<Blob> {
+  const img = await loadImage(blob)
   const W = img.width
   const H = img.height
   const { angle, flipX, flipY } = options
@@ -50,5 +49,5 @@ export async function rotateImage(file: File, options: RotateOptions): Promise<B
   ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1)
   ctx.drawImage(img, -W / 2, -H / 2)
 
-  return canvasToBlob(canvas, (file.type as OutputFormat) || 'png')
+  return canvasToBlob(canvas, getOutputFormat(blob))
 }

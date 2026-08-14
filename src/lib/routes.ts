@@ -8,10 +8,7 @@ export const toolPaths: Record<ToolType, string> = {
   compress: '/compress',
   'remove-bg': '/remove-bg',
   convert: '/convert',
-  watermark: '/watermark',
   'remove-watermark': '/remove-watermark',
-  crop: '/crop',
-  rotate: '/rotate',
 }
 
 export const toolPathList: { tool: ToolType; path: string }[] = Object.entries(toolPaths).map(
@@ -28,3 +25,6 @@ export function toolFromPath(pathname: string): ToolType | null {
 // Homepage focuses the compress tool by default (best perceived value, matches
 // most search intent) but all tabs remain visible as internal links.
 export const HOME_TOOL: ToolType = 'compress'
+
+// The combined single-image editor (not part of the ToolType union).
+export const EDITOR_PATH = '/studio'

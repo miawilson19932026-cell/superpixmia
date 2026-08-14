@@ -79,8 +79,13 @@ export default function CatMascot({ positionClass }: { positionClass?: string })
 
   return (
     <>
-    <button
+    {/* div role=button (not <button>) so the speech-bubble <button> inside
+        doesn't nest interactive elements — that nesting breaks React hydration. */}
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick() } }}
       className={`${positionClass ?? 'absolute -bottom-32 -left-4 sm:-bottom-44 sm:left-auto sm:-right-28'} z-10 w-[150px] h-[150px] sm:w-[280px] sm:h-[280px]
         rounded-full cursor-pointer select-none
         hover:scale-110 active:scale-95 transition-transform duration-200
@@ -191,7 +196,7 @@ export default function CatMascot({ positionClass }: { positionClass?: string })
           </p>
         </button>
       </div>
-    </button>
+    </div>
 
       {/* WeChat bookmark guide overlay */}
       {showGuide && (

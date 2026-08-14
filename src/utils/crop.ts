@@ -1,5 +1,4 @@
-import type { OutputFormat } from '../types'
-import { canvasToBlob } from './resize'
+import { canvasToBlob, getOutputFormat } from './resize'
 
 // Crop rectangle in source-image pixel coordinates.
 export interface CropRect {
@@ -9,7 +8,7 @@ export interface CropRect {
   height: number // px
 }
 
-function loadImage(file: File): Promise<HTMLImageElement> {
+function loadImage(blob: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
@@ -17,14 +16,14 @@ function loadImage(file: File): Promise<HTMLImageElement> {
       resolve(img)
     }
     img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = URL.createObjectURL(file)
+    img.src = URL.createObjectURL(blob)
   })
 }
 
 // Cut out `rect` from the source image. The rect is clamped to the image bounds
 // and rounded to whole pixels, so a slightly-out-of-range selection still works.
-export async function cropImage(file: File, rect: CropRect): Promise<Blob> {
-  const img = await loadImage(file)
+export async function cropImage(blob: Blob, rect: CropRect): Promise<Blob> {
+  const img = await loadImage(blob)
   const W = img.width
   const H = img.height
 
@@ -43,5 +42,5 @@ export async function cropImage(file: File, rect: CropRect): Promise<Blob> {
   canvas.height = h
   const ctx = canvas.getContext('2d')!
   ctx.drawImage(img, x, y, w, h, 0, 0, w, h)
-  return canvasToBlob(canvas, (file.type as OutputFormat) || 'png')
+  return canvasToBlob(canvas, getOutputFormat(blob))
 }

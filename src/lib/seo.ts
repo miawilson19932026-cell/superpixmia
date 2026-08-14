@@ -110,23 +110,6 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     ogTitle: 'Free Image Converter — Convert PNG, JPEG, WebP & More',
     ogDescription: 'Convert images between 9 formats online for free. Perfect for favicons, social media, or web optimization. No upload.',
   },
-  '/watermark': {
-    en: {
-      title: 'Free Online Watermark Maker — Add Text or Logo Watermark to Images',
-      description:
-        'Add a text or logo watermark to your images online for free. Choose any of 9 corner positions or tile the watermark across the whole image, adjust opacity and size, and protect your photos before sharing — 100% in your browser, no upload.',
-      keywords: 'add watermark, watermark image, image watermark, text watermark, logo watermark, protect photos, watermark maker, batch watermark',
-    },
-    zh: {
-      title: '图片加水印 - 在线添加文字或 Logo 水印，免费免上传',
-      description:
-        '免费在线图片加水印工具，支持文字水印和 Logo 水印。可选择任意角落位置或平铺整张图片，自由调节不透明度与大小。分享前保护你的照片版权。浏览器本地处理，无需上传。',
-      keywords: '图片加水印,水印工具,文字水印,Logo水印,图片防盗,加水印防转载,批量加水印',
-    },
-    canonical: `${SITE}/watermark`,
-    ogTitle: 'Free Online Watermark Maker — Add Text or Logo Watermark',
-    ogDescription: 'Add a text or logo watermark to images online for free. Corner or tiled, adjustable opacity and size. 100% in your browser, no upload.',
-  },
   '/remove-watermark': {
     en: {
       title: 'Free Online Watermark Remover — Erase Watermarks, Stamps & Text',
@@ -143,40 +126,6 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     canonical: `${SITE}/remove-watermark`,
     ogTitle: 'Free Online Watermark Remover — Erase Watermarks & Text',
     ogDescription: 'Paint over a watermark with a brush and it\'s rebuilt from the surrounding pixels. Free, 100% in your browser, no upload.',
-  },
-  '/crop': {
-    en: {
-      title: 'Free Online Image Cropper — Crop Photos to Any Size or Ratio',
-      description:
-        'Crop images online for free with a draggable selection box. Pick a preset ratio — 1:1, 4:3, 3:4, 16:9, or 9:16 — or crop freely, then download without any quality loss. Perfect for social media, thumbnails, and profile photos. 100% in your browser, no upload.',
-      keywords: 'crop image, image cropper, crop photo, crop to 1:1, 16:9 crop, crop picture online, free photo cropper',
-    },
-    zh: {
-      title: '图片裁剪 - 在线自由裁剪图片比例，免费免上传',
-      description:
-        '免费在线图片裁剪工具，用可拖拽选框自由选择保留区域。内置 1:1、4:3、3:4、16:9、9:16 常用比例，适合发朋友圈、小红书、视频封面和头像，也支持自由裁剪。无损输出，浏览器本地处理。',
-      keywords: '图片裁剪,裁剪图片,在线裁剪,1:1裁剪,16:9裁剪,照片裁剪,免费裁剪工具',
-    },
-    canonical: `${SITE}/crop`,
-    ogTitle: 'Free Online Image Cropper — Crop Photos to Any Ratio',
-    ogDescription: 'Crop images online for free with a draggable box. Preset ratios for social media or free crop, no quality loss. 100% in your browser.',
-  },
-  '/rotate': {
-    en: {
-      title: 'Free Online Image Rotator — Rotate, Flip & Straighten Photos',
-      description:
-        'Rotate images online for free — 90° clockwise or counterclockwise, 180°, or any angle with a fine-tune slider to straighten tilted photos. Mirror left-right or top-bottom. All processed in your browser, no upload, no quality loss.',
-      keywords: 'rotate image, image rotator, flip image, mirror photo, straighten photo, rotate photo online, flip horizontal, flip vertical',
-    },
-    zh: {
-      title: '图片旋转 - 在线旋转、翻转照片，免费免上传',
-      description:
-        '免费在线图片旋转工具：一键顺时针/逆时针 90°、180°，或拖动滑竿任意角度微调，把拍歪的照片转正。支持水平/垂直镜像翻转。浏览器本地处理，无损，无需上传。',
-      keywords: '图片旋转,旋转图片,照片翻转,镜像,水平翻转,垂直翻转,照片转正,免费旋转工具',
-    },
-    canonical: `${SITE}/rotate`,
-    ogTitle: 'Free Online Image Rotator — Rotate, Flip & Straighten Photos',
-    ogDescription: 'Rotate images 90° or any angle to straighten photos, and mirror left-right or top-bottom. 100% in your browser, no upload.',
   },
   '/help': {
     en: {
@@ -262,6 +211,23 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     canonical: `${SITE}/help/resize-image-guide`,
     ogTitle: 'How to Resize an Image Online — Keep Quality & Proportions',
     ogDescription: 'Resize images online without losing quality — pixel dimensions, aspect ratios, and the right sizes for every use.',
+  },
+  '/studio': {
+    en: {
+      title: 'Studio — Free Single-Image Editor | Rotate, Crop, Text, Watermark, Cut Out in One Place',
+      description:
+        'Edit one image with many tools in a single free online workspace — rotate, crop, add draggable text, stamp a logo, draw with a pencil, erase watermarks, cut out subjects, remove backgrounds, and resize. All processed in your browser, no upload, no layers, no design tools needed.',
+      keywords: 'image editor online, photo editor free, studio image editor, rotate crop image, add text to image, watermark photo, cut out image online',
+    },
+    zh: {
+      title: '全能编辑 Studio - 单图多工具免费在线编辑 | 旋转、裁剪、写字、刻章、抠图',
+      description:
+        '一张图，多种工具，在一个免费在线工作台里完成：旋转、裁剪、可拖动的文字、Logo 刻章、铅笔手绘、涂抹去水印、手动抠图、一键抠图、调整尺寸。全部浏览器本地处理，无需上传，不用打开 Photoshop。',
+      keywords: '在线图片编辑,全能编辑,图片编辑器,旋转裁剪图片,图片上写字,图片加水印,在线抠图,图片去水印',
+    },
+    canonical: `${SITE}/studio`,
+    ogTitle: 'Studio — Free Single-Image Editor in Your Browser',
+    ogDescription: 'Rotate, crop, add text, stamp a logo, draw, erase watermarks, cut out subjects, and resize one image in a single free workspace. No upload.',
   },
   '/blog': {
     en: {

@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
-import { resizeImage, compressImage, convertImage, getResultExtension, watermarkImage, cropImage, rotateImage, removeWatermark } from '../utils'
-import type { WatermarkOptions, CropRect, RotateOptions } from '../utils'
+import { resizeImage, compressImage, convertImage, getResultExtension, removeWatermark } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
 import JSZip from 'jszip'
 import DropZone from './DropZone'
@@ -12,9 +11,6 @@ import ResizePanel from './ResizePanel'
 import CompressPanel from './CompressPanel'
 import BgRemovePanel from './BgRemovePanel'
 import ConvertPanel from './ConvertPanel'
-import WatermarkPanel from './WatermarkPanel'
-import CropPanel from './CropPanel'
-import RotatePanel from './RotatePanel'
 import RemoveWatermarkPanel from './RemoveWatermarkPanel'
 import { toolPaths } from '../lib/routes'
 import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
@@ -52,10 +48,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     compress: [],
     'remove-bg': [],
     convert: [],
-    watermark: [],
     'remove-watermark': [],
-    crop: [],
-    rotate: [],
   })
   const [processingTools, setProcessingTools] = useState<Set<ToolType>>(new Set())
   const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null)
@@ -286,24 +279,6 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     markDone('convert')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
-  const handleWatermark = useCallback(async (opts: WatermarkOptions) => {
-    markProcessing('watermark')
-    const targets = mode === 'batch'
-      ? images.map((img, i) => ({ img, idx: i }))
-      : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
-
-    setProcessingProgress({ current: 0, total: targets.length })
-    for (const { img, idx } of targets) {
-      try {
-        const blob = await watermarkImage(img.file, opts)
-        saveToolResult('watermark', blob, idx)
-      } catch (e) { console.error('Watermark failed:', e) }
-      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
-    }
-    setProcessingProgress(null)
-    markDone('watermark')
-  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
-
   const handleRemoveWatermark = useCallback(async (mask: Uint8Array, maskWidth: number, maskHeight: number) => {
     markProcessing('remove-watermark')
     const targets = mode === 'batch'
@@ -325,55 +300,6 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
     setProcessingProgress(null)
     markDone('remove-watermark')
   }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone, toolResults])
-
-  const handleCrop = useCallback(async (rect: CropRect) => {
-    markProcessing('crop')
-    const targets = mode === 'batch'
-      ? images.map((img, i) => ({ img, idx: i }))
-      : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
-
-    setProcessingProgress({ current: 0, total: targets.length })
-    for (const { img, idx } of targets) {
-      try {
-        // In batch mode the box was drawn on the current image, so re-normalize
-        // it against that image and scale it to every other image's pixels.
-        let r = rect
-        if (mode === 'batch' && currentImage) {
-          const nx = rect.x / currentImage.width
-          const ny = rect.y / currentImage.height
-          r = {
-            x: nx * img.width,
-            y: ny * img.height,
-            width: (rect.width / currentImage.width) * img.width,
-            height: (rect.height / currentImage.height) * img.height,
-          }
-        }
-        const blob = await cropImage(img.file, r)
-        saveToolResult('crop', blob, idx)
-      } catch (e) { console.error('Crop failed:', e) }
-      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
-    }
-    setProcessingProgress(null)
-    markDone('crop')
-  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
-
-  const handleRotate = useCallback(async (opts: RotateOptions) => {
-    markProcessing('rotate')
-    const targets = mode === 'batch'
-      ? images.map((img, i) => ({ img, idx: i }))
-      : currentImage ? [{ img: currentImage, idx: currentIndex }] : []
-
-    setProcessingProgress({ current: 0, total: targets.length })
-    for (const { img, idx } of targets) {
-      try {
-        const blob = await rotateImage(img.file, opts)
-        saveToolResult('rotate', blob, idx)
-      } catch (e) { console.error('Rotate failed:', e) }
-      setProcessingProgress(p => p && { current: p.current + 1, total: p.total })
-    }
-    setProcessingProgress(null)
-    markDone('rotate')
-  }, [mode, images, currentImage, currentIndex, saveToolResult, markProcessing, markDone])
 
   const handleRemoveBg = useCallback(async (index?: number) => {
     const idx = index ?? currentIndex
@@ -490,7 +416,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const processNewGate = useRef(false)
   useEffect(() => {
     if (mode !== 'batch' || imageCount === 0 || isProcessing) return
-    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'watermark' || activeTool === 'remove-watermark' || activeTool === 'crop' || activeTool === 'rotate') return
+    if (activeTool === 'remove-bg' || activeTool === 'convert' || activeTool === 'remove-watermark') return
     const resultsLen = toolResults[activeTool].length
     const hasPending = resultsLen < imageCount || toolResults[activeTool].slice(0, imageCount).some(r => !r)
     if (!hasPending) return
@@ -700,35 +626,11 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
               batch={mode === 'batch'}
             />
           )}
-          {activeTool === 'watermark' && (
-            <WatermarkPanel
-              onWatermark={handleWatermark}
-              processing={isProcessing}
-              hasResult={hasResult}
-            />
-          )}
           {activeTool === 'remove-watermark' && (
             <RemoveWatermarkPanel
               file={currentImage!.file}
               resultUrl={activeResult?.url ?? null}
               onRemoveWatermark={handleRemoveWatermark}
-              processing={isProcessing}
-              hasResult={hasResult}
-            />
-          )}
-          {activeTool === 'crop' && (
-            <CropPanel
-              file={currentImage!.file}
-              originalWidth={currentImage?.width ?? 0}
-              originalHeight={currentImage?.height ?? 0}
-              onCrop={handleCrop}
-              processing={isProcessing}
-              hasResult={hasResult}
-            />
-          )}
-          {activeTool === 'rotate' && (
-            <RotatePanel
-              onRotate={handleRotate}
               processing={isProcessing}
               hasResult={hasResult}
             />

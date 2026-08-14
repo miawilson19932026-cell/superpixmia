@@ -9,9 +9,10 @@ import SeoContent from './components/SeoContent'
 import { HelpHome, HelpArticlePage } from './components/HelpPage'
 import { BlogHome, BlogArticlePage } from './components/BlogPage'
 import { useSeoMeta } from './lib/useSeoMeta'
-import { HOME_TOOL } from './lib/routes'
+import { HOME_TOOL, EDITOR_PATH } from './lib/routes'
 import { helpArticles } from './lib/help-articles'
 import { blogArticles } from './lib/blog-articles'
+import EditorPage from './components/studio/EditorPage'
 
 // A tool page = focused tool workspace + its per-tool SEO content block.
 // The workspace is the exact same component used on the homepage — only the
@@ -63,10 +64,8 @@ export default function App() {
         <Route path="/remove-bg" element={<ToolPage tool="remove-bg" />} />
         <Route path="/resize" element={<ToolPage tool="resize" />} />
         <Route path="/convert" element={<ToolPage tool="convert" />} />
-        <Route path="/watermark" element={<ToolPage tool="watermark" />} />
         <Route path="/remove-watermark" element={<ToolPage tool="remove-watermark" />} />
-        <Route path="/crop" element={<ToolPage tool="crop" />} />
-        <Route path="/rotate" element={<ToolPage tool="rotate" />} />
+        <Route path={EDITOR_PATH} element={<EditorPage />} />
         <Route path="/help" element={<HelpHome />} />
         {helpArticles.map((a) => (
           <Route key={a.path} path={a.path} element={<HelpArticlePage data={a} />} />

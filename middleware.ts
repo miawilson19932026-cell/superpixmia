@@ -18,17 +18,14 @@ const TOOL_PATHS: Record<string, ToolType> = {
   '/remove-bg': 'remove-bg',
   '/resize': 'resize',
   '/convert': 'convert',
-  '/watermark': 'watermark',
   '/remove-watermark': 'remove-watermark',
-  '/crop': 'crop',
-  '/rotate': 'rotate',
 }
 
 const HELP_PATHS = ['/help', '/help/how-to-remove-bg', '/help/png-compression-guide', '/help/image-formats-comparison', '/help/resize-image-guide']
 
 const BLOG_PATHS = ['/blog', '/blog/wechat-images-blurry', '/blog/how-ai-sees-images']
 
-const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS, ...BLOG_PATHS])
+const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS, ...BLOG_PATHS, '/studio'])
 
 function escapeAttr(s: string): string {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -118,4 +115,4 @@ export default async function middleware(request: Request): Promise<Response> {
   })
 }
 
-export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/watermark', '/remove-watermark', '/crop', '/rotate', '/help', '/help/:path*', '/blog', '/blog/:path*'] }
+export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/remove-watermark', '/studio', '/help', '/help/:path*', '/blog', '/blog/:path*'] }

@@ -32,21 +32,9 @@ const toolNames: Record<ToolType, { en: string; zh: string }> = {
     en: 'SuperPixMia Online Image Format Converter',
     zh: 'SuperPixMia 在线图片格式转换工具',
   },
-  watermark: {
-    en: 'SuperPixMia Online Image Watermark Maker',
-    zh: 'SuperPixMia 在线图片加水印工具',
-  },
   'remove-watermark': {
     en: 'SuperPixMia Online Image Watermark Remover',
     zh: 'SuperPixMia 在线去水印工具',
-  },
-  crop: {
-    en: 'SuperPixMia Online Image Cropper',
-    zh: 'SuperPixMia 在线图片裁剪工具',
-  },
-  rotate: {
-    en: 'SuperPixMia Online Image Rotator',
-    zh: 'SuperPixMia 在线图片旋转工具',
   },
 }
 
@@ -55,10 +43,7 @@ const toolHowToName: Record<ToolType, { en: string; zh: string }> = {
   'remove-bg': { en: 'How to Remove Image Backgrounds Online with SuperPixMia', zh: '如何用 SuperPixMia 在线去除图片背景' },
   resize: { en: 'How to Resize Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线调整图片尺寸' },
   convert: { en: 'How to Convert Image Formats Online with SuperPixMia', zh: '如何用 SuperPixMia 在线转换图片格式' },
-  watermark: { en: 'How to Add a Watermark to Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线给图片加水印' },
   'remove-watermark': { en: 'How to Remove a Watermark from an Image Online with SuperPixMia', zh: '如何用 SuperPixMia 在线去除图片水印' },
-  crop: { en: 'How to Crop Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线裁剪图片' },
-  rotate: { en: 'How to Rotate and Flip Images Online with SuperPixMia', zh: '如何用 SuperPixMia 在线旋转翻转图片' },
 }
 
 const toolKeywords: Record<ToolType, { en: string[]; zh: string[] }> = {
@@ -66,10 +51,7 @@ const toolKeywords: Record<ToolType, { en: string[]; zh: string[] }> = {
   'remove-bg': { en: ['remove background', 'background removal'], zh: ['抠图', '去除背景'] },
   resize: { en: ['resize', 'image dimensions'], zh: ['改尺寸', '调整尺寸'] },
   convert: { en: ['convert', 'format conversion'], zh: ['转换', '格式互转'] },
-  watermark: { en: ['watermark', 'add watermark'], zh: ['加水印', '图片水印'] },
   'remove-watermark': { en: ['remove watermark', 'erase watermark'], zh: ['去水印', '去除水印', '清除水印'] },
-  crop: { en: ['crop', 'image cropping'], zh: ['裁剪', '图片裁剪'] },
-  rotate: { en: ['rotate', 'flip image'], zh: ['旋转', '图片翻转'] },
 }
 
 function organizationLd(): object {
@@ -188,6 +170,42 @@ export function homePageLd(): object[] {
 
 export function articlePageLd(pathname: string, title: string, description: string): object[] {
   return [organizationLd(), softwareLd(), breadcrumbLd(pathname), articleLd(pathname, title, description)]
+}
+
+// /studio — the combined single-image editor.
+export function editorPageLd(): object[] {
+  return [
+    organizationLd(),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'SuperPixMia Studio',
+      url: `${SITE}/studio`,
+      description:
+        'Free single-image editor in your browser — rotate, crop, add draggable text, stamp a logo, draw with a pencil, erase watermarks, cut out subjects, and resize. 100% client-side, no layers, no design tools needed.',
+      applicationCategory: 'MultimediaApplication',
+      operatingSystem: 'Any',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      featureList: [
+        'Rotate, flip, and free-angle rotation',
+        'Crop with a draggable selection box',
+        'Draggable text overlay',
+        'Logo stamp',
+        'Freehand pencil drawing',
+        'Brush watermark removal',
+        'Manual cutout and click-to-remove background',
+        'Resize with aspect ratio lock',
+        'Undo history',
+        '100% client-side — images never leave your device',
+      ],
+    },
+    breadcrumbLd('/studio'),
+    faqLd([
+      { q: 'Is SuperPixMia Studio free?', a: 'Yes — Studio is completely free and runs 100% in your browser. No upload, no account, no watermarks.' },
+      { q: 'Does Studio upload my image to a server?', a: 'No. Every tool processes the image locally on your device, so your photos never leave your computer.' },
+      { q: 'What can Studio do?', a: 'Studio combines rotation, cropping, text, logo stamps, freehand drawing, watermark removal, manual cutout, click-to-remove background, and resizing into one workspace for a single image.' },
+    ]),
+  ]
 }
 
 export function zhArticleLd(pathname: string): object | null {

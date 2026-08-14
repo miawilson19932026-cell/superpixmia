@@ -5,6 +5,11 @@
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
+  "redirects": [
+    { "source": "/watermark", "destination": "/studio", "permanent": true },
+    { "source": "/crop", "destination": "/studio", "permanent": true },
+    { "source": "/rotate", "destination": "/studio", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/og-image-square.jpg",

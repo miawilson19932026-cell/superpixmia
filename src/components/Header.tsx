@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
-import { toolPaths } from '../lib/routes'
+import { toolPaths, EDITOR_PATH } from '../lib/routes'
 
 export default function Header() {
   const { t, lang, toggleLang } = useTranslation()
@@ -69,6 +69,20 @@ export default function Header() {
             </NavLink>
             <NavLink to="/blog" onClick={closeMenu} className={({ isActive }) => linkClass(isActive)}>
               {t.navBlog}
+            </NavLink>
+            {/* Studio — flagship combined editor */}
+            <NavLink
+              to={EDITOR_PATH}
+              onClick={closeMenu}
+              className={({ isActive }) => `
+                shrink-0 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium transition-all duration-200
+                ${isActive
+                  ? 'glass-active text-[var(--accent)]'
+                  : 'text-[var(--accent)]/80 hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 border border-[var(--accent)]/25'
+                }
+              `}
+            >
+              <span className="text-gradient">{lang === 'zh' ? '全能编辑' : 'Studio'}</span>
             </NavLink>
             {/* Help = compact question-mark icon */}
             <NavLink
@@ -158,6 +172,22 @@ export default function Header() {
             <MobileNavLink to="/help" onClick={closeMenu} active={pathname.startsWith('/help')}>
               {t.navHelp}
             </MobileNavLink>
+
+            {/* Studio — flagship combined editor */}
+            <NavLink
+              to={EDITOR_PATH}
+              onClick={closeMenu}
+              className={`flex items-center gap-2 rounded-lg px-2.5 py-2.5 text-sm font-semibold transition-all border border-[var(--accent)]/25 ${
+                pathname === EDITOR_PATH ? 'glass-active text-[var(--accent)]' : 'text-[var(--accent)]/85 hover:bg-[var(--accent)]/10'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0">
+                <rect x="3" y="12" width="12" height="8" rx="2" opacity="0.5" />
+                <rect x="5" y="13" width="12" height="8" rx="2" />
+                <path d="M19 7l3-3 1.5 1.5-3 3z" transform="scale(0.9)" />
+              </svg>
+              <span className="text-gradient">{lang === 'zh' ? '全能编辑 · 单图多工具' : 'Studio · one image, many tools'}</span>
+            </NavLink>
 
             {/* Tools — compact icon grid */}
             <p className="pt-3 pb-1 text-[10px] uppercase tracking-[0.18em] text-[var(--text-dim)]">

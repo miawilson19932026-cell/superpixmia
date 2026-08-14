@@ -1,5 +1,4 @@
-import type { OutputFormat } from '../types'
-import { canvasToBlob } from './resize'
+import { canvasToBlob, getOutputFormat } from './resize'
 
 export type WatermarkPosition =
   | 'top-left' | 'top-center' | 'top-right'
@@ -16,6 +15,10 @@ export interface WatermarkOptions {
   tiled: boolean
   imageUrl: string | null   // data/object URL of the logo image
   imageScale: number        // logo width as fraction of image width
+  // Free positioning (Studio drag): when both x & y are provided they override
+  // `position`. x/y are the top-left of the element box in source-image px.
+  x?: number
+  y?: number
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -92,8 +95,8 @@ function drawImageTiled(
   ctx.restore()
 }
 
-export async function watermarkImage(file: File, options: WatermarkOptions): Promise<Blob> {
-  const url = URL.createObjectURL(file)
+export async function watermarkImage(blob: Blob, options: WatermarkOptions): Promise<Blob> {
+  const url = URL.createObjectURL(blob)
   const img = await loadImage(url)
   const W = img.width
   const H = img.height
@@ -105,6 +108,8 @@ export async function watermarkImage(file: File, options: WatermarkOptions): Pro
   URL.revokeObjectURL(url)
 
   const margin = Math.max(12, W * 0.03)
+
+  const freePos = options.x !== undefined && options.y !== undefined
 
   if (options.type === 'text' && options.text.trim()) {
     const fontSizePx = Math.max(10, W * options.fontSize)
@@ -118,7 +123,9 @@ export async function watermarkImage(file: File, options: WatermarkOptions): Pro
       ctx.textBaseline = 'middle'
       const text = options.text.trim()
       const tw = ctx.measureText(text).width
-      const [x, y] = computePosition(options.position, W, H, tw, fontSizePx, margin)
+      const [x, y] = freePos
+        ? [options.x!, options.y! + fontSizePx / 2] // free coords are the text box top-left
+        : computePosition(options.position, W, H, tw, fontSizePx, margin)
       // Subtle shadow keeps the text legible on busy backgrounds.
       ctx.shadowColor = 'rgba(0,0,0,0.35)'
       ctx.shadowBlur = fontSizePx * 0.15
@@ -133,7 +140,9 @@ export async function watermarkImage(file: File, options: WatermarkOptions): Pro
     if (options.tiled) {
       drawImageTiled(ctx, logo, logoW, logoH, options.opacity, W, H)
     } else {
-      const [x, y] = computePosition(options.position, W, H, logoW, logoH, margin)
+      const [x, y] = freePos
+        ? [options.x!, options.y!] // free coords are the logo box top-left
+        : computePosition(options.position, W, H, logoW, logoH, margin)
       ctx.save()
       ctx.globalAlpha = options.opacity
       ctx.drawImage(logo, x, y, logoW, logoH)
@@ -142,5 +151,5 @@ export async function watermarkImage(file: File, options: WatermarkOptions): Pro
   }
   // No valid watermark → returns the source image re-encoded (unchanged).
 
-  return canvasToBlob(canvas, (file.type as OutputFormat) || 'png')
+  return canvasToBlob(canvas, getOutputFormat(blob))
 }

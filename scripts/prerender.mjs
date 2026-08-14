@@ -26,10 +26,8 @@ const ROUTES = [
   { path: '/remove-bg', tool: 'remove-bg', article: null },
   { path: '/resize', tool: 'resize', article: null },
   { path: '/convert', tool: 'convert', article: null },
-  { path: '/watermark', tool: 'watermark', article: null },
   { path: '/remove-watermark', tool: 'remove-watermark', article: null },
-  { path: '/crop', tool: 'crop', article: null },
-  { path: '/rotate', tool: 'rotate', article: null },
+  { path: '/studio', tool: null, article: null },
   { path: '/help', tool: null, article: null },
   { path: '/help/how-to-remove-bg', tool: null, article: 'how-to-remove-bg' },
   { path: '/help/png-compression-guide', tool: null, article: 'png-compression-guide' },
@@ -98,6 +96,8 @@ try {
     let ldBlocks
     if (route.path === '/') {
       ldBlocks = seoJsonLd.homePageLd()
+    } else if (route.path === '/studio') {
+      ldBlocks = seoJsonLd.editorPageLd()
     } else if (route.tool) {
       ldBlocks = seoJsonLd.toolPageLd(route.tool)
     } else if (route.path === '/help') {

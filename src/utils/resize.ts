@@ -2,16 +2,16 @@ import imageCompression from 'browser-image-compression'
 import type { Dimensions, OutputFormat } from '../types'
 
 export async function resizeImage(
-  file: File,
+  blob: Blob,
   dims: Dimensions
 ): Promise<Blob> {
-  const img = await loadImage(file)
+  const img = await loadImage(blob)
   const canvas = document.createElement('canvas')
   canvas.width = dims.width
   canvas.height = dims.height
   const ctx = canvas.getContext('2d')!
   ctx.drawImage(img, 0, 0, dims.width, dims.height)
-  return canvasToBlob(canvas, file.type as OutputFormat)
+  return canvasToBlob(canvas, getOutputFormat(blob))
 }
 
 // ---- Compression ----
@@ -98,7 +98,7 @@ export async function convertImage(
 
 // ---- Helpers ----
 
-function loadImage(file: File): Promise<HTMLImageElement> {
+function loadImage(blob: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
@@ -106,7 +106,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
       resolve(img)
     }
     img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = URL.createObjectURL(file)
+    img.src = URL.createObjectURL(blob)
   })
 }
 
