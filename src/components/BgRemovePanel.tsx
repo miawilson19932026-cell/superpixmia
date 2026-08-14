@@ -6,6 +6,7 @@ type BgMode = 'transparent' | 'white' | 'black'
 interface Props {
   resultUrl: string | null
   onRemoveBg: (index?: number) => void
+  onOpenRefine: () => void
   processing: boolean
   progress: number // 0-1
   imageCount: number
@@ -14,7 +15,7 @@ interface Props {
   onNext: () => void
 }
 
-export default function BgRemovePanel({ resultUrl, onRemoveBg, processing, progress, imageCount, currentIndex, onPrev, onNext }: Props) {
+export default function BgRemovePanel({ resultUrl, onRemoveBg, onOpenRefine, processing, progress, imageCount, currentIndex, onPrev, onNext }: Props) {
   const { t } = useTranslation()
   const [bgMode, setBgMode] = useState<BgMode>('transparent')
 
@@ -127,6 +128,16 @@ export default function BgRemovePanel({ resultUrl, onRemoveBg, processing, progr
         <p className="text-center text-[11px] text-[var(--text-dim)] font-mono tabular-nums">
           {currentIndex + 1} / {imageCount}
         </p>
+      )}
+
+      {/* Manual refine entry */}
+      {resultUrl && !processing && (
+        <button
+          onClick={onOpenRefine}
+          className="w-full py-2.5 text-sm font-medium rounded-[var(--radius-md)] border border-[var(--accent)]/30 text-[var(--accent)] hover:border-[var(--accent)]/60 hover:bg-[var(--accent-glow)] transition-all"
+        >
+          🎨 {t.bgRefineOpen} — {t.bgRefineWand} / {t.bgRefineBrush}
+        </button>
       )}
 
       {/* Action button */}

@@ -10,6 +10,7 @@ import ImagePreview from './ImagePreview'
 import ResizePanel from './ResizePanel'
 import CompressPanel from './CompressPanel'
 import BgRemovePanel from './BgRemovePanel'
+import BgRefinePanel from './BgRefinePanel'
 import ConvertPanel from './ConvertPanel'
 import RemoveWatermarkPanel from './RemoveWatermarkPanel'
 import { toolPaths } from '../lib/routes'
@@ -54,6 +55,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const [processingProgress, setProcessingProgress] = useState<{ current: number; total: number } | null>(null)
   const [lightboxTrigger, setLightboxTrigger] = useState(0)
   const [bgProgress, setBgProgress] = useState(0)
+  const [refineOpen, setRefineOpen] = useState(false)
 
   // Reset workspace when the focused tool changes (route change)
   useEffect(() => {
@@ -639,6 +641,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
             <BgRemovePanel
               resultUrl={activeResult?.url ?? null}
               onRemoveBg={handleRemoveBg}
+              onOpenRefine={() => setRefineOpen(true)}
               processing={isProcessing}
               progress={bgProgress}
               imageCount={imageCount}
@@ -716,6 +719,19 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* Manual refine overlay for remove-bg results */}
+      {refineOpen && activeResult && currentImage && (
+        <BgRefinePanel
+          resultUrl={activeResult.url}
+          originalUrl={currentImage.url}
+          onRefine={(blob) => {
+            saveToolResult('remove-bg', blob, currentIndex)
+            setRefineOpen(false)
+          }}
+          onClose={() => setRefineOpen(false)}
+        />
       )}
 
       <style>{`

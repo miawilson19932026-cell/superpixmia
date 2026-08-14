@@ -99,7 +99,11 @@ function inpaint(data: Uint8ClampedArray, W: number, H: number, m: Uint8Array): 
   let tail = 0
 
   const ridxAt = (x: number, y: number) => (y - ry0) * rw + (x - rx0)
-  const isMasked = (x: number, y: number) => m[y * W + x] === 1
+  // The mask is a Uint8Array where a pixel is either 0 (unmasked) or non-zero
+  // (masked). Callers use two conventions: the standalone panel normalizes to
+  // 0/1, the Studio's buildMaskFromStrokes keeps the raw alpha (0/255). Test
+  // truthiness so both work.
+  const isMasked = (x: number, y: number) => m[y * W + x] !== 0
 
   // Seed the queue with every unmasked pixel in the region — each is a color
   // source for the hole around it.

@@ -110,11 +110,18 @@ export async function removeMasked(blob: Blob, mask: (Uint8Array | boolean[]) | 
 // ── Magic wand: connected region around (x,y) within RGB tolerance ──
 // Returns a boolean[] (W×H, true = selected). Color is compared against the
 // pixel at the seed point, so clicking a sky region selects sky-like pixels.
+//
+// opts.matchTransparent — used by the refine panel's "restore" wand. A fully
+// transparent seed normally selects nothing (so users don't nuke a transparent
+// PNG by clicking empty space), but restoring means clicking a transparent hole
+// to bring the original back, so here the connected region of any non-opaque
+// pixel (alpha < 255) is selected instead — exactly the area the erase touched.
 export function floodFill(
   imgData: ImageData,
   sx: number,
   sy: number,
   tolerance: number,
+  opts?: { matchTransparent?: boolean },
 ): boolean[] {
   const { width: W, height: H } = imgData
   const px = imgData.data
@@ -125,9 +132,12 @@ export function floodFill(
   const sg = px[seed * 4 + 1]
   const sb = px[seed * 4 + 2]
   const sa = px[seed * 4 + 3]
+
+  // Restore-on-transparent: select any connected non-opaque region.
+  const matchAlpha = opts?.matchTransparent === true && sa < 255
   // Fully transparent seeds select the whole transparent area; treat as no-op
   // so users don't nuke a transparent PNG by clicking empty space.
-  if (sa === 0) return new Array(W * H).fill(false)
+  if (!matchAlpha && sa === 0) return new Array(W * H).fill(false)
 
   const tol2 = tolerance * tolerance * 3 // squared RGB distance
   const selected = new Uint8Array(W * H)
@@ -145,6 +155,14 @@ export function floodFill(
   }
   function tryFill(i: number) {
     if (selected[i]) return
+    if (matchAlpha) {
+      // Any non-opaque pixel counts — the erase touched it, restore it.
+      if (px[i * 4 + 3] < 255) {
+        selected[i] = 1
+        stack.push(i)
+      }
+      return
+    }
     const r = px[i * 4]
     const g = px[i * 4 + 1]
     const b = px[i * 4 + 2]

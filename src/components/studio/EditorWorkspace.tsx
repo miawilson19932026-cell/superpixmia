@@ -5,8 +5,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from '../../i18n'
 import type { CropRect } from '../../utils/crop'
-import { cropImage, rotateImage, resizeImage, watermarkImage, removeWatermark } from '../../utils'
+import { cropImage, rotateImage, resizeImage, watermarkImage, removeWatermark, convertImage, formatSize, getOutputFormat } from '../../utils'
 import { downloadBlob } from '../../utils/download'
+import type { OutputFormat } from '../../types'
 import { STUDIO_TOOLS, type StudioToolId } from './tools'
 import {
   compositeStrokes,
@@ -65,9 +66,11 @@ export default function EditorWorkspace({
 }) {
   const { t, lang } = useTranslation()
 
-  // ── Committed result stack (undo). current = top, or the source file. ──
+  // ── Committed result stack (undo/redo). histIdx points into history;
+  //     -1 means "no edits yet" → current falls back to the source file. ──
   const [history, setHistory] = useState<Blob[]>([])
-  const current: Blob = history[history.length - 1] ?? source.file
+  const [histIdx, setHistIdx] = useState(-1)
+  const current: Blob = histIdx >= 0 && history[histIdx] ? history[histIdx] : source.file
 
   const [activeTool, setActiveTool] = useState<StudioToolId | null>(null)
   const [processing, setProcessing] = useState(false)
@@ -97,6 +100,9 @@ export default function EditorWorkspace({
   const [removeTol, setRemoveTol] = useState(32)
   const [removeClicks, setRemoveClicks] = useState(0)
   const [resizeState, setResizeState] = useState({ width: source.width, height: source.height, lock: true })
+  const [hoverPt, setHoverPt] = useState<{ x: number; y: number } | null>(null)
+  const [dlOpen, setDlOpen] = useState(false)
+  const [dlFormat, setDlFormat] = useState<'same' | OutputFormat>('same')
 
   // Paint-state lives in refs (mutable during drag); compose() is called by
   // the pointer handlers directly.
@@ -188,13 +194,51 @@ export default function EditorWorkspace({
     ctx.globalCompositeOperation = 'destination-out'
     ctx.clearRect(r.x, r.y, r.width, r.height)
     ctx.restore()
+
+    // Rule-of-thirds grid inside the crop box
+    ctx.save()
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'
+    ctx.lineWidth = 1
+    ctx.setLineDash([3, 3])
+    for (let i = 1; i < 3; i++) {
+      const gx = r.x + (r.width * i) / 3
+      const gy = r.y + (r.height * i) / 3
+      ctx.beginPath(); ctx.moveTo(gx, r.y); ctx.lineTo(gx, r.y + r.height); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(r.x, gy); ctx.lineTo(r.x + r.width, gy); ctx.stroke()
+    }
+    ctx.restore()
+
+    // Crop border
     ctx.strokeStyle = '#fff'
     ctx.lineWidth = 1.5
+    ctx.setLineDash([])
     ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1)
-    ctx.fillStyle = '#3b82f6'
-    const h = 8
+
+    // Corner handles — larger rings with white rims so they read on any bg
+    const h = 11
     for (const [cx, cy] of [[r.x, r.y], [r.x + r.width, r.y], [r.x, r.y + r.height], [r.x + r.width, r.y + r.height]]) {
-      ctx.fillRect(cx - h / 2, cy - h / 2, h, h)
+      ctx.fillStyle = '#3b82f6'
+      ctx.beginPath()
+      ctx.arc(cx, cy, h / 2, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+    }
+
+    // Crosshair + ring at the pointer (hover) — an unambiguous "you are here"
+    if (hoverPt) {
+      const { x, y } = hoverPt
+      ctx.save()
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)'
+      ctx.lineWidth = 1
+      ctx.setLineDash([])
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, curH); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(curW, y); ctx.stroke()
+      ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.stroke()
+      ctx.fillStyle = 'rgba(59,130,246,0.9)'
+      ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
     }
   }
 
@@ -339,6 +383,7 @@ export default function EditorWorkspace({
     overRef.current.setPointerCapture(e.pointerId)
     const p = toImg(e)
     switch (activeTool) {
+      case 'rotate': startRotate(p); break
       case 'crop': startCrop(p); break
       case 'text': placeOrGrab(p, 'text'); break
       case 'logo': placeOrGrab(p, 'logo'); break
@@ -354,9 +399,16 @@ export default function EditorWorkspace({
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragRef.current || !activeTool) return
+    if (!activeTool) return
     const p = toImg(e)
+    if (!dragRef.current) {
+      // Hover tracking (no drag): the crop crosshair follows the pointer so
+      // users always see exactly where they are on the image.
+      if (activeTool === 'crop') setHoverPt(p)
+      return
+    }
     switch (activeTool) {
+      case 'rotate': moveRotate(p); break
       case 'crop': moveCrop(p); break
       case 'text': moveElement(p, 'text'); break
       case 'logo': moveElement(p, 'logo'); break
@@ -371,6 +423,22 @@ export default function EditorWorkspace({
 
   const onPointerUp = () => {
     dragRef.current = null
+  }
+
+  // Rotate by dragging on the canvas: the angle is measured from the image
+  // center, so dragging around in a circle spins the image freely.
+  const startRotate = (p: { x: number; y: number }) => {
+    const startAngle = Math.atan2(p.y - curH / 2, p.x - curW / 2)
+    dragRef.current = { mode: 'rotate', startX: p.x, startY: p.y, orig: { x: startAngle, y: rotate.angle, width: 0, height: 0 } }
+  }
+
+  const moveRotate = (p: { x: number; y: number }) => {
+    const d = dragRef.current!
+    const a = Math.atan2(p.y - curH / 2, p.x - curW / 2)
+    const delta = ((a - d.orig.x) * 180) / Math.PI
+    let angle = (d.orig.y + delta) % 360
+    if (angle < 0) angle += 360
+    setRotate((s) => ({ ...s, angle: Math.round(angle) }))
   }
 
   // Crop drag: detect handle, then move/resize.
@@ -549,9 +617,18 @@ export default function EditorWorkspace({
           break
       }
       if (blob) {
-        setHistory((h) => [...h.slice(-(MAX_HISTORY - 1)), blob])
+        // Truncate the redo branch, append, and cap the stack. Reading
+        // history/histIdx straight from this render is safe — apply() runs once
+        // per click and React delivers the latest closure.
+        const next = [...history.slice(0, histIdx + 1), blob]
+        const trimmed = next.length > MAX_HISTORY ? next.slice(next.length - MAX_HISTORY) : next
+        setHistory(trimmed)
+        setHistIdx(trimmed.length - 1)
         clearPaint()
         setApplied(true)
+        // Clear the preview immediately instead of waiting for the new image to
+        // reload — otherwise the old mask/outline lingers over the fresh result.
+        compose()
       }
     } catch (err) {
       console.error(err)
@@ -562,26 +639,48 @@ export default function EditorWorkspace({
   }
 
   const undo = () => {
-    if (history.length === 0) return
-    setHistory((h) => h.slice(0, -1))
+    if (histIdx < 0) return
+    setHistIdx((i) => i - 1)
     clearPaint()
+    dragRef.current = null
     setApplied(false)
+    compose()
+  }
+
+  const redo = () => {
+    if (histIdx >= history.length - 1) return
+    setHistIdx((i) => i + 1)
+    clearPaint()
+    dragRef.current = null
+    setApplied(false)
+    compose()
   }
 
   const clearTool = () => {
     clearPaint()
+    dragRef.current = null
     setRemoveClicks(0)
+    setApplied(false)
+    setHoverPt(null)
     compose()
   }
 
-  const download = () => {
+  // Download confirmation dialog → actually save.
+  const doDownload = async () => {
+    let blob = current
+    if (dlFormat !== 'same') {
+      const file = new File([current], `out.${getOutputFormat(current)}`, { type: current.type })
+      blob = await convertImage(file, dlFormat)
+    }
+    setDlOpen(false)
     const base = source.file.name.replace(/\.[^.]+$/, '')
-    downloadBlob(current, `${base}-studio`)
+    downloadBlob(blob, `${base}-studio`)
   }
 
   const selectTool = (tool: StudioToolId) => {
     setActiveTool(tool)
     setApplied(false)
+    setHoverPt(null)
     if (tool === 'crop' && !cropRect) {
       setCropRect({ x: Math.round(curW * 0.1), y: Math.round(curH * 0.1), width: Math.round(curW * 0.8), height: Math.round(curH * 0.8) })
     }
@@ -641,6 +740,7 @@ export default function EditorWorkspace({
       case 'rotate':
         return (
           <div className="space-y-3">
+            <p className="text-xs text-[var(--text-dim)]">{t.studioRotateHint}</p>
             <div className="flex gap-2">
               <ToolButton onClick={() => setRotate((s) => ({ ...s, angle: (s.angle - 90 + 360) % 360 }))}>↺ 90°</ToolButton>
               <ToolButton onClick={() => setRotate((s) => ({ ...s, angle: (s.angle + 90) % 360 }))}>↻ 90°</ToolButton>
@@ -659,7 +759,7 @@ export default function EditorWorkspace({
       case 'crop':
         return (
           <div className="space-y-3">
-            <p className="text-xs text-[var(--text-dim)]">{lang === 'zh' ? '拖动选框调整裁剪区域，拖动四角或四边缩放。' : 'Drag the box to choose what to keep; corners & edges resize it.'}</p>
+            <p className="text-xs text-[var(--text-dim)]">{t.studioCropHint}</p>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="glass rounded-[var(--radius-sm)] px-2.5 py-2 flex items-center justify-between gap-2">
                 <span className="text-[var(--text-dim)]">{t.studioWidth}</span>
@@ -760,7 +860,7 @@ export default function EditorWorkspace({
       case 'cutout':
         return (
           <div className="space-y-3">
-            <p className="text-xs text-[var(--text-dim)]">{lang === 'zh' ? '用鼠标沿主体边缘画一圈，保留圈内区域。' : 'Trace around the subject — everything inside the loop is kept.'}</p>
+            <p className="text-xs text-[var(--text-dim)]">{t.studioCutoutHint}</p>
             <div className="flex gap-2">
               <ToolButton onClick={clearTool}>{t.studioClear}</ToolButton>
             </div>
@@ -845,14 +945,24 @@ export default function EditorWorkspace({
           <button
             type="button"
             onClick={undo}
-            disabled={history.length === 0}
+            disabled={histIdx < 0}
+            title={t.studioUndo}
             className="px-2.5 py-1.5 rounded-[var(--radius-sm)] glass text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all disabled:opacity-35 disabled:cursor-not-allowed shrink-0"
           >
             ↩ {t.studioUndo}
           </button>
           <button
             type="button"
-            onClick={download}
+            onClick={redo}
+            disabled={histIdx >= history.length - 1}
+            title={t.studioRedo}
+            className="px-2.5 py-1.5 rounded-[var(--radius-sm)] glass text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all disabled:opacity-35 disabled:cursor-not-allowed shrink-0"
+          >
+            ↪ {t.studioRedo}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDlOpen(true)}
             className="px-3 py-1.5 rounded-[var(--radius-sm)] btn-gradient text-xs font-medium shrink-0"
           >
             {processing ? t.studioDownloading : `↓ ${t.studioDownload}`}
@@ -876,6 +986,7 @@ export default function EditorWorkspace({
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
+              onPointerLeave={() => setHoverPt(null)}
               onContextMenu={(e) => e.preventDefault()}
             >
               <canvas
@@ -926,6 +1037,67 @@ export default function EditorWorkspace({
           </button>
         </div>
       </div>
+
+      {/* Per-tool tutorial */}
+      <StudioTutorial lang={lang} />
+
+      {/* Download confirmation dialog */}
+      {dlOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setDlOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl glass border border-white/10 p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4 className="text-sm font-semibold text-[var(--text-primary)]">{t.studioDlTitle}</h4>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="glass rounded-[var(--radius-sm)] px-3 py-2">
+                <p className="text-[10px] text-[var(--text-dim)]">{t.studioDlDims}</p>
+                <p className="font-mono text-[var(--text-primary)] mt-0.5">{curW} × {curH}px</p>
+              </div>
+              <div className="glass rounded-[var(--radius-sm)] px-3 py-2">
+                <p className="text-[10px] text-[var(--text-dim)]">{t.studioDlSize}</p>
+                <p className="font-mono text-[var(--text-primary)] mt-0.5">{formatSize(current.size)}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] text-[var(--text-dim)] mb-1.5">{t.studioDlFormat}</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {(['same', 'png', 'jpeg', 'webp'] as const).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setDlFormat(f)}
+                    className={`py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-all ${
+                      dlFormat === f ? 'glass-active text-[var(--accent)]' : 'glass text-[var(--text-dim)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    {f === 'same' ? t.studioFormatSame : f.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDlOpen(false)}
+                className="flex-1 py-2 rounded-[var(--radius-md)] glass text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)]"
+              >
+                {t.studioDlCancel}
+              </button>
+              <button
+                type="button"
+                onClick={doDownload}
+                className="flex-1 py-2 rounded-[var(--radius-md)] btn-gradient text-xs font-semibold"
+              >
+                {t.studioDlConfirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -958,6 +1130,195 @@ function ToolButton({
     >
       {children}
     </button>
+  )
+}
+
+// ── Studio how-to — step-by-step per tool, shown at the bottom of the page ──
+const TUTORIALS: { id: StudioToolId; labelEn: string; labelZh: string; stepsEn: string[]; stepsZh: string[] }[] = [
+  {
+    id: 'rotate',
+    labelEn: 'Rotate & flip',
+    labelZh: '旋转与翻转',
+    stepsEn: [
+      'Click the 90° buttons for quick turns, or drag anywhere on the canvas to rotate freely.',
+      'Use the angle slider for fine adjustments — the preview updates live.',
+      'Flip horizontally or vertically with the two flip buttons.',
+      'Tap Apply to commit; Undo/Redo can step back and forth.',
+    ],
+    stepsZh: [
+      '点 90° 按钮快速转向，或直接在画布上按住拖动，自由旋转到任意角度。',
+      '用角度滑块微调，预览会实时更新。',
+      '点「水平翻转」「垂直翻转」镜像图片。',
+      '满意后点「应用」；随时可用「撤销 / 重做」来回调整。',
+    ],
+  },
+  {
+    id: 'crop',
+    labelEn: 'Crop',
+    labelZh: '裁剪',
+    stepsEn: [
+      'The crop box appears automatically. Drag inside the box to move it.',
+      'Drag a corner handle to resize; the crosshair follows your pointer so you can aim precisely.',
+      'Use the rule-of-thirds grid to frame your shot.',
+      'Tap Apply to keep only the area inside the box.',
+    ],
+    stepsZh: [
+      '进入后会自动出现裁剪框，在框内拖动可移动位置。',
+      '拖动四角手柄缩放；十字准线会跟随鼠标，方便精确对准。',
+      '框内显示三分构图线，辅助取景。',
+      '点「应用」只保留框内区域。',
+    ],
+  },
+  {
+    id: 'text',
+    labelEn: 'Add text',
+    labelZh: '添加文字',
+    stepsEn: [
+      'Type your text in the panel, then click the canvas to place it.',
+      'Drag the text box to move it anywhere on the image.',
+      'Adjust color, size and opacity in the panel.',
+      'Tap Apply to bake the text into the image.',
+    ],
+    stepsZh: [
+      '在面板输入文字内容，然后点击画布放置文字。',
+      '拖动文字框可移动位置。',
+      '可在面板调整颜色、大小、透明度。',
+      '点「应用」把文字合成进图片。',
+    ],
+  },
+  {
+    id: 'logo',
+    labelEn: 'Add a logo',
+    labelZh: '添加 Logo 印章',
+    stepsEn: [
+      'Upload your logo (a transparent PNG works best).',
+      'Click the canvas to place it, then drag to move it.',
+      'Adjust size and opacity in the panel.',
+      'Tap Apply to burn the logo into the image.',
+    ],
+    stepsZh: [
+      '上传你的 Logo（透明 PNG 效果最佳）。',
+      '点击画布放置印章，拖动可移动。',
+      '在面板调整大小和透明度。',
+      '点「应用」把印章合成进图片。',
+    ],
+  },
+  {
+    id: 'pencil',
+    labelEn: 'Freehand drawing',
+    labelZh: '画笔涂鸦',
+    stepsEn: [
+      'Pick a color and brush size, then draw directly on the canvas.',
+      'Clear removes every stroke you have not applied yet.',
+      'Tap Apply to merge the drawing into the image.',
+    ],
+    stepsZh: [
+      '选择颜色和笔刷大小，直接在画布上绘制。',
+      '「清空」会移除所有尚未应用的笔迹。',
+      '点「应用」把涂鸦合成进图片。',
+    ],
+  },
+  {
+    id: 'heal',
+    labelEn: 'Remove watermark / spot',
+    labelZh: '去水印 / 去污点',
+    stepsEn: [
+      'Paint over the watermark — make sure the brush covers the whole area you want gone.',
+      'Use Erase to undo part of the mask if you over-painted.',
+      'Tap Apply: the covered area is filled in from its surroundings.',
+      'Keep painting + applying until it is clean, then download.',
+    ],
+    stepsZh: [
+      '用笔刷涂抹水印，记得要完全覆盖要清除的区域。',
+      '涂多了可用「擦除」去掉多余的遮罩。',
+      '点「应用」：涂抹区域会用周围颜色自动填充。',
+      '可反复涂抹、反复应用，直到干净再下载。',
+    ],
+  },
+  {
+    id: 'cutout',
+    labelEn: 'Cut out (manual)',
+    labelZh: '手动抠图',
+    stepsEn: [
+      'Trace a closed loop around the subject — everything inside is kept.',
+      'Tap Apply to remove the background outside the loop (PNG with transparency).',
+      'Use Clear to start over before applying.',
+    ],
+    stepsZh: [
+      '沿主体边缘画一圈闭合的线，圈内内容会被保留。',
+      '点「应用」删除圈外背景（输出透明 PNG）。',
+      '应用前可用「清空」重新开始。',
+    ],
+  },
+  {
+    id: 'remove',
+    labelEn: 'Magic wand remove',
+    labelZh: '魔术棒去除',
+    stepsEn: [
+      'Click the area you want to remove (e.g. the background) — similar colors are selected.',
+      'Adjust Tolerance to select more or fewer similar pixels.',
+      'Click several times to add more regions, then Apply to make them transparent.',
+    ],
+    stepsZh: [
+      '点击要去掉的区域（比如背景），相似颜色会被选中。',
+      '调整「容差」控制选中范围的大小。',
+      '可多次点击累加选区，点「应用」把这些区域变为透明。',
+    ],
+  },
+  {
+    id: 'resize',
+    labelEn: 'Resize',
+    labelZh: '调整尺寸',
+    stepsEn: [
+      'Enter the new width or height — the other side scales automatically while the ratio is locked.',
+      'Unlock the ratio (🔓) to set both freely.',
+      'Tap Apply to resize the image.',
+    ],
+    stepsZh: [
+      '输入新的宽或高，锁定比例时另一边会自动等比缩放。',
+      '点「解锁比例」可分别设置宽高。',
+      '点「应用」调整图片尺寸。',
+    ],
+  },
+]
+
+function StudioTutorial({ lang }: { lang: 'en' | 'zh' }) {
+  return (
+    <section className="mt-10">
+      <div className="mb-4">
+        <h3 className="text-base font-bold text-[var(--text-primary)]">
+          {lang === 'zh' ? '📖 每个工具怎么用' : '📖 How to use each tool'}
+        </h3>
+        <p className="text-xs text-[var(--text-dim)] mt-1">
+          {lang === 'zh'
+            ? '点击任意工具展开分步教程。所有操作都在浏览器内完成，图片不会上传。'
+            : 'Expand any tool for a step-by-step guide. Everything runs in your browser — images are never uploaded.'}
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {TUTORIALS.map((tut) => (
+          <details
+            key={tut.id}
+            className="group glass rounded-xl border border-white/[0.06] overflow-hidden"
+          >
+            <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] list-none [&::-webkit-details-marker]:hidden">
+              <span>{lang === 'zh' ? tut.labelZh : tut.labelEn}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-[var(--text-dim)] transition-transform duration-200 group-open:rotate-180">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </summary>
+            <ol className="border-t border-white/[0.06] px-4 py-3 space-y-2">
+              {(lang === 'zh' ? tut.stepsZh : tut.stepsEn).map((s, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs leading-relaxed text-[var(--text-dim)]">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/12 text-[10px] text-[var(--accent)]">{i + 1}</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          </details>
+        ))}
+      </div>
+    </section>
   )
 }
 

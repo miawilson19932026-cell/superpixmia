@@ -45,6 +45,20 @@ export interface Translations {
   bgBlack: string
   applyRemoveBg: string
   bgRemoveGuide: string
+  bgRefineTitle: string
+  bgRefineOpen: string
+  bgRefineWand: string
+  bgRefineBrush: string
+  bgRefineErase: string
+  bgRefineRestore: string
+  bgRefineTolerance: string
+  bgRefineBrushSize: string
+  bgRefineUndo: string
+  bgRefineRedo: string
+  bgRefineReset: string
+  bgRefineApply: string
+  bgRefineCancel: string
+  bgRefineHint: string
   convertTitle: string
   convertTo: string
   convertSize: string
@@ -142,6 +156,7 @@ export interface Translations {
   studioResize: string
   studioApply: string
   studioUndo: string
+  studioRedo: string
   studioDownload: string
   studioDownloading: string
   studioClear: string
@@ -162,6 +177,19 @@ export interface Translations {
   studioFlipV: string
   studioErase: string
   studioFree: string
+  // Download confirmation dialog
+  studioDlTitle: string
+  studioDlFormat: string
+  studioDlDims: string
+  studioDlSize: string
+  studioDlCancel: string
+  studioDlConfirm: string
+  studioFormatSame: string
+  // Interaction hints
+  studioRotateHint: string
+  studioCropHint: string
+  studioCutoutHint: string
+  studioWandHint: string
 }
 
 // Detect language from URL param, browser, or localStorage
