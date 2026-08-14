@@ -14,6 +14,15 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const PAGE_URL = process.env.PAGE_URL || 'http://localhost:5173/studio'
 const PNG = fileURLToPath(new URL('./test-pink-watermark.png', import.meta.url))
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const waitFor = async (fn, timeout = 8000) => {
+  const t0 = Date.now()
+  while (Date.now() - t0 < timeout) {
+    const v = await fn()
+    if (v) return v
+    await sleep(250)
+  }
+  return null
+}
 
 const browser = await puppeteer.launch({ executablePath: EDGE, headless: 'new', args: ['--no-sandbox'] })
 const page = await browser.newPage()
@@ -24,14 +33,25 @@ page.on('console', (m) => { if (m.type() === 'error') errors.push('console.error
 await page.setViewport({ width: 1400, height: 900 })
 await page.goto(PAGE_URL, { waitUntil: 'networkidle2', timeout: 60000 })
 
-// 1. Upload
+// 1. Upload — poll for the workbench (image load + render can exceed 2s on a
+//    cold dev-server compile; a fixed sleep flakes — dev-lesson #13).
 const input = await page.$('input[type="file"]')
 if (!input) throw new Error('file input not found')
 await input.uploadFile(PNG)
-await sleep(1800)
 
-const hasBaseCanvas = await page.evaluate(() => document.querySelectorAll('canvas').length >= 2)
+const hasBaseCanvas = await waitFor(() => page.evaluate(() => document.querySelectorAll('canvas').length >= 2), 12000)
 console.log('workbench canvas appeared          :', hasBaseCanvas ? 'YES ✓' : 'NO ✗')
+if (!hasBaseCanvas) {
+  const dbg = await page.evaluate(() => ({
+    url: location.href,
+    canvases: document.querySelectorAll('canvas').length,
+    h1: document.querySelector('h1')?.textContent,
+    fileInputs: document.querySelectorAll('input[type=file]').length,
+    bodyStart: (document.body.textContent || '').slice(0, 80),
+  }))
+  console.log('  [dbg]', JSON.stringify(dbg))
+  console.log('  [dbg errors]', errors.length ? errors : 'none')
+}
 
 const buttonByText = (re) => page.evaluate((s) => {
   const btns = Array.from(document.querySelectorAll('button'))
@@ -53,16 +73,6 @@ const stage = () => page.evaluate(() => {
   const r = c.getBoundingClientRect()
   return { left: r.left, top: r.top, width: r.width, height: r.height }
 })
-
-const waitFor = async (fn, timeout = 8000) => {
-  const t0 = Date.now()
-  while (Date.now() - t0 < timeout) {
-    const v = await fn()
-    if (v) return v
-    await sleep(250)
-  }
-  return null
-}
 
 // 2. Rotate 90° + Apply
 await buttonByText('^Rotate$|^旋转$')
@@ -106,8 +116,8 @@ await page.mouse.move(s2.left + s2.width * 0.6, s2.top + s2.height * 0.4, { step
 await page.mouse.up()
 await sleep(300)
 await buttonByText('^Apply$|^应用$')
-await sleep(600)
-console.log('pencil tool apply                     :', await appliedShown() ? 'YES ✓' : 'NO ✗')
+const pencilApplied = await waitFor(appliedShown, 10000)
+console.log('pencil tool apply                     :', pencilApplied ? 'YES ✓' : 'NO ✗')
 
 // 5. Heal: brush strokes + Apply (iterative accumulate)
 await buttonByText('^Erase$|^去水印$')

@@ -118,7 +118,7 @@ export default function CatMascot({ positionClass }: { positionClass?: string })
       />
 
       {/* Speech bubble + tail + dots wrapper */}
-      <div className="absolute top-[2%] left-[80%] sm:-top-[12%] sm:left-[75%] z-20 animate-float pointer-events-none">
+      <div className="absolute top-[2%] left-[48%] sm:-top-[12%] sm:left-[75%] z-20 animate-float pointer-events-none">
         {/* Bubble dots trail from mouth */}
         {[
           { top: '58%', left: '-42px', w: 16, bg: 0.22, d: '2.0s', delay: '0s' },
@@ -163,7 +163,7 @@ export default function CatMascot({ positionClass }: { positionClass?: string })
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           className="relative px-5 py-3.5 sm:px-6 sm:py-4
-            min-w-[170px] sm:min-w-[220px]
+            min-w-[130px] sm:min-w-[220px] max-w-[calc(100vw-1.5rem)]
             pointer-events-auto cursor-pointer
             hover:scale-105 active:scale-95 transition-all duration-200"
           style={{

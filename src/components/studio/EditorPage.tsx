@@ -39,7 +39,7 @@ export default function EditorPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-3 sm:px-6 pt-14 sm:pt-16 pb-12">
+    <div className="mx-auto max-w-2xl w-full px-3 sm:px-6 pt-14 sm:pt-16 pb-12">
       <h1 className="text-center text-2xl sm:text-3xl font-black">
         <span className="text-gradient">{lang === 'zh' ? '全能编辑 Studio' : 'Studio Editor'}</span>
       </h1>

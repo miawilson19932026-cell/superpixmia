@@ -248,7 +248,7 @@ export default function DropZone({
     <div className="relative mx-auto max-w-2xl mt-20 sm:mt-24">
       {/* Stacked album cards — dark glass, more opaque */}
       <div
-        className="absolute -inset-x-5 -inset-y-8 rounded-[var(--radius-xl)] -rotate-[3deg]"
+        className="absolute -inset-x-2 sm:-inset-x-5 -inset-y-8 rounded-[var(--radius-xl)] -rotate-[3deg]"
         style={{
           background: 'linear-gradient(135deg, rgba(18,18,40,0.78), rgba(14,14,36,0.85), rgba(22,18,44,0.75))',
           boxShadow: '0 0 0 1px rgba(255,255,255,0.05), 0 0 40px rgba(139,92,246,0.05), 0 8px 32px rgba(0,0,0,0.5)',
@@ -257,7 +257,7 @@ export default function DropZone({
         }}
       />
       <div
-        className="absolute -inset-x-3 -inset-y-5 rounded-[var(--radius-xl)] rotate-[2.5deg]"
+        className="absolute -inset-x-1.5 sm:-inset-x-3 -inset-y-5 rounded-[var(--radius-xl)] rotate-[2.5deg]"
         style={{
           background: 'linear-gradient(135deg, rgba(20,18,42,0.78), rgba(16,16,40,0.85), rgba(20,20,46,0.75))',
           boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 36px rgba(99,102,241,0.04), 0 6px 28px rgba(0,0,0,0.45)',
@@ -266,7 +266,7 @@ export default function DropZone({
         }}
       />
       <div
-        className="absolute -inset-x-1.5 -inset-y-3 rounded-[var(--radius-xl)] -rotate-[1.5deg]"
+        className="absolute -inset-x-1 sm:-inset-x-1.5 -inset-y-3 rounded-[var(--radius-xl)] -rotate-[1.5deg]"
         style={{
           background: 'linear-gradient(135deg, rgba(18,18,42,0.78), rgba(16,16,42,0.85), rgba(20,18,44,0.75))',
           boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 0 28px rgba(59,130,246,0.03), 0 4px 24px rgba(0,0,0,0.4)',

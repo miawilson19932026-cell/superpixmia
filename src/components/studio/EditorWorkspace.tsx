@@ -821,7 +821,12 @@ export default function EditorWorkspace({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-3 sm:px-6 py-4 sm:py-6">
+    // w-full: this container is a flex item of the page column flex. `mx-auto`
+    // (auto cross margins) disables flex stretch, so without an explicit width
+    // the tool rail's content (9 buttons) blows the layout out past the viewport
+    // on mobile. w-full caps it at the viewport; max-w-6xl + mx-auto keep desktop
+    // centered at 1152px.
+    <div className="mx-auto max-w-6xl w-full min-w-0 px-3 sm:px-6 py-4 sm:py-6">
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
