@@ -1,5 +1,32 @@
 @import "tailwindcss";
 
+/* ---- Gradient direction legacy override ----
+   Tailwind v4 emits `--tw-gradient-position: to bottom in oklab` etc. The
+   `in oklab` color-interpolation syntax needs Chrome/Edge 111+ (2023). On older
+   browsers (the dev/test machine runs Edge 100) the whole `linear-gradient()`
+   becomes invalid and the gradient silently disappears — the amber "推荐" badge
+   and the HowTo/tutorial connector lines were invisible. Overriding the
+   position with the plain legacy direction makes the same `bg-gradient-to-*`
+   classes render everywhere. The color shift vs oklab interpolation is
+   imperceptible for the solid accent colors we use. (These rules are unlayered,
+   so they beat Tailwind's @layer utilities regardless of source order.) */
+.bg-gradient-to-t { --tw-gradient-position: to top; }
+.bg-gradient-to-tr { --tw-gradient-position: to top right; }
+.bg-gradient-to-r { --tw-gradient-position: to right; }
+.bg-gradient-to-br { --tw-gradient-position: to bottom right; }
+.bg-gradient-to-b { --tw-gradient-position: to bottom; }
+.bg-gradient-to-bl { --tw-gradient-position: to bottom left; }
+.bg-gradient-to-l { --tw-gradient-position: to left; }
+.bg-gradient-to-tl { --tw-gradient-position: to top left; }
+.bg-linear-to-t { --tw-gradient-position: to top; }
+.bg-linear-to-tr { --tw-gradient-position: to top right; }
+.bg-linear-to-r { --tw-gradient-position: to right; }
+.bg-linear-to-br { --tw-gradient-position: to bottom right; }
+.bg-linear-to-b { --tw-gradient-position: to bottom; }
+.bg-linear-to-bl { --tw-gradient-position: to bottom left; }
+.bg-linear-to-l { --tw-gradient-position: to left; }
+.bg-linear-to-tl { --tw-gradient-position: to top left; }
+
 /* ---- PixMia Design System: Dark Only ---- */
 :root {
   --bg-page:    #0a0a0a;

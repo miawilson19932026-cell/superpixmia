@@ -2,7 +2,7 @@
 // One image, many tools. Every tool is applied against the LATEST committed
 // blob (not the original), so operations accumulate like a lightweight PS.
 // Layout: tool rail | canvas workbench | per-tool panel (+ Apply / Undo / Download).
-import { useEffect, useRef, useState } from 'react'
+import { cloneElement, useEffect, useRef, useState, type ReactElement } from 'react'
 import { useTranslation } from '../../i18n'
 import type { CropRect } from '../../utils/crop'
 import { cropImage, rotateImage, resizeImage, watermarkImage, removeWatermark, convertImage, formatSize, getOutputFormat } from '../../utils'
@@ -489,32 +489,43 @@ export default function EditorWorkspace({
       ctx.stroke(path)
     }
     // Magic wand cursor follows the pointer (the real cursor is hidden).
-    if (hoverPt) drawWand(ctx, hoverPt.x, hoverPt.y)
+    if (hoverPt) {
+      // The overlay canvas is CSS-scaled from image pixels down to its on-screen
+      // size, so a wand drawn at fixed image-pixel size shrinks along with big
+      // phone photos — on a 3000px photo it becomes a ~6px dot and the user
+      // "can't find the mouse". Scale the glyph by 1/scale so it always renders
+      // at a constant, human-sized size on screen (~24px).
+      const ov = overRef.current
+      const scale = ov && ov.width ? ov.getBoundingClientRect().width / ov.width : 1
+      drawWand(ctx, hoverPt.x, hoverPt.y, 1 / scale)
+    }
   }
 
   // Small magic wand glyph drawn at the pointer for the one-click cutout tool.
-  const drawWand = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+  // k = on-screen size compensation (1/displayScale); k=1 when the image is
+  // displayed at its natural resolution.
+  const drawWand = (ctx: CanvasRenderingContext2D, x: number, y: number, k = 1) => {
     ctx.save()
     ctx.lineCap = 'round'
     // handle
     ctx.strokeStyle = 'rgba(226,232,240,0.95)'
-    ctx.lineWidth = 3
+    ctx.lineWidth = 3 * k
     ctx.beginPath()
-    ctx.moveTo(x - 8, y + 8)
-    ctx.lineTo(x + 3, y - 3)
+    ctx.moveTo(x - 8 * k, y + 8 * k)
+    ctx.lineTo(x + 3 * k, y - 3 * k)
     ctx.stroke()
     // grip
     ctx.strokeStyle = '#3b82f6'
-    ctx.lineWidth = 3
+    ctx.lineWidth = 3 * k
     ctx.beginPath()
-    ctx.moveTo(x - 8, y + 8)
-    ctx.lineTo(x - 11, y + 11)
+    ctx.moveTo(x - 8 * k, y + 8 * k)
+    ctx.lineTo(x - 11 * k, y + 11 * k)
     ctx.stroke()
     // sparkles near the tip
     ctx.fillStyle = '#fde047'
     for (const [dx, dy, r] of [[4, -7, 2.2], [8, -3, 1.5], [1, -11, 1.3], [9, -8, 1.1]]) {
       ctx.beginPath()
-      ctx.arc(x + dx, y + dy, r, 0, Math.PI * 2)
+      ctx.arc(x + dx * k, y + dy * k, r * k, 0, Math.PI * 2)
       ctx.fill()
     }
     ctx.restore()
@@ -1590,41 +1601,85 @@ const TUTORIALS: { id: StudioToolId; labelEn: string; labelZh: string; stepsEn: 
   },
 ]
 
+// Per-tool accent tints — each card gets its own soft color so the grid reads
+// as a friendly rainbow instead of a row of identical boxes. All class names are
+// literal so Tailwind v4 picks them up.
+const TUTORIAL_TINTS: Record<StudioToolId, { tile: string; dot: string; line: string; open: string }> = {
+  rotate: { tile: 'bg-cyan-400/10 text-cyan-300 ring-1 ring-inset ring-cyan-400/25 group-open:bg-cyan-400/20 group-open:ring-cyan-400/50', dot: 'bg-cyan-400/15 text-cyan-300', line: 'from-cyan-400/50', open: 'group-open:border-cyan-400/30' },
+  crop: { tile: 'bg-emerald-400/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/25 group-open:bg-emerald-400/20 group-open:ring-emerald-400/50', dot: 'bg-emerald-400/15 text-emerald-300', line: 'from-emerald-400/50', open: 'group-open:border-emerald-400/30' },
+  text: { tile: 'bg-amber-400/10 text-amber-300 ring-1 ring-inset ring-amber-400/25 group-open:bg-amber-400/20 group-open:ring-amber-400/50', dot: 'bg-amber-400/15 text-amber-300', line: 'from-amber-400/50', open: 'group-open:border-amber-400/30' },
+  logo: { tile: 'bg-fuchsia-400/10 text-fuchsia-300 ring-1 ring-inset ring-fuchsia-400/25 group-open:bg-fuchsia-400/20 group-open:ring-fuchsia-400/50', dot: 'bg-fuchsia-400/15 text-fuchsia-300', line: 'from-fuchsia-400/50', open: 'group-open:border-fuchsia-400/30' },
+  pencil: { tile: 'bg-yellow-400/10 text-yellow-300 ring-1 ring-inset ring-yellow-400/25 group-open:bg-yellow-400/20 group-open:ring-yellow-400/50', dot: 'bg-yellow-400/15 text-yellow-300', line: 'from-yellow-400/50', open: 'group-open:border-yellow-400/30' },
+  heal: { tile: 'bg-rose-400/10 text-rose-300 ring-1 ring-inset ring-rose-400/25 group-open:bg-rose-400/20 group-open:ring-rose-400/50', dot: 'bg-rose-400/15 text-rose-300', line: 'from-rose-400/50', open: 'group-open:border-rose-400/30' },
+  cutout: { tile: 'bg-indigo-400/10 text-indigo-300 ring-1 ring-inset ring-indigo-400/25 group-open:bg-indigo-400/20 group-open:ring-indigo-400/50', dot: 'bg-indigo-400/15 text-indigo-300', line: 'from-indigo-400/50', open: 'group-open:border-indigo-400/30' },
+  remove: { tile: 'bg-violet-400/10 text-violet-300 ring-1 ring-inset ring-violet-400/25 group-open:bg-violet-400/20 group-open:ring-violet-400/50', dot: 'bg-violet-400/15 text-violet-300', line: 'from-violet-400/50', open: 'group-open:border-violet-400/30' },
+  resize: { tile: 'bg-sky-400/10 text-sky-300 ring-1 ring-inset ring-sky-400/25 group-open:bg-sky-400/20 group-open:ring-sky-400/50', dot: 'bg-sky-400/15 text-sky-300', line: 'from-sky-400/50', open: 'group-open:border-sky-400/30' },
+}
+
+const tutIcon = (id: StudioToolId) => {
+  const def = STUDIO_TOOLS.find((t) => t.id === id)
+  return def ? cloneElement(def.icon as ReactElement<any>, { className: 'h-4 w-4' }) : null
+}
+
 export function StudioTutorial({ lang }: { lang: 'en' | 'zh' }) {
+  const zh = lang === 'zh'
   return (
     <section className="mt-10">
-      <div className="mb-4">
-        <h3 className="text-base font-bold text-[var(--text-primary)]">
-          {lang === 'zh' ? '📖 每个工具怎么用' : '📖 How to use each tool'}
-        </h3>
-        <p className="text-xs text-[var(--text-dim)] mt-1">
-          {lang === 'zh'
-            ? '点击任意工具展开分步教程。所有操作都在浏览器内完成，图片不会上传。'
-            : 'Expand any tool for a step-by-step guide. Everything runs in your browser — images are never uploaded.'}
-        </p>
+      <div className="mb-6 flex items-start gap-3.5 sm:items-center">
+        <span className="glass-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[var(--accent)]">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+            <path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z" />
+            <path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z" />
+          </svg>
+        </span>
+        <div>
+          <h2 className="text-lg sm:text-xl font-extrabold tracking-tight">
+            <span className="text-gradient">{zh ? '每个工具怎么用' : 'How to use each tool'}</span>
+          </h2>
+          <p className="mt-0.5 text-xs sm:text-sm text-[var(--text-dim)]">
+            {zh
+              ? '点击任意工具展开分步教程。所有操作都在浏览器内完成，图片不会上传。'
+              : 'Expand any tool for a step-by-step guide. Everything runs in your browser — images are never uploaded.'}
+          </p>
+        </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {TUTORIALS.map((tut) => (
-          <details
-            key={tut.id}
-            className="group glass rounded-xl border border-white/[0.06] overflow-hidden"
-          >
-            <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-[var(--text-primary)] list-none [&::-webkit-details-marker]:hidden">
-              <span>{lang === 'zh' ? tut.labelZh : tut.labelEn}</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-[var(--text-dim)] transition-transform duration-200 group-open:rotate-180">
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </summary>
-            <ol className="border-t border-white/[0.06] px-4 py-3 space-y-2">
-              {(lang === 'zh' ? tut.stepsZh : tut.stepsEn).map((s, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs leading-relaxed text-[var(--text-dim)]">
-                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--accent)]/12 text-[10px] text-[var(--accent)]">{i + 1}</span>
-                  <span>{s}</span>
-                </li>
-              ))}
-            </ol>
-          </details>
-        ))}
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {TUTORIALS.map((tut) => {
+          const t = TUTORIAL_TINTS[tut.id]
+          const steps = zh ? tut.stepsZh : tut.stepsEn
+          return (
+            <details
+              key={tut.id}
+              className={`group glass rounded-xl border border-white/[0.06] overflow-hidden transition-all duration-200 card-hover hover:-translate-y-0.5 ${t.open}`}
+            >
+              <summary className="flex cursor-pointer items-center gap-3 px-4 py-3.5 text-sm font-semibold text-[var(--text-primary)] list-none [&::-webkit-details-marker]:hidden">
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 ${t.tile}`}>
+                  {tutIcon(tut.id)}
+                </span>
+                <span className="flex-1 leading-tight">{zh ? tut.labelZh : tut.labelEn}</span>
+                <span className="hidden sm:inline whitespace-nowrap text-[10px] font-medium uppercase tracking-wider text-[var(--text-dim)]/70">
+                  {zh ? `${steps.length} 步` : `${steps.length} steps`}
+                </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 shrink-0 text-[var(--text-dim)] transition-transform duration-200 group-open:rotate-180">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </summary>
+              <ol className="space-y-0 border-t border-white/[0.06] px-4 py-3.5">
+                {steps.map((s, i) => (
+                  <li key={i} className="relative flex gap-3 pb-3.5 last:pb-0">
+                    {i < steps.length - 1 && (
+                      <span className={`absolute left-[8px] top-6 bottom-0 w-px bg-gradient-to-b ${t.line} to-transparent`} />
+                    )}
+                    <span className={`relative mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${t.dot}`}>
+                      {i + 1}
+                    </span>
+                    <span className="pt-px text-xs leading-relaxed text-[var(--text-dim)]">{s}</span>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )
+        })}
       </div>
     </section>
   )
