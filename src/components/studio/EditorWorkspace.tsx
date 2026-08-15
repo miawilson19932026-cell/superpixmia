@@ -12,7 +12,6 @@ import { STUDIO_TOOLS, type StudioToolId } from './tools'
 import {
   compositeStrokes,
   buildMaskFromStrokes,
-  cutoutRegion,
   removeMasked,
   floodFill,
   type Stroke,
@@ -29,7 +28,47 @@ export interface SourceImage {
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
 const MAX_HISTORY = 10
 
+// Turn a closed path of points into a W×H boolean mask (true = inside). Strokes
+// the loop too (2px, round joins) so even a degenerate sliver selects something
+// instead of nothing.
+function pathToMask(W: number, H: number, pts: StrokePt[]): boolean[] {
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d', { willReadFrequently: true })!
+  ctx.beginPath()
+  ctx.moveTo(pts[0].x, pts[0].y)
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y)
+  ctx.closePath()
+  ctx.lineWidth = 2
+  ctx.lineJoin = 'round'
+  ctx.fillStyle = '#000'
+  ctx.strokeStyle = '#000'
+  ctx.fill()
+  ctx.stroke()
+  const d = ctx.getImageData(0, 0, W, H).data
+  const m = new Array<boolean>(W * H).fill(false)
+  for (let i = 0; i < W * H; i++) m[i] = d[i * 4 + 3] > 0
+  return m
+}
+
 const FONT = `system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`
+
+// First-visit teaching bubble: one short "how to use" line per tool, shown the
+// first time the tool is picked, pointing at the Apply button. Persisted per
+// browser session (sessionStorage) so re-uploading an image doesn't re-teach.
+const TIP_SEEN_KEY = 'spm-studio-tip-seen'
+const TOOL_TIPS: Record<StudioToolId, { en: string; zh: string }> = {
+  rotate: { en: 'Drag on the canvas, or use the buttons / slider to rotate.', zh: '在画布上拖动，或用按钮 / 滑块旋转。' },
+  crop: { en: 'Drag inside the box to move it, drag corners to resize.', zh: '拖动选框移动，拖四角可缩放。' },
+  text: { en: 'Type your text, then click the canvas to place it.', zh: '输入文字，然后点击画布放置。' },
+  logo: { en: 'Upload a logo, then click the canvas to place it.', zh: '上传图章，然后点击画布放置。' },
+  pencil: { en: 'Pick a color and draw directly on the canvas.', zh: '选好颜色，直接在画布上绘制。' },
+  heal: { en: 'Paint over the watermark you want to remove.', zh: '涂抹要清除的水印区域。' },
+  cutout: { en: 'Trace a loop over the area, then pick Keep or Remove.', zh: '沿区域画一圈，选「保留」或「去除」。' },
+  remove: { en: 'Click similar areas (like the background) to select them.', zh: '点击相似区域（如背景）选中它们。' },
+  resize: { en: 'Enter a new width or height.', zh: '输入新的宽或高。' },
+}
 
 // Font choices for the text tool — rendered via canvas, so they're system fonts
 // (fall back gracefully if a device doesn't have a given family installed).
@@ -114,16 +153,26 @@ export default function EditorWorkspace({
   const [removeTol, setRemoveTol] = useState(32)
   const [removeClicks, setRemoveClicks] = useState(0)
   const [removeMode, setRemoveMode] = useState<'add' | 'erase'>('add')
+  const [cutoutMode, setCutoutMode] = useState<'keep' | 'remove'>('keep')
+  const [cutoutClicks, setCutoutClicks] = useState(0)
   const [resizeState, setResizeState] = useState({ width: source.width, height: source.height, lock: true })
   const [hoverPt, setHoverPt] = useState<{ x: number; y: number } | null>(null)
   const [dlOpen, setDlOpen] = useState(false)
   const [dlFormat, setDlFormat] = useState<'same' | OutputFormat>('same')
+
+  // First-visit teaching bubble — shown once per tool per browser session,
+  // pointing at the Apply button so users learn every change needs Apply.
+  const applyBtnRef = useRef<HTMLButtonElement>(null)
+  const seenRef = useRef<Set<StudioToolId>>(new Set())
+  const [tipTool, setTipTool] = useState<StudioToolId | null>(null)
+  const [tipPos, setTipPos] = useState<{ x: number; y: number; place: 'left' | 'bottom' } | null>(null)
 
   // Paint-state lives in refs (mutable during drag); compose() is called by
   // the pointer handlers directly.
   const pencilRef = useRef<Stroke[]>([])
   const healRef = useRef<Stroke[]>([])
   const cutoutRef = useRef<StrokePt[]>([])
+  const cutoutMaskRef = useRef<boolean[] | null>(null) // true = keep the pixel
   const removeRef = useRef<boolean[] | null>(null)
 
   // Load `current` into a drawable Image whenever it changes.
@@ -149,6 +198,40 @@ export default function EditorWorkspace({
     c.height = curH
     c.getContext('2d')!.drawImage(curImg, 0, 0)
   }, [curImg, curW, curH])
+
+  // Load the "seen" set once (sessionStorage — read in an effect so the SSR
+  // prerender pass never touches window.sessionStorage).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(TIP_SEEN_KEY)
+      if (raw) seenRef.current = new Set<StudioToolId>(JSON.parse(raw))
+    } catch { /* ignore */ }
+  }, [])
+
+  // Position the teaching bubble next to the Apply button and auto-dismiss it.
+  // Desktop: bubble to the LEFT of the button with the arrow pointing right at
+  // it; mobile: bubble BELOW the button with the arrow pointing up.
+  useEffect(() => {
+    if (!tipTool) { setTipPos(null); return }
+    const btn = applyBtnRef.current
+    if (!btn) return
+    const bw = 280
+    const measure = () => {
+      const r = btn.getBoundingClientRect()
+      const vw = window.innerWidth
+      if (vw >= 1024) {
+        const x = Math.max(12, Math.min(r.left - bw - 14, vw - bw - 12))
+        setTipPos({ x, y: r.top + r.height / 2, place: 'left' })
+      } else {
+        const x = Math.max(12, Math.min(r.left + r.width / 2 - bw / 2, vw - bw - 12))
+        setTipPos({ x, y: r.bottom + 12, place: 'bottom' })
+      }
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    const timer = setTimeout(() => setTipTool(null), 12000)
+    return () => { window.removeEventListener('resize', measure); clearTimeout(timer) }
+  }, [tipTool])
 
   // ── Preview composition (drawn over the base on the overlay canvas) ──
   const compose = () => {
@@ -336,27 +419,47 @@ export default function EditorWorkspace({
   }
 
   const drawCutout = (ctx: CanvasRenderingContext2D) => {
+    const W = curW, H = curH
+    const m = cutoutMaskRef.current
+    if (m) {
+      // Kept pixels stay visible; removed pixels get a dark tint. Green dashed
+      // outline marks the keep region, cyan the remove region — PS-style.
+      const id = ctx.createImageData(W, H)
+      const data = id.data
+      for (let i = 0; i < W * H; i++) if (!m[i]) data[i * 4 + 3] = 92
+      ctx.putImageData(id, 0, 0)
+
+      const keepPath = new Path2D()
+      const remPath = new Path2D()
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const i = y * W + x
+          const onEdge =
+            x === 0 || x === W - 1 || y === 0 || y === H - 1 ||
+            !m[i - 1] || !m[i + 1] || !m[i - W] || !m[i + W]
+          if (!onEdge) continue
+          if (m[i]) keepPath.rect(x, y, 1, 1)
+          else remPath.rect(x, y, 1, 1)
+        }
+      }
+      ctx.strokeStyle = 'rgba(16,185,129,0.95)'
+      ctx.lineWidth = 1.2
+      ctx.stroke(keepPath)
+      ctx.strokeStyle = 'rgba(56,189,248,0.95)'
+      ctx.stroke(remPath)
+    }
+    // In-progress loop: just the dashed line while drawing — the region only
+    // closes (and shows its fill) after the pointer is released.
     const pts = cutoutRef.current
-    if (pts.length < 2) return
-    ctx.save()
-    if (pts.length >= 3) {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)'
-      ctx.fillRect(0, 0, curW, curH)
+    if (pts.length >= 2) {
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 4])
       ctx.beginPath()
       ctx.moveTo(pts[0].x, pts[0].y)
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y)
-      ctx.closePath()
-      ctx.globalCompositeOperation = 'destination-out'
-      ctx.fill()
+      ctx.stroke()
     }
-    ctx.restore()
-    ctx.strokeStyle = '#fff'
-    ctx.lineWidth = 2
-    ctx.setLineDash([6, 4])
-    ctx.beginPath()
-    ctx.moveTo(pts[0].x, pts[0].y)
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y)
-    ctx.stroke()
   }
 
   const drawRemove = (ctx: CanvasRenderingContext2D) => {
@@ -493,7 +596,10 @@ export default function EditorWorkspace({
   }
 
   const onPointerUp = () => {
+    const d = dragRef.current
     dragRef.current = null
+    // Release = close the loop → the traced region becomes a selection.
+    if (d?.mode === 'path') commitCutout()
   }
 
   // Rotate by dragging on the canvas: the angle is measured from the image
@@ -610,6 +716,28 @@ export default function EditorWorkspace({
     compose()
   }
 
+  // Cutout loop closed → merge the traced region into the running mask. In
+  // "keep" mode the region is added (union); in "remove" mode it is subtracted.
+  // The first loop defines the base: keep starts from "everything removed",
+  // remove starts from "everything kept" — so a single loop keeps the old
+  // behavior (trace the subject, the rest goes transparent).
+  const commitCutout = () => {
+    const pts = cutoutRef.current
+    if (pts.length < 3) { cutoutRef.current = []; return }
+    const sel = pathToMask(curW, curH, pts)
+    const existing = cutoutMaskRef.current
+    if (existing) {
+      for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = cutoutMode === 'keep'
+    } else {
+      const base = new Array<boolean>(curW * curH).fill(cutoutMode !== 'keep')
+      for (let i = 0; i < sel.length; i++) if (sel[i]) base[i] = cutoutMode === 'keep'
+      cutoutMaskRef.current = base
+    }
+    cutoutRef.current = []
+    setCutoutClicks((n) => n + 1)
+    compose()
+  }
+
   // Click-to-remove: flood-fill the CURRENT image from the click point. In
   // "select" mode the region is unioned into the running mask; in "erase" mode
   // it is subtracted, so the user can custom-build exactly the selection.
@@ -642,6 +770,7 @@ export default function EditorWorkspace({
     pencilRef.current = []
     healRef.current = []
     cutoutRef.current = []
+    cutoutMaskRef.current = null
     removeRef.current = null
   }
 
@@ -651,6 +780,7 @@ export default function EditorWorkspace({
   const resetPreview = () => {
     clearPaint()
     setRemoveClicks(0)
+    setCutoutClicks(0)
     setRotate({ angle: 0, flipX: false, flipY: false })
     setCropRect(null)
     setTextState((s) => ({ ...s, text: '', x: 0, y: 0, hasPos: false }))
@@ -698,9 +828,16 @@ export default function EditorWorkspace({
         case 'heal':
           blob = await removeWatermark(current, buildMaskFromStrokes(curW, curH, healRef.current), curW, curH)
           break
-        case 'cutout':
-          blob = await cutoutRegion(current, cutoutRef.current)
+        case 'cutout': {
+          // Kept mask → everything not kept becomes transparent.
+          const m = cutoutMaskRef.current
+          if (m) {
+            const inverted = new Array<boolean>(m.length)
+            for (let i = 0; i < m.length; i++) inverted[i] = !m[i]
+            blob = await removeMasked(current, inverted)
+          }
           break
+        }
         case 'remove':
           blob = await removeMasked(current, removeRef.current)
           break
@@ -718,6 +855,7 @@ export default function EditorWorkspace({
         setHistIdx(trimmed.length - 1)
         resetPreview()
         setApplied(true)
+        setTipTool(null) // applying is the lesson — stop teaching
         // Clear the preview immediately instead of waiting for the new image to
         // reload — otherwise the old mask/outline lingers over the fresh result.
         compose()
@@ -771,6 +909,16 @@ export default function EditorWorkspace({
     setActiveTool(tool)
     setApplied(false)
     setHoverPt(null)
+    // First visit to a tool → teach with a bubble pointing at Apply.
+    if (!seenRef.current.has(tool)) {
+      const next = new Set(seenRef.current)
+      next.add(tool)
+      seenRef.current = next
+      try { sessionStorage.setItem(TIP_SEEN_KEY, JSON.stringify([...next])) } catch { /* ignore */ }
+      setTipTool(tool)
+    } else {
+      setTipTool(null)
+    }
     if (tool === 'crop' && !cropRect) {
       setCropRect({ x: Math.round(curW * 0.1), y: Math.round(curH * 0.1), width: Math.round(curW * 0.8), height: Math.round(curH * 0.8) })
     }
@@ -963,10 +1111,20 @@ export default function EditorWorkspace({
       case 'cutout':
         return (
           <div className="space-y-3">
-            <p className="text-xs text-[var(--text-dim)]">{t.studioCutoutHint}</p>
-            <div className="flex gap-2">
-              <ToolButton onClick={clearTool}>{t.studioClear}</ToolButton>
+            <p className="text-xs text-[var(--text-dim)]">
+              {lang === 'zh'
+                ? '画圈选中区域（松开鼠标即闭合）。「保留」= 圈内留下，「去除」= 圈内去掉；可反复画圈叠加 / 减去选区，像 PS 一样微调。'
+                : 'Trace a loop over an area (it closes when you release). Keep = keep the loop content, Remove = drop it. Draw more loops to add or subtract from the selection — PS-style.'}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <ToolButton active={cutoutMode === 'keep'} onClick={() => setCutoutMode('keep')}>{lang === 'zh' ? '保留' : 'Keep'}</ToolButton>
+              <ToolButton active={cutoutMode === 'remove'} onClick={() => setCutoutMode('remove')}>{lang === 'zh' ? '去除' : 'Remove'}</ToolButton>
             </div>
+            {cutoutClicks > 0 && (
+              <div className="flex gap-2">
+                <ToolButton onClick={clearTool}>{t.studioClear}</ToolButton>
+              </div>
+            )}
           </div>
         )
       case 'remove':
@@ -1136,6 +1294,7 @@ export default function EditorWorkspace({
           </div>
           {panel()}
           <button
+            ref={applyBtnRef}
             type="button"
             onClick={apply}
             disabled={!canApply() || processing}
@@ -1145,6 +1304,43 @@ export default function EditorWorkspace({
           </button>
         </div>
       </div>
+
+      {/* First-visit teaching bubble, aimed at the Apply button */}
+      {tipTool && tipPos && (
+        <div
+          className="fixed z-[90] w-[280px] max-w-[calc(100vw-24px)]"
+          style={tipPos.place === 'left'
+            ? { left: tipPos.x, top: tipPos.y, transform: 'translateY(-50%)' }
+            : { left: tipPos.x, top: tipPos.y, transform: 'none' }}
+        >
+          <div className="relative rounded-xl bg-[#121228]/[0.97] border border-[var(--accent)]/35 px-3.5 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.55)]">
+            {tipPos.place === 'left' ? (
+              <span className="absolute right-[-6px] top-1/2 -translate-y-1/2 h-3 w-3 rotate-45 bg-[#121228] border-r border-t border-[var(--accent)]/35" />
+            ) : (
+              <span className="absolute top-[-6px] left-1/2 -translate-x-1/2 h-3 w-3 rotate-45 bg-[#121228] border-t border-l border-[var(--accent)]/35" />
+            )}
+            <button
+              type="button"
+              onClick={() => setTipTool(null)}
+              aria-label="dismiss"
+              className="absolute top-1.5 right-2 text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-3.5 w-3.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+            <div className="flex items-start gap-2.5 pr-6">
+              <span className="text-base leading-none mt-0.5">💡</span>
+              <div className="space-y-1.5">
+                <p className="text-xs text-[var(--text-primary)] font-medium leading-snug">
+                  {lang === 'zh' ? TOOL_TIPS[tipTool].zh : TOOL_TIPS[tipTool].en}
+                </p>
+                <p className="text-[11px] leading-snug text-[var(--accent)]">
+                  {lang === 'zh' ? '每次操作后，点右侧「应用」按钮，改动才会生效' : 'Tap "Apply" on the right after every change — it takes effect only then'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Per-tool tutorial */}
       <StudioTutorial lang={lang} />
@@ -1348,14 +1544,16 @@ const TUTORIALS: { id: StudioToolId; labelEn: string; labelZh: string; stepsEn: 
     labelEn: 'Cut out (manual)',
     labelZh: '手动抠图',
     stepsEn: [
-      'Trace a closed loop around the subject — everything inside is kept.',
-      'Tap Apply to remove the background outside the loop (PNG with transparency).',
-      'Use Clear to start over before applying.',
+      'Trace a loop over the area you want to affect — it only closes when you release the mouse.',
+      'Choose Keep to keep the area inside the loop, or Remove to drop it.',
+      'Draw more loops to add (Keep) or subtract (Remove) from the selection — refine like in PS.',
+      'Tap Apply: everything not kept becomes transparent (PNG).',
     ],
     stepsZh: [
-      '沿主体边缘画一圈闭合的线，圈内内容会被保留。',
-      '点「应用」删除圈外背景（输出透明 PNG）。',
-      '应用前可用「清空」重新开始。',
+      '沿目标区域画一圈，鼠标松开才闭合，圈出要处理的选区。',
+      '选「保留」留下圈内内容，或选「去除」去掉圈内内容。',
+      '继续画圈可叠加（保留）或减去（去除）选区，像 PS 一样微调。',
+      '点「应用」：未保留的区域变为透明（PNG）。',
     ],
   },
   {
@@ -1392,7 +1590,7 @@ const TUTORIALS: { id: StudioToolId; labelEn: string; labelZh: string; stepsEn: 
   },
 ]
 
-function StudioTutorial({ lang }: { lang: 'en' | 'zh' }) {
+export function StudioTutorial({ lang }: { lang: 'en' | 'zh' }) {
   return (
     <section className="mt-10">
       <div className="mb-4">

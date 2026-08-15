@@ -1,7 +1,7 @@
 // /studio — pick ONE image, then work in the combined editor.
 import { useCallback, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from '../../i18n'
-import EditorWorkspace, { type SourceImage } from './EditorWorkspace'
+import EditorWorkspace, { StudioTutorial, type SourceImage } from './EditorWorkspace'
 import CatMascot from '../CatMascot'
 
 const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif', 'image/bmp', 'image/svg+xml', 'image/x-icon', 'image/tiff', 'image/vnd.microsoft.icon']
@@ -39,7 +39,8 @@ export default function EditorPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl w-full px-3 sm:px-6 pt-14 sm:pt-16 pb-12">
+    <div>
+      <div className="mx-auto max-w-2xl w-full px-3 sm:px-6 pt-14 sm:pt-16 pb-10">
       <h1 className="text-center text-2xl sm:text-3xl font-black">
         <span className="text-gradient">{lang === 'zh' ? '全能编辑 Studio' : 'Studio Editor'}</span>
       </h1>
@@ -92,7 +93,12 @@ export default function EditorPage() {
           <input ref={inputRef} type="file" accept="image/*" className="hidden"
             onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = '' }} />
         </div>
-        <CatMascot />
+          <CatMascot />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl w-full px-3 sm:px-6 pb-14">
+        <StudioTutorial lang={lang} />
       </div>
     </div>
   )
