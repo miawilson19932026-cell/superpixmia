@@ -48,6 +48,7 @@ const vite = await createServer({ server: { middlewareMode: true }, appType: 'cu
 try {
   const { default: App } = await vite.ssrLoadModule('/src/App.tsx')
   const { LangProvider } = await vite.ssrLoadModule('/src/i18n/index.tsx')
+  const { AuthProvider } = await vite.ssrLoadModule('/src/lib/auth.tsx')
   const seo = await vite.ssrLoadModule('/src/lib/seo.ts')
   const seoJsonLd = await vite.ssrLoadModule('/src/lib/seo-jsonld.ts')
   const { helpArticles } = await vite.ssrLoadModule('/src/lib/help-articles.ts')
@@ -60,7 +61,11 @@ try {
       React.createElement(
         StaticRouter,
         { location: route.path },
-        React.createElement(LangProvider, null, React.createElement(App, null)),
+        React.createElement(
+          LangProvider,
+          null,
+          React.createElement(AuthProvider, null, React.createElement(App, null)),
+        ),
       ),
     )
 

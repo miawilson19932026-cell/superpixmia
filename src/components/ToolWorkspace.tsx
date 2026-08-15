@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
+import { useAuth } from '../lib/auth'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
 import { resizeImage, compressImage, convertImage, getResultExtension, removeWatermark } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
@@ -52,6 +53,7 @@ interface ToolWorkspaceProps {
 export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const navigate = useNavigate()
   const { t, lang } = useTranslation()
+  const { user, openLogin } = useAuth()
 
   const [mode, setMode] = useState<Mode>('single')
   const [images, setImages] = useState<ImageItem[]>([])
@@ -94,6 +96,10 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const currentImage = images[currentIndex] ?? null
   const imageCount = images.length
   const hasImage = imageCount > 0
+  // Batch ZIP is the only login-gated action in Phase 1. WeChat can't download
+  // ZIP at all (it shows an open-in-browser alert), so it's exempt from the gate.
+  const isBatchZip = mode === 'batch' && imageCount > 1
+  const zipLocked = isBatchZip && !user && !isWeChat
 
   // ── Save a single result ──
   const saveToolResult = useCallback((tool: ToolType, blob: Blob, idx: number) => {
@@ -389,6 +395,10 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
         URL.revokeObjectURL(url)
       }
     } else {
+      if (!user && !isWeChat) {
+        openLogin() // batch ZIP is the only login-gated action in Phase 1
+        return
+      }
       const zip = new JSZip()
       results.forEach((result, idx) => {
         if (!result) return
@@ -416,7 +426,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
         URL.revokeObjectURL(url)
       }
     }
-  }, [toolResults, activeTool, mode, images])
+  }, [toolResults, activeTool, mode, images, user, openLogin])
 
   // ── Derived values ──
   const activeResult = toolResults[activeTool][currentIndex] ?? null
@@ -765,7 +775,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
                 >
                   ↓ {isWeChat
                     ? (mode === 'batch' && imageCount > 1 ? t.downloadZip : (lang === 'zh' ? '预览并长按保存' : 'Preview & Long-press'))
-                    : (mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download)
+                    : (zipLocked ? t.downloadZipLogin : (mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download))
                   }
                 </button>
               </div>
@@ -781,7 +791,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
                 onClick={download}
                 className="hidden sm:block px-8 py-3 btn-gradient text-sm font-semibold rounded-[var(--radius-md)]"
               >
-                ↓ {mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download}
+                ↓ {zipLocked ? t.downloadZipLogin : (mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download)}
               </button>
             </div>
           )}

@@ -198,6 +198,19 @@ const zh: Translations = {
   studioCropHint: '拖动选框移动，拖动四角或四边缩放',
   studioCutoutHint: '沿主体边缘画一圈（闭合），圈内保留',
   studioWandHint: '点击选择相似区域，可配合涂抹精修',
+  // Auth — Phase 1 email + password login
+  authSignIn: '登录',
+  authSignUp: '注册',
+  authEmail: '邮箱',
+  authPassword: '密码',
+  authSubmitting: '请稍候…',
+  authErrorInvalid: '邮箱或密码错误',
+  authErrorExists: '该邮箱已注册',
+  authCheckEmail: '请查收邮件完成确认',
+  authPrivacyNote: '图片始终在本地处理，绝不上传。登录仅用于账号功能（批量ZIP下载）。',
+  authSignOut: '退出登录',
+  authClose: '关闭',
+  downloadZipLogin: '登录后下载ZIP',
 }
 
 export default zh

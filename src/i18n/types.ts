@@ -193,6 +193,19 @@ export interface Translations {
   studioCropHint: string
   studioCutoutHint: string
   studioWandHint: string
+  // Auth — Phase 1 email + password login
+  authSignIn: string
+  authSignUp: string
+  authEmail: string
+  authPassword: string
+  authSubmitting: string
+  authErrorInvalid: string
+  authErrorExists: string
+  authCheckEmail: string
+  authPrivacyNote: string
+  authSignOut: string
+  authClose: string
+  downloadZipLogin: string
 }
 
 // Detect language from URL param, browser, or localStorage

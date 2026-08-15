@@ -198,6 +198,19 @@ const en: Translations = {
   studioCropHint: 'Drag the box to move it; corners & edges resize it',
   studioCutoutHint: 'Trace a closed loop around the subject to keep it',
   studioWandHint: 'Click to select similar pixels — then refine with the brush',
+  // Auth — Phase 1 email + password login
+  authSignIn: 'Sign in',
+  authSignUp: 'Create account',
+  authEmail: 'Email',
+  authPassword: 'Password',
+  authSubmitting: 'Please wait…',
+  authErrorInvalid: 'Invalid email or password',
+  authErrorExists: 'This email is already registered',
+  authCheckEmail: 'Please check your email to confirm your account',
+  authPrivacyNote: 'Your images never leave your device. Login is only for the account feature (batch ZIP download).',
+  authSignOut: 'Sign out',
+  authClose: 'Close',
+  downloadZipLogin: 'Sign in to download ZIP',
 }
 
 export default en

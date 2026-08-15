@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
+import { useAuth } from '../lib/auth'
 import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS } from '../lib/tools'
 import { toolPaths, EDITOR_PATH } from '../lib/routes'
 
 export default function Header() {
   const { t, lang, toggleLang } = useTranslation()
+  const { user, loading, openLogin, signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [comingToast, setComingToast] = useState(false)
   const { pathname } = useLocation()
@@ -114,8 +116,30 @@ export default function Header() {
             </NavLink>
           </nav>
 
-          {/* Right: Lang toggle + mobile hamburger */}
+          {/* Right: Auth + Lang toggle + mobile hamburger */}
           <div className="flex items-center gap-2 shrink-0">
+            {loading ? (
+              <div className="hidden sm:block w-16 h-8 rounded-[var(--radius-sm)] glass opacity-60" aria-hidden />
+            ) : user ? (
+              <div className="hidden sm:flex items-center gap-1.5 max-w-[160px]">
+                <span className="text-xs text-[var(--text-dim)] truncate" title={user.email ?? ''}>
+                  {user.email ?? '—'}
+                </span>
+                <button
+                  onClick={signOut}
+                  className="shrink-0 glass rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all"
+                >
+                  {t.authSignOut}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={openLogin}
+                className="hidden sm:block px-4 py-1.5 btn-gradient text-xs font-semibold rounded-[var(--radius-sm)]"
+              >
+                {t.authSignIn}
+              </button>
+            )}
             <button
               onClick={toggleLang}
               className="text-xs font-medium text-[var(--text-dim)] hover:text-[var(--text-primary)] glass backdrop-blur-xl hover:border-white/[0.14] rounded-[var(--radius-sm)] px-2.5 py-1.5 transition-all"
@@ -171,6 +195,24 @@ export default function Header() {
 
           {/* Nav links */}
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            {user ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2.5 glass">
+                <span className="text-xs text-[var(--text-dim)] truncate">{user.email ?? '—'}</span>
+                <button onClick={signOut} className="shrink-0 text-xs font-medium text-[var(--accent)]">
+                  {t.authSignOut}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  openLogin()
+                  closeMenu()
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 btn-gradient text-sm font-semibold"
+              >
+                {t.authSignIn}
+              </button>
+            )}
             <MobileNavLink to="/" onClick={closeMenu} active={pathname === '/'}>
               {t.navHome}
             </MobileNavLink>
