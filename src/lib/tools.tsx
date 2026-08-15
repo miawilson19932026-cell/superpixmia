@@ -1,6 +1,33 @@
 import type { ReactNode } from 'react'
 import type { ToolType } from '../types'
 
+// ── AI coming-soon cards ──
+// Shared by the homepage nav grid (ToolWorkspace) AND the mobile drawer
+// (Header) so both entry points stay in sync. They render with a distinct
+// dashed orange style and show a "coming soon" toast instead of navigating.
+export const aiGenNavIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="15" height="15" rx="2" />
+    <path d="M3 15l4-4 3 2.5 3.5-3.5 4.5 4" />
+    <path d="M19 2.5V6M17.25 4.25h3.5" />
+    <path d="M21 15v3M19.5 16.5h3" />
+  </svg>
+)
+export const aiFactoryNavIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21h18" />
+    <path d="M4 21V10l4 3v-3l4 3v-3l4 3v-3l4 3v11" />
+    <path d="M8 10V5" />
+    <path d="M6 4l2 2-2 2" />
+    <path d="M20 10V7" />
+    <path d="M18 6l2 2-2 2" />
+  </svg>
+)
+export const AI_COMING_ITEMS: { id: string; icon: ReactNode; labelZh: string; labelEn: string }[] = [
+  { id: 'ai-gen', icon: aiGenNavIcon, labelZh: 'AI 生图', labelEn: 'AI Image' },
+  { id: 'ai-factory', icon: aiFactoryNavIcon, labelZh: '图片工厂', labelEn: 'Image Factory' },
+]
+
 // Order used by the tool switcher and the help-side navigation.
 // crop / rotate / watermark moved into the /studio editor (2026-08-14).
 export const TOOL_KEYS: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'remove-watermark']

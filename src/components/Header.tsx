@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
-import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
+import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS } from '../lib/tools'
 import { toolPaths, EDITOR_PATH } from '../lib/routes'
 
 export default function Header() {
   const { t, lang, toggleLang } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [comingToast, setComingToast] = useState(false)
   const { pathname } = useLocation()
 
   // Close the mobile menu when navigating
   const closeMenu = () => setMenuOpen(false)
+
+  // Auto-dismiss the "coming soon" toast (same UX as the homepage AI cards).
+  useEffect(() => {
+    if (!comingToast) return
+    const t = setTimeout(() => setComingToast(false), 2600)
+    return () => clearTimeout(t)
+  }, [comingToast])
 
   // Lock page scroll while the mobile drawer is open (it overlays content)
   useEffect(() => {
@@ -214,6 +222,25 @@ export default function Header() {
                   </NavLink>
                 )
               })}
+              {/* AI coming-soon cards — dashed orange, same style as the homepage
+                  nav grid, so the new features show up in the mobile drawer too. */}
+              {AI_COMING_ITEMS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setComingToast(true)}
+                  className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-all border border-dashed border-orange-400/25 text-[var(--text-dim)]/85 hover:text-[var(--text-primary)] hover:border-orange-400/40"
+                >
+                  <span className="h-4 w-4 shrink-0 text-orange-300/80">{item.icon}</span>
+                  <span className="truncate flex-1">{lang === 'zh' ? item.labelZh : item.labelEn}</span>
+                  <span
+                    className="shrink-0 rounded-full px-1 py-[1px] text-[8px] font-semibold text-orange-300 leading-none whitespace-nowrap"
+                    style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)' }}
+                  >
+                    🔥{lang === 'zh' ? '建设中' : 'Soon'}
+                  </span>
+                </button>
+              ))}
             </div>
           </nav>
 
@@ -229,6 +256,13 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      {/* Coming-soon toast for the AI cards (z above the drawer) */}
+      {comingToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[110] px-4 py-2 rounded-full glass border border-[var(--accent)]/30 text-sm text-[var(--text-primary)] shadow-[0_8px_30px_rgba(0,0,0,0.45)]">
+          {lang === 'zh' ? '🚧 敬请期待，AI 功能正在建设中' : '🚧 Coming soon — we are building it'}
+        </div>
+      )}
     </header>
   )
 }

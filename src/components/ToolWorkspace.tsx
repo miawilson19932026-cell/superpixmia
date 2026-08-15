@@ -14,7 +14,7 @@ import BgRefinePanel from './BgRefinePanel'
 import ConvertPanel from './ConvertPanel'
 import RemoveWatermarkPanel from './RemoveWatermarkPanel'
 import { toolPaths, EDITOR_PATH } from '../lib/routes'
-import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
+import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS } from '../lib/tools'
 
 type Mode = 'single' | 'batch'
 type ToolResult = { blob: Blob; url: string } | null
@@ -38,28 +38,6 @@ const studioNavIcon = (
     <path d="M11 12h7M11 15h4" opacity="0.8" />
   </svg>
 )
-const aiGenNavIcon = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="15" height="15" rx="2" />
-    <path d="M3 15l4-4 3 2.5 3.5-3.5 4.5 4" />
-    <path d="M19 2.5V6M17.25 4.25h3.5" />
-    <path d="M21 15v3M19.5 16.5h3" />
-  </svg>
-)
-const aiFactoryNavIcon = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 21h18" />
-    <path d="M4 21V10l4 3v-3l4 3v-3l4 3v-3l4 3v11" />
-    <path d="M8 10V5" />
-    <path d="M6 4l2 2-2 2" />
-    <path d="M20 10V7" />
-    <path d="M18 6l2 2-2 2" />
-  </svg>
-)
-const AI_COMING_ITEMS = [
-  { id: 'ai-gen', icon: aiGenNavIcon, labelZh: 'AI 生图', labelEn: 'AI Image' },
-  { id: 'ai-factory', icon: aiFactoryNavIcon, labelZh: '图片工厂', labelEn: 'Image Factory' },
-]
 
 // SSR-safe: prerender runs in Node where navigator is undefined.
 const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
