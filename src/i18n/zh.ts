@@ -169,6 +169,8 @@ const zh: Translations = {
   studioApplied: '✓ 已应用，可继续编辑，最后下载',
   studioBrushSize: '笔刷大小',
   studioColor: '颜色',
+  studioFont: '字体',
+  studioFontDefault: '系统默认',
   studioTextPlaceholder: '输入文字…',
   studioLogoHint: '推荐透明 PNG',
   studioSelectLogo: '上传 Logo',

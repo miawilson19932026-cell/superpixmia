@@ -164,6 +164,8 @@ export interface Translations {
   studioApplied: string
   studioBrushSize: string
   studioColor: string
+  studioFont: string
+  studioFontDefault: string
   studioTextPlaceholder: string
   studioLogoHint: string
   studioSelectLogo: string

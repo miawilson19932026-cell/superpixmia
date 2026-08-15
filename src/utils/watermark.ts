@@ -11,6 +11,7 @@ export interface WatermarkOptions {
   color: string
   fontSize: number      // fraction of image width (0.01 = 1%)
   opacity: number       // 0..1
+  font?: string         // CSS font-family stack (Studio text tool); defaults to system-ui stack
   position: WatermarkPosition
   tiled: boolean
   imageUrl: string | null   // data/object URL of the logo image
@@ -119,7 +120,7 @@ export async function watermarkImage(blob: Blob, options: WatermarkOptions): Pro
       ctx.save()
       ctx.globalAlpha = options.opacity
       ctx.fillStyle = options.color
-      ctx.font = `600 ${fontSizePx}px system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`
+      ctx.font = `600 ${fontSizePx}px ${options.font ?? 'system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif'}`
       ctx.textBaseline = 'middle'
       const text = options.text.trim()
       const tw = ctx.measureText(text).width

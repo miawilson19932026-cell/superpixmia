@@ -169,6 +169,8 @@ const en: Translations = {
   studioApplied: 'Applied — keep going, then download below',
   studioBrushSize: 'Brush size',
   studioColor: 'Color',
+  studioFont: 'Font',
+  studioFontDefault: 'System default',
   studioTextPlaceholder: 'Type your text…',
   studioLogoHint: 'PNG with transparency works best',
   studioSelectLogo: 'Upload logo',

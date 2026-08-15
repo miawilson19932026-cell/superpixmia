@@ -93,10 +93,9 @@ export const STUDIO_TOOLS: StudioToolDef[] = [
     labelKey: 'studioCutout',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="6" cy="12" r="3.2" />
-        <circle cx="18" cy="6" r="2.6" />
-        <circle cx="18" cy="18" r="2.6" />
-        <path d="M8.8 10.5l6.5-3.2M8.8 13.5l6.5 3.2" />
+        {/* lasso — draw a loop around the subject */}
+        <path d="M7 22a5 5 0 0 1-2-4" />
+        <path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1" />
       </svg>
     ),
   },
@@ -105,8 +104,15 @@ export const STUDIO_TOOLS: StudioToolDef[] = [
     labelKey: 'studioRemove',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 3.5s6 6.1 6 10a6 6 0 11-12 0c0-3.9 6-10 6-10z" />
-        <path d="M9 14l2 2 4-4" />
+        {/* magic wand + sparkles — one click to remove the background */}
+        <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z" />
+        <path d="m14 7 3 3" />
+        <path d="M5 6v4" />
+        <path d="M19 14v4" />
+        <path d="M10 2v2" />
+        <path d="M7 8H3" />
+        <path d="M21 16h-4" />
+        <path d="M11 3H9" />
       </svg>
     ),
   },

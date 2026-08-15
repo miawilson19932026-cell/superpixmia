@@ -31,6 +31,20 @@ const MAX_HISTORY = 10
 
 const FONT = `system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`
 
+// Font choices for the text tool — rendered via canvas, so they're system fonts
+// (fall back gracefully if a device doesn't have a given family installed).
+const TEXT_FONTS: { label: string; stack: string }[] = [
+  { label: '黑体', stack: '"Microsoft YaHei", "PingFang SC", "Heiti SC", sans-serif' },
+  { label: '宋体', stack: '"SimSun", "Songti SC", "Noto Serif CJK SC", serif' },
+  { label: '楷体', stack: '"KaiTi", "Kaiti SC", "STKaiti", serif' },
+  { label: '仿宋', stack: '"FangSong", "FangSong SC", "STFangsong", serif' },
+  { label: 'Arial', stack: 'Arial, Helvetica, sans-serif' },
+  { label: 'Georgia', stack: 'Georgia, "Times New Roman", serif' },
+  { label: 'Courier', stack: '"Courier New", Courier, monospace' },
+  { label: 'Comic Sans', stack: '"Comic Sans MS", "Comic Sans", cursive' },
+  { label: 'Impact', stack: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif' },
+]
+
 // ── Small presentational helpers (module-level = no remount state loss) ──
 function Slider({
   value, min, max, step = 1, onChange, className = '',
@@ -89,7 +103,7 @@ export default function EditorWorkspace({
   const [rotate, setRotate] = useState({ angle: 0, flipX: false, flipY: false })
   const [cropRect, setCropRect] = useState<CropRect | null>(null)
   const [textState, setTextState] = useState({
-    text: '', color: '#ffffff', fontSize: 0.06, opacity: 1, x: 0, y: 0, hasPos: false,
+    text: '', color: '#ffffff', fontSize: 0.06, opacity: 1, x: 0, y: 0, hasPos: false, font: FONT,
   })
   const [logoState, setLogoState] = useState({
     imageUrl: null as string | null, imageScale: 0.2, opacity: 1, x: 0, y: 0, hasPos: false,
@@ -99,6 +113,7 @@ export default function EditorWorkspace({
   const [healState, setHealState] = useState({ size: 30, erase: false })
   const [removeTol, setRemoveTol] = useState(32)
   const [removeClicks, setRemoveClicks] = useState(0)
+  const [removeMode, setRemoveMode] = useState<'add' | 'erase'>('add')
   const [resizeState, setResizeState] = useState({ width: source.width, height: source.height, lock: true })
   const [hoverPt, setHoverPt] = useState<{ x: number; y: number } | null>(null)
   const [dlOpen, setDlOpen] = useState(false)
@@ -161,10 +176,12 @@ export default function EditorWorkspace({
   useEffect(() => {
     compose()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool, curImg, curW, curH, rotate, cropRect, textState, logoState, logoImg, resizeState])
+  }, [activeTool, curImg, curW, curH, rotate, cropRect, textState, logoState, logoImg, resizeState, hoverPt])
 
   // ── Preview drawers ──
   const drawRotate = (ctx: CanvasRenderingContext2D, img: HTMLImageElement) => {
+    // No-op preview: nothing to show until the user actually rotates/flips.
+    if (!rotate.angle && !rotate.flipX && !rotate.flipY) return
     ctx.fillStyle = 'rgba(0,0,0,0.55)'
     ctx.fillRect(0, 0, curW, curH)
     const rad = (rotate.angle * Math.PI) / 180
@@ -243,10 +260,12 @@ export default function EditorWorkspace({
   }
 
   const drawText = (ctx: CanvasRenderingContext2D) => {
-    if (!textState.text.trim()) return
+    // Only render once placed on the canvas — never linger over a committed base.
+    if (!textState.hasPos || !textState.text.trim()) return
     const px = Math.max(10, curW * textState.fontSize)
+    const text = textState.text.trim()
     ctx.save()
-    ctx.font = `600 ${px}px ${FONT}`
+    ctx.font = `600 ${px}px ${textState.font}`
     ctx.fillStyle = textState.color
     ctx.globalAlpha = textState.opacity
     ctx.textBaseline = 'middle'
@@ -254,10 +273,12 @@ export default function EditorWorkspace({
     ctx.shadowColor = 'rgba(0,0,0,0.35)'
     ctx.shadowBlur = px * 0.15
     ctx.shadowOffsetY = px * 0.06
-    ctx.fillText(textState.text.trim(), textState.x, textState.y + px / 2)
+    ctx.fillText(text, textState.x, textState.y + px / 2)
     ctx.restore()
-    // Dashed bounding box (drag handle hint)
-    const tw = ctx.measureText(textState.text.trim()).width
+    // Dashed bounding box (drag handle hint) — restore re-set the font, so
+    // measure with the same font family for a box that hugs the text.
+    ctx.font = `600 ${px}px ${textState.font}`
+    const tw = ctx.measureText(text).width
     ctx.strokeStyle = 'rgba(255,255,255,0.5)'
     ctx.lineWidth = 1
     ctx.setLineDash([4, 3])
@@ -265,7 +286,8 @@ export default function EditorWorkspace({
   }
 
   const drawLogo = (ctx: CanvasRenderingContext2D) => {
-    if (!logoState.imageUrl || !logoImg) return
+    // Only render once placed on the canvas — never linger over a committed base.
+    if (!logoState.hasPos || !logoState.imageUrl || !logoImg) return
     const lw = curW * logoState.imageScale
     const lh = lw * (logoImg.height / logoImg.width)
     ctx.save()
@@ -339,16 +361,65 @@ export default function EditorWorkspace({
 
   const drawRemove = (ctx: CanvasRenderingContext2D) => {
     const m = removeRef.current
-    if (!m) return
-    const id = ctx.createImageData(curW, curH)
-    const data = id.data
-    for (let i = 0; i < m.length && i < curW * curH; i++) {
-      if (m[i]) data[i * 4 + 3] = 115
+    const W = curW, H = curH
+    if (m) {
+      // Translucent tint over the selected area, plus a marching-ants boundary so
+      // the user always sees exactly what's selected.
+      const id = ctx.createImageData(W, H)
+      const data = id.data
+      for (let i = 0; i < m.length && i < W * H; i++) if (m[i]) data[i * 4 + 3] = 92
+      ctx.putImageData(id, 0, 0)
+
+      const path = new Path2D()
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const i = y * W + x
+          if (!m[i]) continue
+          const onEdge =
+            x === 0 || x === W - 1 || y === 0 || y === H - 1 ||
+            !m[i - 1] || !m[i + 1] || !m[i - W] || !m[i + W]
+          if (onEdge) path.rect(x, y, 1, 1)
+        }
+      }
+      ctx.strokeStyle = 'rgba(56,189,248,0.95)'
+      ctx.lineWidth = 1.2
+      ctx.stroke(path)
     }
-    ctx.putImageData(id, 0, 0)
+    // Magic wand cursor follows the pointer (the real cursor is hidden).
+    if (hoverPt) drawWand(ctx, hoverPt.x, hoverPt.y)
+  }
+
+  // Small magic wand glyph drawn at the pointer for the one-click cutout tool.
+  const drawWand = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    ctx.save()
+    ctx.lineCap = 'round'
+    // handle
+    ctx.strokeStyle = 'rgba(226,232,240,0.95)'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(x - 8, y + 8)
+    ctx.lineTo(x + 3, y - 3)
+    ctx.stroke()
+    // grip
+    ctx.strokeStyle = '#3b82f6'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(x - 8, y + 8)
+    ctx.lineTo(x - 11, y + 11)
+    ctx.stroke()
+    // sparkles near the tip
+    ctx.fillStyle = '#fde047'
+    for (const [dx, dy, r] of [[4, -7, 2.2], [8, -3, 1.5], [1, -11, 1.3], [9, -8, 1.1]]) {
+      ctx.beginPath()
+      ctx.arc(x + dx, y + dy, r, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.restore()
   }
 
   const drawResize = (ctx: CanvasRenderingContext2D, img: HTMLImageElement) => {
+    // No-op preview: target size already equals the current image.
+    if (resizeState.width === curW && resizeState.height === curH) return
     ctx.fillStyle = 'rgba(0,0,0,0.55)'
     ctx.fillRect(0, 0, curW, curH)
     const nw = Math.max(1, Math.round(resizeState.width))
@@ -402,9 +473,9 @@ export default function EditorWorkspace({
     if (!activeTool) return
     const p = toImg(e)
     if (!dragRef.current) {
-      // Hover tracking (no drag): the crop crosshair follows the pointer so
-      // users always see exactly where they are on the image.
-      if (activeTool === 'crop') setHoverPt(p)
+      // Hover tracking (no drag): the crop crosshair and the remove tool's magic
+      // wand follow the pointer so users always see exactly where they are.
+      if (activeTool === 'crop' || activeTool === 'remove') setHoverPt(p)
       return
     }
     switch (activeTool) {
@@ -497,7 +568,7 @@ export default function EditorWorkspace({
     const px = Math.max(10, curW * textState.fontSize)
     const c = document.createElement('canvas')
     const m = c.getContext('2d')!
-    m.font = `600 ${px}px ${FONT}`
+    m.font = `600 ${px}px ${textState.font}`
     const tw = m.measureText(textState.text.trim()).width
     return { x: textState.x, y: textState.y, w: tw, h: px }
   }
@@ -539,8 +610,9 @@ export default function EditorWorkspace({
     compose()
   }
 
-  // Click-to-remove: flood-fill the CURRENT image from the click point and
-  // union it into the running removal mask.
+  // Click-to-remove: flood-fill the CURRENT image from the click point. In
+  // "select" mode the region is unioned into the running mask; in "erase" mode
+  // it is subtracted, so the user can custom-build exactly the selection.
   const doRemoveClick = (p: { x: number; y: number }) => {
     if (!curImg) return
     const c = document.createElement('canvas')
@@ -551,10 +623,15 @@ export default function EditorWorkspace({
     const data = ctx.getImageData(0, 0, curW, curH)
     const sel = floodFill(data, Math.round(p.x), Math.round(p.y), removeTol)
     const existing = removeRef.current
-    if (!existing) {
-      removeRef.current = sel
+    if (removeMode === 'erase') {
+      if (!existing) return
+      for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = false
     } else {
-      for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = true
+      if (!existing) {
+        removeRef.current = sel
+      } else {
+        for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = true
+      }
     }
     setRemoveClicks((n) => n + 1)
     compose()
@@ -566,6 +643,21 @@ export default function EditorWorkspace({
     healRef.current = []
     cutoutRef.current = []
     removeRef.current = null
+  }
+
+  // Wipe every in-progress preview so the overlay shows nothing on top of the
+  // committed base. Otherwise text/logo/rotate/resize previews linger over the
+  // freshly-applied (or undone) image and make Undo look broken.
+  const resetPreview = () => {
+    clearPaint()
+    setRemoveClicks(0)
+    setRotate({ angle: 0, flipX: false, flipY: false })
+    setCropRect(null)
+    setTextState((s) => ({ ...s, text: '', x: 0, y: 0, hasPos: false }))
+    if (logoState.imageUrl) URL.revokeObjectURL(logoState.imageUrl)
+    setLogoImg(null)
+    setLogoState((s) => ({ ...s, imageUrl: null, x: 0, y: 0, hasPos: false }))
+    setApplied(false)
   }
 
   const apply = async () => {
@@ -584,7 +676,7 @@ export default function EditorWorkspace({
           if (textState.text.trim()) {
             blob = await watermarkImage(current, {
               type: 'text', text: textState.text, color: textState.color,
-              fontSize: textState.fontSize, opacity: textState.opacity,
+              fontSize: textState.fontSize, opacity: textState.opacity, font: textState.font,
               position: 'top-left', tiled: false, imageUrl: null, imageScale: 0,
               x: textState.x, y: textState.y,
             })
@@ -624,7 +716,7 @@ export default function EditorWorkspace({
         const trimmed = next.length > MAX_HISTORY ? next.slice(next.length - MAX_HISTORY) : next
         setHistory(trimmed)
         setHistIdx(trimmed.length - 1)
-        clearPaint()
+        resetPreview()
         setApplied(true)
         // Clear the preview immediately instead of waiting for the new image to
         // reload — otherwise the old mask/outline lingers over the fresh result.
@@ -641,26 +733,24 @@ export default function EditorWorkspace({
   const undo = () => {
     if (histIdx < 0) return
     setHistIdx((i) => i - 1)
-    clearPaint()
+    resetPreview()
     dragRef.current = null
-    setApplied(false)
+    setHoverPt(null)
     compose()
   }
 
   const redo = () => {
     if (histIdx >= history.length - 1) return
     setHistIdx((i) => i + 1)
-    clearPaint()
+    resetPreview()
     dragRef.current = null
-    setApplied(false)
+    setHoverPt(null)
     compose()
   }
 
   const clearTool = () => {
-    clearPaint()
+    resetPreview()
     dragRef.current = null
-    setRemoveClicks(0)
-    setApplied(false)
     setHoverPt(null)
     compose()
   }
@@ -784,6 +874,19 @@ export default function EditorWorkspace({
                 className="w-full glass rounded-[var(--radius-sm)] px-2.5 py-2 text-sm outline-none focus:border-[var(--accent)]"
               />
             </Field>
+            <Field label={t.studioFont}>
+              <select
+                value={textState.font}
+                onChange={(e) => setTextState((s) => ({ ...s, font: e.target.value }))}
+                style={{ fontFamily: textState.font }}
+                className="w-full glass rounded-[var(--radius-sm)] px-2.5 py-2 text-sm outline-none focus:border-[var(--accent)] [&>option]:text-black"
+              >
+                <option value={FONT}>{t.studioFontDefault}</option>
+                {TEXT_FONTS.map((f) => (
+                  <option key={f.label} value={f.stack} style={{ fontFamily: f.stack }}>{f.label}</option>
+                ))}
+              </select>
+            </Field>
             <Field label={t.studioColor}>
               <div className="flex items-center gap-2">
                 <input type="color" value={textState.color} onChange={(e) => setTextState((s) => ({ ...s, color: e.target.value }))} className="h-8 w-10 rounded cursor-pointer bg-transparent border border-white/10" />
@@ -869,7 +972,15 @@ export default function EditorWorkspace({
       case 'remove':
         return (
           <div className="space-y-3">
-            <p className="text-xs text-[var(--text-dim)]">{lang === 'zh' ? '点击要去掉的区域（背景），可多次点击。' : 'Click the area to remove (e.g. background). Click again to add more.'}</p>
+            <p className="text-xs text-[var(--text-dim)]">
+              {lang === 'zh'
+                ? '魔术棒点击选中相似区域（如背景），选中处会显示选区；「擦除」可减去多余选区，可反复组合。'
+                : 'Click with the magic wand to select similar pixels (e.g. background) — a selection outline shows what is picked. Use Erase to trim it.'}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <ToolButton active={removeMode === 'add'} onClick={() => setRemoveMode('add')}>{lang === 'zh' ? '选中' : 'Select'}</ToolButton>
+              <ToolButton active={removeMode === 'erase'} onClick={() => setRemoveMode('erase')}>{lang === 'zh' ? '擦除' : 'Erase'}</ToolButton>
+            </div>
             <Field label={t.studioTolerance}>
               <Slider value={removeTol} min={1} max={100} onChange={setRemoveTol} />
             </Field>
@@ -981,7 +1092,7 @@ export default function EditorWorkspace({
           <div className="flex justify-center">
             <div
               className="relative w-fit select-none checkerboard rounded-[var(--radius-md)]"
-              style={{ touchAction: 'none' }}
+              style={{ touchAction: 'none', cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool] : 'default' }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
@@ -996,10 +1107,7 @@ export default function EditorWorkspace({
               <canvas
                 ref={overRef}
                 className="absolute inset-0 w-full h-full rounded-[var(--radius-md)] pointer-events-none"
-                style={{
-                  cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool] : 'default',
-                  opacity: processing ? 0.6 : 1,
-                }}
+                style={{ opacity: processing ? 0.6 : 1 }}
               />
               {processing && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px] z-10 rounded-[var(--radius-md)]">
@@ -1108,7 +1216,7 @@ const PAINT_CURSOR: Partial<Record<StudioToolId, string>> = {
   pencil: 'crosshair',
   heal: 'crosshair',
   cutout: 'crosshair',
-  remove: 'pointer',
+  remove: 'none', // the drawn magic wand is the cursor
 }
 
 function ToolButton({
@@ -1255,14 +1363,16 @@ const TUTORIALS: { id: StudioToolId; labelEn: string; labelZh: string; stepsEn: 
     labelEn: 'Magic wand remove',
     labelZh: '魔术棒去除',
     stepsEn: [
-      'Click the area you want to remove (e.g. the background) — similar colors are selected.',
-      'Adjust Tolerance to select more or fewer similar pixels.',
-      'Click several times to add more regions, then Apply to make them transparent.',
+      'Click the area you want to remove (e.g. the background) — similar colors are selected and shown with an outline.',
+      'Adjust Tolerance to pick more or fewer similar pixels.',
+      'Switch to Erase to subtract excess selection, then click several times to build exactly the area you want.',
+      'Tap Apply to make the selected area transparent (PNG).',
     ],
     stepsZh: [
-      '点击要去掉的区域（比如背景），相似颜色会被选中。',
+      '用魔术棒点击要去掉的区域（比如背景），相似颜色会被选中并显示选区。',
       '调整「容差」控制选中范围的大小。',
-      '可多次点击累加选区，点「应用」把这些区域变为透明。',
+      '切到「擦除」可减去多余的选区，多次点击就能精确组合出想要的区域。',
+      '点「应用」把这些区域变为透明（PNG）。',
     ],
   },
   {
