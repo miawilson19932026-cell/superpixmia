@@ -211,6 +211,25 @@ const en: Translations = {
   authSignOut: 'Sign out',
   authClose: 'Close',
   downloadZipLogin: 'Sign in to download ZIP',
+  // Auth — OTP email-code sign-up flow
+  authStepEmail: 'Enter your email',
+  authStepCode: 'Enter the code',
+  authStepPassword: 'Set a password',
+  authSendCode: 'Send code',
+  authCode: 'Verification code',
+  authVerify: 'Verify',
+  authCodeSent: 'Code sent — check your email',
+  authCodeInvalid: 'Invalid or expired code',
+  authEmailNotFound: 'No account with this email — create one first',
+  authResendCode: 'Resend code',
+  authBack: 'Back',
+  authSetPassword: 'Set a password',
+  authConfirmPassword: 'Confirm password',
+  authPasswordTooShort: 'Password must be at least 6 characters',
+  authPasswordMismatch: 'Passwords do not match',
+  authUseCodeLogin: 'Sign in with an email code',
+  authUsePassword: 'Use password instead',
+  authDone: 'Done',
 }
 
 export default en

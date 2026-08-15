@@ -211,6 +211,25 @@ const zh: Translations = {
   authSignOut: '退出登录',
   authClose: '关闭',
   downloadZipLogin: '登录后下载ZIP',
+  // Auth — OTP 验证码注册流程（先验证邮箱，再设置密码）
+  authStepEmail: '输入邮箱',
+  authStepCode: '输入验证码',
+  authStepPassword: '设置密码',
+  authSendCode: '发送验证码',
+  authCode: '验证码',
+  authVerify: '验证',
+  authCodeSent: '验证码已发送到邮箱，请查收',
+  authCodeInvalid: '验证码错误或已过期',
+  authEmailNotFound: '该邮箱未注册，请先注册',
+  authResendCode: '重新发送验证码',
+  authBack: '返回',
+  authSetPassword: '设置密码',
+  authConfirmPassword: '确认密码',
+  authPasswordTooShort: '密码至少 6 位',
+  authPasswordMismatch: '两次输入的密码不一致',
+  authUseCodeLogin: '用邮箱验证码登录',
+  authUsePassword: '用密码登录',
+  authDone: '完成',
 }
 
 export default zh

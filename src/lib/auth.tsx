@@ -9,7 +9,11 @@ interface AuthContextValue {
   // neutral placeholder instead of flashing "logged out" on refresh
   loading: boolean
   signIn: (email: string, password: string) => Promise<Error | null>
-  signUp: (email: string, password: string) => Promise<{ error: Error | null; needsEmailConfirm: boolean }>
+  // OTP email-code flow. forSignup=true creates the account on first send
+  // (sign-up); false requires the account to already exist (code sign-in).
+  sendCode: (email: string, forSignup: boolean) => Promise<Error | null>
+  verifyCode: (email: string, token: string) => Promise<Error | null>
+  setPassword: (password: string) => Promise<Error | null>
   signOut: () => Promise<void>
   loginOpen: boolean
   openLogin: () => void
@@ -41,7 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session) setLoginOpen(false) // close modal on successful sign-in / sign-up
+      // Note: the modal closes itself (LoginModal calls closeLogin()) so the
+      // OTP sign-up flow can keep the modal open through the "set password"
+      // step after the session is established.
     })
 
     return () => {
@@ -60,13 +66,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error
   }, [])
 
-  const signUp = useCallback(async (email: string, password: string) => {
+  const sendCode = useCallback(async (email: string, forSignup: boolean) => {
     const supabase = getSupabase()
-    if (!supabase) return { error: new Error('Auth is not configured'), needsEmailConfirm: false }
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    // When email confirmation is ON, signUp returns no session — the modal must
-    // show a "check your inbox" notice instead of closing.
-    return { error, needsEmailConfirm: !data.session }
+    if (!supabase) return new Error('Auth is not configured')
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: forSignup },
+    })
+    return error
+  }, [])
+
+  const verifyCode = useCallback(async (email: string, token: string) => {
+    const supabase = getSupabase()
+    if (!supabase) return new Error('Auth is not configured')
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: token.trim(),
+      type: 'email',
+    })
+    return error
+  }, [])
+
+  const setPassword = useCallback(async (password: string) => {
+    const supabase = getSupabase()
+    if (!supabase) return new Error('Auth is not configured')
+    const { error } = await supabase.auth.updateUser({ password })
+    return error
   }, [])
 
   const signOut = useCallback(async () => {
@@ -76,7 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, loginOpen, openLogin, closeLogin }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, sendCode, verifyCode, setPassword, signOut, loginOpen, openLogin, closeLogin }}
+    >
       {children}
       <LoginModal />
     </AuthContext.Provider>

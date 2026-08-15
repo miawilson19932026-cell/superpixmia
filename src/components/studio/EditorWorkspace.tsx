@@ -1010,7 +1010,7 @@ export default function EditorWorkspace({
 
   // ── Tool rail ──
   const rail = (
-    <div className="shrink-0 flex lg:flex-col gap-1.5 lg:gap-2 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
+    <div className="shrink-0 flex flex-wrap lg:flex-nowrap lg:flex-col gap-1.5 lg:gap-2">
       {STUDIO_TOOLS.map((tool) => {
         const active = activeTool === tool.id
         return (
@@ -1273,6 +1273,16 @@ export default function EditorWorkspace({
     // on mobile. w-full caps it at the viewport; max-w-6xl + mx-auto keep desktop
     // centered at 1152px.
     <div className="mx-auto max-w-6xl w-full min-w-0 px-3 sm:px-6 py-4 sm:py-6">
+      {/* Page heading — the promo tagline lives here, OUTSIDE the workbench
+          (not under the tool rail, not in the canvas area). Mirrors the empty
+          state (h1 + tagline) so the two states look consistent. */}
+      <div className="mb-3 sm:mb-4">
+        <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight">
+          <span className="text-gradient">{lang === 'zh' ? '全能编辑 Studio' : 'Studio Editor'}</span>
+        </h1>
+        <p className="mt-1 text-xs sm:text-sm text-[var(--text-dim)] leading-relaxed">{t.studioTagline}</p>
+      </div>
+
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -1318,66 +1328,54 @@ export default function EditorWorkspace({
 
       {/* Workbench */}
       <div className="flex flex-col lg:flex-row gap-3">
-        {/* Tool module — with the promo tagline directly beneath it */}
+        {/* Tool module — mobile: tools wrap into a top grid (no horizontal
+            scroll); desktop: vertical left rail. */}
         <div className="flex flex-col gap-2 lg:w-44">
           {rail}
-          <p className="px-1 text-center text-[10px] leading-relaxed text-[var(--text-dim)]/90">{t.studioTagline}</p>
         </div>
 
-        {/* Canvas — base in-flow, overlay absolute inset-0 (same pattern as
-            RemoveWatermarkPanel) so both canvases always align at any scale. */}
-        <div className="flex-1 min-w-0 glass rounded-[var(--radius-lg)] p-3 sm:p-4">
-          <div className="flex justify-center">
-            <div
-              className="relative w-fit select-none checkerboard rounded-[var(--radius-md)]"
-              style={{ touchAction: 'none', cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool] : 'default' }}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
-              onPointerLeave={() => setHoverPt(null)}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <canvas
-                ref={baseRef}
-                className="block max-w-full max-h-[58vh] w-auto h-auto rounded-[var(--radius-md)]"
-              />
-              <canvas
-                ref={overRef}
-                className="absolute inset-0 w-full h-full rounded-[var(--radius-md)] pointer-events-none"
-                style={{ opacity: processing ? 0.6 : 1 }}
-              />
-              {processing && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px] z-10 rounded-[var(--radius-md)]">
-                  <span className="text-sm text-[var(--text-primary)] animate-pulse">{t.studioDownloading}</span>
-                </div>
-              )}
-              {applied && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 backdrop-blur-md whitespace-nowrap">
-                  {t.studioApplied}
-                </div>
-              )}
+        {/* Canvas + panel — mobile: panel is a LEFT sidebar beside the canvas
+            (order 1/2); desktop keeps [canvas | panel] (lg:order 1/2). */}
+        <div className="flex flex-1 min-w-0 flex-row gap-3">
+          {/* Canvas — base in-flow, overlay absolute inset-0 (same pattern as
+              RemoveWatermarkPanel) so both canvases always align at any scale. */}
+          <div className="order-2 lg:order-1 flex-1 min-w-0 glass rounded-[var(--radius-lg)] p-3 sm:p-4">
+            <div className="flex justify-center">
+              <div
+                className="relative w-fit select-none checkerboard rounded-[var(--radius-md)]"
+                style={{ touchAction: 'none', cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool] : 'default' }}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                onPointerLeave={() => setHoverPt(null)}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <canvas
+                  ref={baseRef}
+                  className="block max-w-full max-h-[58vh] w-auto h-auto rounded-[var(--radius-md)]"
+                />
+                <canvas
+                  ref={overRef}
+                  className="absolute inset-0 w-full h-full rounded-[var(--radius-md)] pointer-events-none"
+                  style={{ opacity: processing ? 0.6 : 1 }}
+                />
+                {processing && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px] z-10 rounded-[var(--radius-md)]">
+                    <span className="text-sm text-[var(--text-primary)] animate-pulse">{t.studioDownloading}</span>
+                  </div>
+                )}
+                {applied && (
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 backdrop-blur-md whitespace-nowrap">
+                    {t.studioApplied}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-          {/* Centered import-image button (the ad tagline moved under the tool
-              rail above). */}
-          <div className="mt-3 flex justify-center">
-            <button
-              type="button"
-              onClick={onReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] glass text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
-                <path d="M12 16V4m0 0l-4 4m4-4l4 4" />
-                <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-              </svg>
-              {t.studioImport}
-            </button>
-          </div>
-        </div>
 
-        {/* Panel */}
-        <div className="shrink-0 w-full lg:w-64 glass rounded-[var(--radius-lg)] p-3.5 space-y-3">
+          {/* Panel — left sidebar on mobile, right panel on desktop */}
+          <div className="order-1 lg:order-2 shrink-0 w-44 sm:w-48 lg:w-64 glass rounded-[var(--radius-lg)] p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">
               {activeTool ? (t[STUDIO_TOOLS.find((x) => x.id === activeTool)!.labelKey] as string) : (lang === 'zh' ? '工具' : 'Tools')}
@@ -1396,6 +1394,7 @@ export default function EditorWorkspace({
           >
             {processing ? t.studioDownloading : t.studioApply}
           </button>
+        </div>
         </div>
       </div>
 

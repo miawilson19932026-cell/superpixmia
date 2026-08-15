@@ -59,11 +59,68 @@ check('filled & submitted the form', !!errShown)
 const gotError = await waitFor(() => page.evaluate(() => /Auth is not configured/i.test(document.body.textContent || '')))
 check('graceful error shown (no Supabase env)', !!gotError)
 
+// ── 4. Sign-up: 3-step OTP flow UI (send code → verify → set password) ──
+// Tab clicks are scoped to the modal overlay (the header also has a "Sign in"
+// button whose text collides with the modal's tab).
+await page.evaluate(() => {
+  const overlay = document.querySelector('input[type=email]')?.closest('div.fixed')
+  const scope = overlay ?? document
+  const b = Array.from(scope.querySelectorAll('button')).find((x) => /^注册$|^Create account$/.test((x.textContent || '').trim()))
+  b && b.click()
+})
+const sendCodeBtn = await waitFor(() => page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('button')).find((x) => /^发送验证码$|^Send code$/.test((x.textContent || '').trim()))
+  return b ? b.textContent.trim() : null
+}))
+check('sign-up tab shows "Send code" button', !!sendCodeBtn, sendCodeBtn || '')
+
+const sendErr = await page.evaluate(async () => {
+  const email = document.querySelector('input[type=email]')
+  const setVal = (el, v) => {
+    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v)
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+  if (!email) return false
+  setVal(email, 'new@example.com')
+  const btn = Array.from(document.querySelectorAll('button')).find((x) => /^发送验证码$|^Send code$/.test((x.textContent || '').trim()))
+  if (!btn) return false
+  btn.click()
+  return true
+})
+check('clicked send code in sign-up', !!sendErr)
+const codeErr = await waitFor(() => page.evaluate(() => /Auth is not configured/i.test(document.body.textContent || '')))
+check('sign-up send code shows graceful error', !!codeErr)
+
+// ── 5. Sign-in email-code method toggle ──
+await page.evaluate(() => {
+  const overlay = document.querySelector('input[type=email]')?.closest('div.fixed')
+  const scope = overlay ?? document
+  const b = Array.from(scope.querySelectorAll('button')).find((x) => /^登录$|^Sign in$/.test((x.textContent || '').trim()))
+  b && b.click()
+})
+await sleep(200)
+const codeLink = await waitFor(() => page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('button')).find((x) => /用邮箱验证码登录|Sign in with an email code/.test((x.textContent || '').trim()))
+  return b ? b.textContent.trim() : null
+}))
+check('sign-in shows email-code login link', !!codeLink, codeLink || '')
+
+await page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('button')).find((x) => /用邮箱验证码登录|Sign in with an email code/.test((x.textContent || '').trim()))
+  b && b.click()
+})
+const codeSendBtn = await waitFor(() => page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('button')).find((x) => /^发送验证码$|^Send code$/.test((x.textContent || '').trim()))
+  return b ? b.textContent.trim() : null
+}))
+check('code method shows send-code button', !!codeSendBtn, codeSendBtn || '')
+
 // Close modal via backdrop click
 await page.mouse.click(40, 40)
 await sleep(400)
 
-// ── 4. Batch ZIP gate on /compress ──
+// ── 6. Batch ZIP gate on /compress ──
 await page.goto(BASE + '/compress', { waitUntil: 'networkidle2', timeout: 60000 })
 // Switch to batch mode
 const toggled = await page.evaluate(() => {

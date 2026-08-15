@@ -155,5 +155,46 @@ await sleep(300)
 const ovAfter = await page.evaluate(() => { const c = document.querySelectorAll('canvas')[2]; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let p = 3; p < d.length; p += 4) if (d[p] > 10) n++; return n })
 check('cutout clear works', ovBefore > 0 && ovAfter === 0, `${ovBefore} → ${ovAfter}`)
 
+// ── 7. tagline location + no leftover import button + mobile layout ──
+console.log('\n── 7. tagline location & mobile layout (no horizontal slide) ──')
+await open()
+const layout = await page.evaluate(() => {
+  const tagline = Array.from(document.querySelectorAll('p')).find((p) => /一张图，多种工具|One image, many tools/.test(p.textContent || ''))
+  const importBtn = Array.from(document.querySelectorAll('button')).find((b) => /导入图片|Import image/.test(b.textContent || ''))
+  if (!tagline) return { missing: true }
+  const wb = tagline.closest('.flex.flex-col.lg\\:flex-row') // the workbench
+  const heading = tagline.parentElement && tagline.parentElement.querySelector('h1')
+  return {
+    missing: false,
+    taglineAboveWorkbench: !wb && !tagline.closest('.lg\\:w-44') && !tagline.closest('.flex-1'),
+    taglineNearHeading: !!heading,
+    noImportAfterUpload: importBtn === undefined,
+  }
+})
+check('tagline above the workbench (not under rail / not in canvas area)',
+  !layout.missing && layout.taglineAboveWorkbench && layout.taglineNearHeading)
+check('no import button after upload', layout.noImportAfterUpload)
+
+await page.setViewport({ width: 390, height: 844 })
+await sleep(600)
+const mob = await page.evaluate(() => {
+  const wb = document.querySelector('.flex.flex-col.lg\\:flex-row')
+  const rail = wb ? wb.querySelector('.lg\\:w-44') : null
+  const btns = rail ? Array.from(rail.querySelectorAll('button')) : []
+  const tops = new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top)))
+  const panel = wb ? wb.querySelector('.order-1') : null
+  const canvas = wb ? wb.querySelector('.order-2') : null
+  const pRect = panel ? panel.getBoundingClientRect() : null
+  const cRect = canvas ? canvas.getBoundingClientRect() : null
+  return {
+    btnRows: tops.size, btnCount: btns.length,
+    noHScroll: document.documentElement.scrollWidth <= window.innerWidth + 1,
+    panelLeftOfCanvas: !!pRect && !!cRect && pRect.left < cRect.left,
+  }
+})
+check('mobile: tools wrap into rows (no slide strip)', mob.btnCount >= 9 && mob.btnRows >= 2, `${mob.btnCount} btns, ${mob.btnRows} rows`)
+check('mobile: no horizontal page scroll', mob.noHScroll)
+check('mobile: settings panel left of canvas', mob.panelLeftOfCanvas)
+
 console.log(`\n=== ${pass} passed, ${fail} failed ===`)
 await browser.close()

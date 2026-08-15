@@ -206,6 +206,25 @@ export interface Translations {
   authSignOut: string
   authClose: string
   downloadZipLogin: string
+  // Auth — OTP email-code sign-up flow (verify email, then set a password)
+  authStepEmail: string
+  authStepCode: string
+  authStepPassword: string
+  authSendCode: string
+  authCode: string
+  authVerify: string
+  authCodeSent: string
+  authCodeInvalid: string
+  authEmailNotFound: string
+  authResendCode: string
+  authBack: string
+  authSetPassword: string
+  authConfirmPassword: string
+  authPasswordTooShort: string
+  authPasswordMismatch: string
+  authUseCodeLogin: string
+  authUsePassword: string
+  authDone: string
 }
 
 // Detect language from URL param, browser, or localStorage
