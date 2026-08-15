@@ -38,9 +38,15 @@ export async function rotateImage(blob: Blob, options: RotateOptions): Promise<B
   canvas.width = newW
   canvas.height = newH
   const ctx = canvas.getContext('2d')!
-  // White base so non-90° rotations never reveal a black corner on JPEG.
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, newW, newH)
+  // White base ONLY for formats that can't carry alpha — otherwise a rotated
+  // transparent PNG would come back with a white background ("有背景"). PNG /
+  // WebP / AVIF keep their transparency (corners stay clear).
+  const fmt = getOutputFormat(blob)
+  const supportsAlpha = fmt === 'png' || fmt === 'webp' || fmt === 'avif'
+  if (!supportsAlpha) {
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, newW, newH)
+  }
 
   // Transform order: mirror first, then rotate — scale applies to the source
   // before rotation, which is what users expect from "flip then rotate".

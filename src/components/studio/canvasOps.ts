@@ -146,8 +146,6 @@ export function floodFill(
 
   const tol2 = tolerance * tolerance * 3 // squared RGB distance
   const selected = new Uint8Array(W * H)
-  const stack: number[] = [seed]
-  selected[seed] = 1
   const matchColor = (i: number) => {
     const p = u32[i]
     const dr = (p & 0xff) - sr
@@ -157,21 +155,33 @@ export function floodFill(
   }
   const matchA = (i: number) => ((u32[i] >> 24) & 0xff) < 255 // any non-opaque
   const ok = matchAlpha ? matchA : matchColor
+
+  // Scanline fill: expands whole horizontal runs and only revisits boundary
+  // rows, so it touches each selected pixel ~once instead of pushing it on a
+  // per-pixel stack 4 times. Several times faster than 4-neighbor BFS on a
+  // big region (a full-background click on a 3000px photo), which is exactly
+  // the wand's worst case.
+  const stack: number[] = []
+  stack.push(sy0, sx0, sx0) // [y, x1, x2]
   while (stack.length) {
-    const idx = stack.pop()!
-    const x = idx % W
-    const y = (idx / W) | 0
-    // 4-connected neighbors
-    if (x > 0) tryFill(idx - 1)
-    if (x < W - 1) tryFill(idx + 1)
-    if (y > 0) tryFill(idx - W)
-    if (y < H - 1) tryFill(idx + W)
+    stack.pop() // x2 — the run's right edge; expansion recomputes it
+    const x1 = stack.pop()!
+    const y = stack.pop()!
+    let sx1 = x1, sx2 = x1
+    while (sx1 > 0 && !selected[y * W + sx1 - 1] && ok(y * W + sx1 - 1)) sx1--
+    while (sx2 < W - 1 && !selected[y * W + sx2 + 1] && ok(y * W + sx2 + 1)) sx2++
+    for (let x = sx1; x <= sx2; x++) selected[y * W + x] = 1
+    if (y > 0) pushRun(y - 1, sx1, sx2)
+    if (y < H - 1) pushRun(y + 1, sx1, sx2)
   }
-  function tryFill(i: number) {
-    if (selected[i]) return
-    if (ok(i)) {
-      selected[i] = 1
-      stack.push(i)
+  function pushRun(ny: number, from: number, to: number) {
+    const base = ny * W
+    let x = from
+    while (x <= to) {
+      if (selected[base + x] || !ok(base + x)) { x++; continue }
+      const s = x
+      while (x <= to && !selected[base + x] && ok(base + x)) x++
+      stack.push(ny, s, x - 1)
     }
   }
   return selected

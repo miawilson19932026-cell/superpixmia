@@ -175,10 +175,21 @@ export default function EditorWorkspace({
   const cutoutRef = useRef<StrokePt[]>([])
   const cutoutMaskRef = useRef<boolean[] | null>(null) // true = keep the pixel
   const removeRef = useRef<Uint8Array | null>(null)
-  // Debounces rapid wand clicks: the flood-fill runs off the pointer handler so
-  // the click never freezes the cursor, and a second click while one is running
-  // is ignored rather than queuing up duplicate work.
+  // Rapid-wand-click handling: the flood-fill runs off the pointer handler (so
+  // the click never freezes the cursor) and a click arriving while one is still
+  // computing is QUEUED (latest wins) and replayed right after — never silently
+  // dropped, which used to read as "点多了没反应".
   const removeBusyRef = useRef(false)
+  const pendingRemoveRef = useRef<{ x: number; y: number } | null>(null)
+  // Bumped after every mask change; keys the cached tint+outline overlay layer.
+  const removeVersionRef = useRef(0)
+  // Offscreen layer with the current remove tint + contour baked in, so the
+  // overlay can redraw on hover (wand follow) without rebuilding 6M pixels.
+  const removeLayerRef = useRef<{ canvas: HTMLCanvasElement; key: number; W: number; H: number } | null>(null)
+  // Cached RGBA of the CURRENT base image — the wand only reads pixels, so we
+  // skip getImageData (24MB copy on a 3000px photo) on every click. Invalidated
+  // when the base image object changes (apply/undo/redo swap in a new Image).
+  const pxDataRef = useRef<{ img: HTMLImageElement; data: ImageData } | null>(null)
   const [removeProcessing, setRemoveProcessing] = useState(false)
 
   // Load `current` into a drawable Image whenever it changes.
@@ -281,13 +292,19 @@ export default function EditorWorkspace({
     const s = Math.min(curW / nw, curH / nh, 1)
     const dw = nw * s, dh = nh * s
     const ox = (curW - dw) / 2, oy = (curH - dh) / 2
+    // Carve the fitted box back out so a rotated transparent PNG shows the
+    // checkerboard through its transparent pixels instead of a white box (the
+    // "有背景" the user saw).
+    ctx.clearRect(ox, oy, dw, dh)
+    // The rotated image keeps the SOURCE aspect ratio. Draw it at curW·s ×
+    // curH·s so that after rotation it exactly fills the fitted box — stretching
+    // it into dw×dh instead squashed non-square photos (the "变形" bug).
+    const sw = curW * s, sh = curH * s
     ctx.save()
-    ctx.fillStyle = '#fff'
-    ctx.fillRect(ox, oy, dw, dh)
     ctx.translate(ox + dw / 2, oy + dh / 2)
     ctx.rotate(rad)
     ctx.scale(rotate.flipX ? -1 : 1, rotate.flipY ? -1 : 1)
-    ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh)
+    ctx.drawImage(img, -sw / 2, -sh / 2, sw, sh)
     ctx.restore()
   }
 
@@ -462,20 +479,34 @@ export default function EditorWorkspace({
   const drawRemove = (ctx: CanvasRenderingContext2D) => {
     const m = removeRef.current
     const W = curW, H = curH
-    if (m) {
-      // Translucent tint over the selected area, plus a marching-ants boundary so
-      // the user always sees exactly what's selected.
-      const id = ctx.createImageData(W, H)
-      const data = id.data
-      for (let i = 0; i < m.length && i < W * H; i++) if (m[i]) data[i * 4 + 3] = 92
-      ctx.putImageData(id, 0, 0)
-
-      // Marching-squares contour — a compact path, fast even on huge photos
-      // (the old per-edge-pixel `rect` build froze the click).
-      const path = maskOutlinePath(m, W, H)
-      ctx.strokeStyle = 'rgba(56,189,248,0.95)'
-      ctx.lineWidth = 1.2
-      ctx.stroke(path)
+    // The tint + outline only change when the mask changes (a click). The
+    // overlay is re-composed on EVERY pointer move (the wand follows the mouse),
+    // so rendering the tint to a cached offscreen layer turns a 6M-pixel
+    // createImageData+loop+putImageData per mousemove into one cheap drawImage.
+    // Keyed by mask version + dimensions; -1 = no mask (empty layer).
+    const key = m ? removeVersionRef.current : -1
+    const cached = removeLayerRef.current
+    if (!cached || cached.key !== key || cached.W !== W || cached.H !== H) {
+      const cv = document.createElement('canvas')
+      cv.width = W
+      cv.height = H
+      const cctx = cv.getContext('2d')!
+      if (m) {
+        // Translucent tint over the selected area, plus a marching-ants boundary
+        // so the user always sees exactly what's selected.
+        const id = cctx.createImageData(W, H)
+        const data = id.data
+        for (let i = 0; i < m.length && i < W * H; i++) if (m[i]) data[i * 4 + 3] = 92
+        cctx.putImageData(id, 0, 0)
+        const path = maskOutlinePath(m, W, H)
+        cctx.strokeStyle = 'rgba(56,189,248,0.95)'
+        cctx.lineWidth = 1.2
+        cctx.stroke(path)
+      }
+      removeLayerRef.current = { canvas: cv, key, W, H }
+      ctx.drawImage(cv, 0, 0)
+    } else {
+      ctx.drawImage(cached.canvas, 0, 0)
     }
     // Magic wand cursor follows the pointer (the real cursor is hidden).
     if (hoverPt) {
@@ -743,25 +774,40 @@ export default function EditorWorkspace({
   // it is subtracted, so the user can custom-build exactly the selection.
   const doRemoveClick = (p: { x: number; y: number }) => {
     if (!curImg) return
-    // Debounce rapid wand clicks: the flood-fill runs off the pointer handler
-    // (deferred via setTimeout) so the click never freezes the cursor, and a
-    // second click while one is running is ignored rather than queuing
-    // duplicate work. Even with the u32 flood fill, a 6M-pixel region can take
-    // a few hundred ms — better to let the overlay keep animating than block it.
-    if (removeBusyRef.current) return
+    // A click while the previous flood-fill is still running is QUEUED (the
+    // latest wins) and replayed right after it finishes — never silently
+    // dropped, which used to make rapid clicks look unresponsive.
+    if (removeBusyRef.current) { pendingRemoveRef.current = p; return }
+    runRemoveFill(p)
+  }
+
+  const runRemoveFill = (p: { x: number; y: number }) => {
+    if (!curImg) return
     removeBusyRef.current = true
     setRemoveProcessing(true)
     const img = curImg
     const W = curW, H = curH, tol = removeTol, mode = removeMode
     const px = p.x, py = p.y
+    // Deferred so the pointer handler never blocks — even with the scanline
+    // fill, a 6M-pixel region takes a few hundred ms; better to let the overlay
+    // keep animating (and keep the cursor responsive) than freeze the tab.
     window.setTimeout(() => {
       try {
-        const c = document.createElement('canvas')
-        c.width = W
-        c.height = H
-        const ctx = c.getContext('2d', { willReadFrequently: true })!
-        ctx.drawImage(img, 0, 0)
-        const data = ctx.getImageData(0, 0, W, H)
+        // Reuse the cached RGBA of the current base — the wand only reads
+        // pixels, so this skips getImageData (a 24MB copy) on every click.
+        const cachedPx = pxDataRef.current
+        let data: ImageData
+        if (cachedPx && cachedPx.img === img) {
+          data = cachedPx.data
+        } else {
+          const c = document.createElement('canvas')
+          c.width = W
+          c.height = H
+          const ctx = c.getContext('2d', { willReadFrequently: true })!
+          ctx.drawImage(img, 0, 0)
+          data = ctx.getImageData(0, 0, W, H)
+          pxDataRef.current = { img, data }
+        }
         const sel = floodFill(data, Math.round(px), Math.round(py), tol)
         const existing = removeRef.current
         if (mode === 'erase') {
@@ -774,11 +820,18 @@ export default function EditorWorkspace({
             for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = 1
           }
         }
+        removeVersionRef.current++
         setRemoveClicks((n) => n + 1)
         compose()
       } finally {
         setRemoveProcessing(false)
         removeBusyRef.current = false
+        // Replay the latest click queued while this one was running.
+        if (pendingRemoveRef.current) {
+          const q = pendingRemoveRef.current
+          pendingRemoveRef.current = null
+          runRemoveFill(q)
+        }
       }
     }, 0)
   }
@@ -1265,8 +1318,11 @@ export default function EditorWorkspace({
 
       {/* Workbench */}
       <div className="flex flex-col lg:flex-row gap-3">
-        {/* Tool rail */}
-        {rail}
+        {/* Tool module — with the promo tagline directly beneath it */}
+        <div className="flex flex-col gap-2 lg:w-44">
+          {rail}
+          <p className="px-1 text-center text-[10px] leading-relaxed text-[var(--text-dim)]/90">{t.studioTagline}</p>
+        </div>
 
         {/* Canvas — base in-flow, overlay absolute inset-0 (same pattern as
             RemoveWatermarkPanel) so both canvases always align at any scale. */}
@@ -1303,7 +1359,21 @@ export default function EditorWorkspace({
               )}
             </div>
           </div>
-          <p className="mt-2 text-center text-[11px] text-[var(--text-dim)]">{t.studioTagline}</p>
+          {/* Centered import-image button (the ad tagline moved under the tool
+              rail above). */}
+          <div className="mt-3 flex justify-center">
+            <button
+              type="button"
+              onClick={onReset}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] glass text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                <path d="M12 16V4m0 0l-4 4m4-4l4 4" />
+                <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+              </svg>
+              {t.studioImport}
+            </button>
+          </div>
         </div>
 
         {/* Panel */}
@@ -1636,6 +1706,10 @@ const tutIcon = (id: StudioToolId) => {
 
 export function StudioTutorial({ lang }: { lang: 'en' | 'zh' }) {
   const zh = lang === 'zh'
+  // Accordion: only ONE guide open at a time. With native <details> every card
+  // could stay open, and several tall expanded cards in a row left big ragged
+  // gaps next to collapsed ones — the "这一行都展开，其他内容是空白" the user saw.
+  const [openId, setOpenId] = useState<string | null>(null)
   return (
     <section className="mt-10">
       <div className="mb-6 flex items-start gap-3.5 sm:items-center">
@@ -1656,13 +1730,23 @@ export function StudioTutorial({ lang }: { lang: 'en' | 'zh' }) {
           </p>
         </div>
       </div>
-      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 items-start">
         {TUTORIALS.map((tut) => {
           const t = TUTORIAL_TINTS[tut.id]
           const steps = zh ? tut.stepsZh : tut.stepsEn
+          const isOpen = openId === tut.id
           return (
             <details
               key={tut.id}
+              open={isOpen}
+              onToggle={(e) => {
+                // Opening a card closes any other open one. When the user
+                // clicks the summary of the currently-open card, the browser
+                // toggles it shut natively — only write state for the open
+                // direction so React re-render matches what the user did.
+                if (e.currentTarget.open) setOpenId(tut.id)
+                else setOpenId((cur) => (cur === tut.id ? null : cur))
+              }}
               className={`group glass rounded-xl border border-white/[0.06] overflow-hidden transition-all duration-200 card-hover hover:-translate-y-0.5 ${t.open}`}
             >
               <summary className="flex cursor-pointer items-center gap-3 px-4 py-3.5 text-sm font-semibold text-[var(--text-primary)] list-none [&::-webkit-details-marker]:hidden">
@@ -1677,19 +1761,23 @@ export function StudioTutorial({ lang }: { lang: 'en' | 'zh' }) {
                   <path d="M6 9l6 6 6-6" />
                 </svg>
               </summary>
-              <ol className="space-y-0 border-t border-white/[0.06] px-4 py-3.5">
-                {steps.map((s, i) => (
-                  <li key={i} className="relative flex gap-3 pb-3.5 last:pb-0">
-                    {i < steps.length - 1 && (
-                      <span className={`absolute left-[8px] top-6 bottom-0 w-px bg-gradient-to-b ${t.line} to-transparent`} />
-                    )}
-                    <span className={`relative mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${t.dot}`}>
-                      {i + 1}
-                    </span>
-                    <span className="pt-px text-xs leading-relaxed text-[var(--text-dim)]">{s}</span>
-                  </li>
-                ))}
-              </ol>
+              <div className="accordion-body">
+                <div>
+                  <ol className="space-y-0 border-t border-white/[0.06] px-4 py-3.5">
+                    {steps.map((s, i) => (
+                      <li key={i} className="relative flex gap-3 pb-3.5 last:pb-0">
+                        {i < steps.length - 1 && (
+                          <span className={`absolute left-[8px] top-6 bottom-0 w-px bg-gradient-to-b ${t.line} to-transparent`} />
+                        )}
+                        <span className={`relative mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${t.dot}`}>
+                          {i + 1}
+                        </span>
+                        <span className="pt-px text-xs leading-relaxed text-[var(--text-dim)]">{s}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
             </details>
           )
         })}
