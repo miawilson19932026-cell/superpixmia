@@ -122,27 +122,41 @@ export function floodFill(
   sy: number,
   tolerance: number,
   opts?: { matchTransparent?: boolean },
-): boolean[] {
+): Uint8Array {
   const { width: W, height: H } = imgData
   const px = imgData.data
+  // Read RGBA as packed u32 (little-endian: R<<0 | G<<8 | B<<16 | A<<24) so each
+  // pixel is one typed read instead of four clamped-byte reads — the wand runs
+  // over ~6M pixels on a phone photo and this measurably cuts the freeze.
+  const u32 = new Uint32Array(px.buffer, px.byteOffset, px.byteLength >> 2)
   const sx0 = Math.round(Math.min(Math.max(sx, 0), W - 1))
   const sy0 = Math.round(Math.min(Math.max(sy, 0), H - 1))
   const seed = sy0 * W + sx0
-  const sr = px[seed * 4]
-  const sg = px[seed * 4 + 1]
-  const sb = px[seed * 4 + 2]
-  const sa = px[seed * 4 + 3]
+  const seedPx = u32[seed]
+  const sr = seedPx & 0xff
+  const sg = (seedPx >> 8) & 0xff
+  const sb = (seedPx >> 16) & 0xff
+  const sa = (seedPx >> 24) & 0xff
 
   // Restore-on-transparent: select any connected non-opaque region.
   const matchAlpha = opts?.matchTransparent === true && sa < 255
   // Fully transparent seeds select the whole transparent area; treat as no-op
   // so users don't nuke a transparent PNG by clicking empty space.
-  if (!matchAlpha && sa === 0) return new Array(W * H).fill(false)
+  if (!matchAlpha && sa === 0) return new Uint8Array(W * H)
 
   const tol2 = tolerance * tolerance * 3 // squared RGB distance
   const selected = new Uint8Array(W * H)
   const stack: number[] = [seed]
   selected[seed] = 1
+  const matchColor = (i: number) => {
+    const p = u32[i]
+    const dr = (p & 0xff) - sr
+    const dg = ((p >> 8) & 0xff) - sg
+    const db = ((p >> 16) & 0xff) - sb
+    return dr * dr + dg * dg + db * db <= tol2
+  }
+  const matchA = (i: number) => ((u32[i] >> 24) & 0xff) < 255 // any non-opaque
+  const ok = matchAlpha ? matchA : matchColor
   while (stack.length) {
     const idx = stack.pop()!
     const x = idx % W
@@ -155,22 +169,72 @@ export function floodFill(
   }
   function tryFill(i: number) {
     if (selected[i]) return
-    if (matchAlpha) {
-      // Any non-opaque pixel counts — the erase touched it, restore it.
-      if (px[i * 4 + 3] < 255) {
-        selected[i] = 1
-        stack.push(i)
-      }
-      return
-    }
-    const r = px[i * 4]
-    const g = px[i * 4 + 1]
-    const b = px[i * 4 + 2]
-    const dr = r - sr, dg = g - sg, db = b - sb
-    if (dr * dr + dg * dg + db * db <= tol2) {
+    if (ok(i)) {
       selected[i] = 1
       stack.push(i)
     }
   }
-  return Array.from(selected, (v) => v === 1)
+  return selected
+}
+
+// Marching-squares outline of a binary mask. Returns one compact Path2D of
+// boundary segments — a cheap O(W*H) scan where the path size ≈ the perimeter —
+// instead of one `rect` per edge pixel. The old per-pixel approach built a path
+// with hundreds of thousands of tiny subpaths on a large selection, which made
+// the magic-wand click visibly freeze (and worse on big phone photos).
+export function maskOutlinePath(mask: ArrayLike<number> | ArrayLike<boolean>, W: number, H: number, invert = false): Path2D {
+  const path = new Path2D()
+  // Case code → cell-edge midpoints the contour crosses. Corners: bit0=TL,
+  // bit1=TR, bit2=BR, bit3=BL. Edge midpoints: L=(x, y+0.5) T=(x+0.5, y)
+  // R=(x+1, y+0.5) B=(x+0.5, y+1). Pairs are [from, to]. Inverting the mask
+  // flips every corner bit (k ^ 15), and the table is complementary so the same
+  // contour segments come out — no need to touch the mask itself.
+  const L = 1, T = 2, R = 4, B = 8
+  const CASES: number[][] = [
+    [],             // 0
+    [L, T],         // 1  TL
+    [T, R],         // 2  TR
+    [L, R],         // 3  TL|TR
+    [R, B],         // 4  BR
+    [L, T, R, B],   // 5  TL|BR (saddle)
+    [T, B],         // 6  TR|BR
+    [L, B],         // 7  TL|TR|BR
+    [B, L],         // 8  BL
+    [T, B],         // 9  TL|BL
+    [T, R, B, L],   // 10 TR|BL (saddle)
+    [R, B],         // 11 TL|TR|BL
+    [L, R],         // 12 BR|BL
+    [T, R],         // 13 TL|BR|BL
+    [L, T],         // 14 TR|BR|BL
+    [],             // 15
+  ]
+  const inv = invert ? 15 : 0
+  for (let y = 0; y < H; y++) {
+    const row = y * W
+    const yIn = y + 1 < H
+    const rowN = row + W
+    for (let x = 0; x < W; x++) {
+      const xIn = x + 1 < W
+      const a = mask[row + x] ? 1 : 0
+      const b = (xIn && mask[row + x + 1]) ? 1 : 0
+      const c = (yIn && xIn && mask[rowN + x + 1]) ? 1 : 0
+      const d = (yIn && mask[rowN + x]) ? 1 : 0
+      const k = (a | (b << 1) | (c << 2) | (d << 3)) ^ inv
+      const segs = CASES[k]
+      if (!segs.length) continue
+      // Edge midpoints: L=(x, y+0.5) T=(x+0.5, y) R=(x+1, y+0.5) B=(x+0.5, y+1).
+      // Only boundary cells reach here, so the loop count ≈ the perimeter.
+      const cx = x + 0.5, cy = y + 0.5
+      for (let s = 0; s < segs.length; s += 2) {
+        const f = segs[s], t = segs[s + 1]
+        const x1 = f === L ? x : f === R ? x + 1 : cx
+        const y1 = f === T ? y : f === B ? y + 1 : cy
+        const x2 = t === L ? x : t === R ? x + 1 : cx
+        const y2 = t === T ? y : t === B ? y + 1 : cy
+        path.moveTo(x1, y1)
+        path.lineTo(x2, y2)
+      }
+    }
+  }
+  return path
 }

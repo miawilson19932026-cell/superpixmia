@@ -14,6 +14,7 @@ import {
   buildMaskFromStrokes,
   removeMasked,
   floodFill,
+  maskOutlinePath,
   type Stroke,
   type StrokePt,
 } from './canvasOps'
@@ -173,7 +174,12 @@ export default function EditorWorkspace({
   const healRef = useRef<Stroke[]>([])
   const cutoutRef = useRef<StrokePt[]>([])
   const cutoutMaskRef = useRef<boolean[] | null>(null) // true = keep the pixel
-  const removeRef = useRef<boolean[] | null>(null)
+  const removeRef = useRef<Uint8Array | null>(null)
+  // Debounces rapid wand clicks: the flood-fill runs off the pointer handler so
+  // the click never freezes the cursor, and a second click while one is running
+  // is ignored rather than queuing up duplicate work.
+  const removeBusyRef = useRef(false)
+  const [removeProcessing, setRemoveProcessing] = useState(false)
 
   // Load `current` into a drawable Image whenever it changes.
   useEffect(() => {
@@ -429,19 +435,10 @@ export default function EditorWorkspace({
       for (let i = 0; i < W * H; i++) if (!m[i]) data[i * 4 + 3] = 92
       ctx.putImageData(id, 0, 0)
 
-      const keepPath = new Path2D()
-      const remPath = new Path2D()
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const i = y * W + x
-          const onEdge =
-            x === 0 || x === W - 1 || y === 0 || y === H - 1 ||
-            !m[i - 1] || !m[i + 1] || !m[i - W] || !m[i + W]
-          if (!onEdge) continue
-          if (m[i]) keepPath.rect(x, y, 1, 1)
-          else remPath.rect(x, y, 1, 1)
-        }
-      }
+      // Marching-squares contours (keep + inverted → remove) — compact paths,
+      // fast even on huge photos, unlike the old per-edge-pixel rect build.
+      const keepPath = maskOutlinePath(m, W, H)
+      const remPath = maskOutlinePath(m, W, H, true)
       ctx.strokeStyle = 'rgba(16,185,129,0.95)'
       ctx.lineWidth = 1.2
       ctx.stroke(keepPath)
@@ -473,17 +470,9 @@ export default function EditorWorkspace({
       for (let i = 0; i < m.length && i < W * H; i++) if (m[i]) data[i * 4 + 3] = 92
       ctx.putImageData(id, 0, 0)
 
-      const path = new Path2D()
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const i = y * W + x
-          if (!m[i]) continue
-          const onEdge =
-            x === 0 || x === W - 1 || y === 0 || y === H - 1 ||
-            !m[i - 1] || !m[i + 1] || !m[i - W] || !m[i + W]
-          if (onEdge) path.rect(x, y, 1, 1)
-        }
-      }
+      // Marching-squares contour — a compact path, fast even on huge photos
+      // (the old per-edge-pixel `rect` build froze the click).
+      const path = maskOutlinePath(m, W, H)
       ctx.strokeStyle = 'rgba(56,189,248,0.95)'
       ctx.lineWidth = 1.2
       ctx.stroke(path)
@@ -754,26 +743,44 @@ export default function EditorWorkspace({
   // it is subtracted, so the user can custom-build exactly the selection.
   const doRemoveClick = (p: { x: number; y: number }) => {
     if (!curImg) return
-    const c = document.createElement('canvas')
-    c.width = curW
-    c.height = curH
-    const ctx = c.getContext('2d', { willReadFrequently: true })!
-    ctx.drawImage(curImg, 0, 0)
-    const data = ctx.getImageData(0, 0, curW, curH)
-    const sel = floodFill(data, Math.round(p.x), Math.round(p.y), removeTol)
-    const existing = removeRef.current
-    if (removeMode === 'erase') {
-      if (!existing) return
-      for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = false
-    } else {
-      if (!existing) {
-        removeRef.current = sel
-      } else {
-        for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = true
+    // Debounce rapid wand clicks: the flood-fill runs off the pointer handler
+    // (deferred via setTimeout) so the click never freezes the cursor, and a
+    // second click while one is running is ignored rather than queuing
+    // duplicate work. Even with the u32 flood fill, a 6M-pixel region can take
+    // a few hundred ms — better to let the overlay keep animating than block it.
+    if (removeBusyRef.current) return
+    removeBusyRef.current = true
+    setRemoveProcessing(true)
+    const img = curImg
+    const W = curW, H = curH, tol = removeTol, mode = removeMode
+    const px = p.x, py = p.y
+    window.setTimeout(() => {
+      try {
+        const c = document.createElement('canvas')
+        c.width = W
+        c.height = H
+        const ctx = c.getContext('2d', { willReadFrequently: true })!
+        ctx.drawImage(img, 0, 0)
+        const data = ctx.getImageData(0, 0, W, H)
+        const sel = floodFill(data, Math.round(px), Math.round(py), tol)
+        const existing = removeRef.current
+        if (mode === 'erase') {
+          if (!existing) return
+          for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = 0
+        } else {
+          if (!existing) {
+            removeRef.current = sel
+          } else {
+            for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = 1
+          }
+        }
+        setRemoveClicks((n) => n + 1)
+        compose()
+      } finally {
+        setRemoveProcessing(false)
+        removeBusyRef.current = false
       }
-    }
-    setRemoveClicks((n) => n + 1)
-    compose()
+    }, 0)
   }
 
   // ── Apply (commit) / Undo / Clear / Download ──
@@ -1153,6 +1160,12 @@ export default function EditorWorkspace({
             <Field label={t.studioTolerance}>
               <Slider value={removeTol} min={1} max={100} onChange={setRemoveTol} />
             </Field>
+            {removeProcessing && (
+              <div className="flex items-center gap-2 text-xs text-[var(--text-dim)]">
+                <span className="h-3 w-3 animate-spin rounded-full border border-[var(--accent)] border-t-transparent" />
+                {lang === 'zh' ? '正在计算选区…' : 'Selecting…'}
+              </div>
+            )}
             {removeClicks > 0 && (
               <div className="flex gap-2">
                 <ToolButton onClick={clearTool}>{t.studioClear}</ToolButton>

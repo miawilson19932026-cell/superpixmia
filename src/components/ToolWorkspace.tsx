@@ -58,7 +58,7 @@ const aiFactoryNavIcon = (
 )
 const AI_COMING_ITEMS = [
   { id: 'ai-gen', icon: aiGenNavIcon, labelZh: 'AI 生图', labelEn: 'AI Image' },
-  { id: 'ai-factory', icon: aiFactoryNavIcon, labelZh: 'AI 工厂', labelEn: 'AI Factory' },
+  { id: 'ai-factory', icon: aiFactoryNavIcon, labelZh: '图片工厂', labelEn: 'Image Factory' },
 ]
 
 // SSR-safe: prerender runs in Node where navigator is undefined.
@@ -553,7 +553,10 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
             onClick={() => navigate(EDITOR_PATH)}
             className="relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 glass backdrop-blur-xl border-[var(--accent)]/30 text-[var(--text-primary)] card-hover hover:border-[var(--accent)]/60 hover:-translate-y-0.5"
           >
-            <span className="absolute -top-2 -right-1.5 z-10 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-1.5 py-0.5 text-[9px] font-bold text-black leading-none shadow-[0_2px_8px_rgba(251,146,60,0.55)]">
+            {/* Badge sits INSIDE the card: the `.card-hover` class has overflow:
+                hidden, so a -top-2 offset used to clip the badge's top edge and
+                the label was unreadable. */}
+            <span className="absolute top-1 right-1 z-10 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-1.5 py-0.5 text-[9px] font-bold text-black leading-none shadow-[0_2px_8px_rgba(251,146,60,0.55)]">
               {lang === 'zh' ? '推荐' : 'Hot'}
             </span>
             <div className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center text-[var(--accent)]">
@@ -572,7 +575,14 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
               onClick={() => setComingToast(true)}
               className="relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 glass backdrop-blur-xl border border-dashed border-white/10 text-[var(--text-dim)]/80 hover:text-[var(--text-primary)] hover:border-orange-400/40 card-hover"
             >
-              <span className="absolute -top-2 -right-1.5 z-10 rounded-full bg-orange-500/15 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-orange-300 leading-none whitespace-nowrap">
+              {/* Inside the card (overflow:hidden on .card-hover clips -top-2),
+                  and inline rgba instead of `bg-orange-500/15` — the Tailwind v4
+                  opacity modifier compiles to color-mix() which old Edge (100)
+                  drops, leaving the badge with no fill. */}
+              <span
+                className="absolute top-1 right-1 z-10 rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-orange-300 leading-none whitespace-nowrap"
+                style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)' }}
+              >
                 🔥 {lang === 'zh' ? '建设中' : 'Soon'}
               </span>
               <div className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center text-orange-300/80">
