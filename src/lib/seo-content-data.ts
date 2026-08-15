@@ -20,6 +20,9 @@ export interface Content {
   howToSteps: { title: string; desc: string }[]
   faqTitle: string
   faqs: FAQ[]
+  /** Optional "what's inside" grid, rendered on pages that have a feature set
+   *  of their own (currently only /studio). Tool pages and the homepage omit it. */
+  features?: { title: string; desc: string }[]
 }
 
 export const homeContent: Record<'en' | 'zh', Content> = {
@@ -549,6 +552,136 @@ export const toolContent: Record<ToolType, Record<'en' | 'zh', Content>> = {
         },
       ],
     },
+  },
+}
+
+// /studio — the combined single-image editor. Same hero/HowTo/FAQ pattern as the
+// tool pages, plus a "what you can do" features grid. Drives both the visible
+// body content and the Studio HowTo / FAQPage structured data (seo-jsonld.ts).
+export const studioContent: Record<'en' | 'zh', Content> = {
+  en: {
+    h1: 'Studio Editor',
+    headline: 'One Free Workspace for Every Image Edit — No Photoshop Needed',
+    intro:
+      'SuperPixMia Studio is a free online photo editor for everyone. No downloads, no accounts, no design skills required. Open a single image and do it all in one place: rotate and flip, crop to the perfect frame, type text onto the picture, stamp your logo, draw with a pencil, wipe out watermarks and stamps, cut out subjects with the lasso or the magic wand, and resize to exact dimensions. It works on both desktop and mobile, and every change runs locally in your browser.',
+    privacy:
+      'Studio runs 100% in your browser — your image is never uploaded to any server. That makes it safe for private photos, screenshots, and work documents. No account, no watermark, no hidden costs, no usage limits.',
+    howToTitle: 'How to edit an image in Studio',
+    howToSteps: [
+      {
+        title: 'Pick or drag in your image',
+        desc: 'Click the upload area or drag any image into Studio from your computer or phone. PNG, JPEG, WebP, AVIF, GIF, BMP, SVG, ICO, and TIFF are all supported.',
+      },
+      {
+        title: 'Choose a tool and adjust it',
+        desc: 'Pick a tool from the rail — Rotate, Crop, Text, Stamp, Pencil, Erase, Cut out, Remove, or Resize. Change the settings in the panel, then tap Apply so every edit takes effect on the image.',
+      },
+      {
+        title: 'Undo freely, then download',
+        desc: 'Every applied change is saved to your edit history, so Undo and Redo let you step back and forth at any time. When you are happy, click Download and choose your format.',
+      },
+    ],
+    features: [
+      { title: 'Rotate & flip', desc: 'Turn 90° with one click, drag to rotate to any angle, or flip horizontally and vertically.' },
+      { title: 'Crop', desc: 'Drag the box to frame the shot, with a rule-of-thirds grid and precise corner handles.' },
+      { title: 'Add text', desc: 'Type any text, click to place it, drag to move it, and adjust color, size, and opacity.' },
+      { title: 'Logo stamp', desc: 'Upload your logo or stamp and place it anywhere with adjustable size and transparency.' },
+      { title: 'Freehand pencil', desc: 'Draw directly on the image in any color and brush size.' },
+      { title: 'Remove watermarks', desc: 'Paint over a watermark, stamp, or stray text and Studio rebuilds the area from its surroundings.' },
+      { title: 'Cut out (lasso)', desc: 'Trace a loop around the subject to keep or remove it — add and subtract selections for fine control.' },
+      { title: 'Magic wand remove', desc: 'Click similar colors (like a background) to select and remove them in one go.' },
+      { title: 'Resize', desc: 'Set an exact width and height, or lock the ratio and scale proportionally.' },
+      { title: '100% private', desc: 'Everything runs in your browser. Your image never leaves your device.' },
+    ],
+    faqTitle: 'Studio Editor FAQ',
+    faqs: [
+      {
+        q: 'Is SuperPixMia Studio really free?',
+        a: 'Yes — Studio is completely free with no ads, no watermarks, and no account. Every tool is included at no cost.',
+      },
+      {
+        q: 'Does Studio upload my photo to a server?',
+        a: 'No. All processing happens locally in your browser using the Canvas API, so your image never leaves your device.',
+      },
+      {
+        q: 'Do I need design skills to use Studio?',
+        a: 'Not at all. Studio is built for everyone — each tool has a step-by-step guide, and changes are applied with a single Apply button. No Photoshop knowledge needed.',
+      },
+      {
+        q: 'Can I use Studio on my phone?',
+        a: 'Yes. Studio is fully responsive and works on phones, tablets, and desktops. Touch and mouse input are both supported.',
+      },
+      {
+        q: 'Can I undo an edit after applying it?',
+        a: 'Yes. Every applied change is added to your history, so you can Undo and Redo freely — even after several different tools.',
+      },
+      {
+        q: 'Which tools are in Studio?',
+        a: 'Rotate & flip, crop, add text, logo stamp, freehand pencil, watermark removal, manual cutout (lasso), magic wand remove, and resize — all in one workspace for a single image.',
+      },
+    ],
+  },
+  zh: {
+    h1: '全能编辑 Studio',
+    headline: '免费在线图片编辑器，一张图搞定所有操作',
+    intro:
+      'SuperPixMia Studio 是一款适合所有人的免费在线图片编辑器。无需下载、无需注册、不需要任何设计基础。打开一张图，就能在一个工作台里完成所有操作：旋转与翻转、裁剪出完美构图、在图片上写字、盖上你的 Logo 印章、用铅笔随手涂鸦、涂抹去除水印和印章、用套索或魔术棒抠图，以及调整到精确尺寸。电脑和手机都能用，所有改动都在浏览器本地完成。',
+    privacy:
+      'Studio 全程在你的浏览器内运行，图片绝不会上传到任何服务器。处理私人照片、截图和工作文档都非常安全。无需注册、无水印、无隐藏收费、不限次数。',
+    howToTitle: '如何用 Studio 在线编辑图片',
+    howToSteps: [
+      {
+        title: '选择或拖入你的图片',
+        desc: '点击上传区域，或把电脑 / 手机里的任意图片拖进 Studio。支持 PNG、JPEG、WebP、AVIF、GIF、BMP、SVG、ICO、TIFF 等格式。',
+      },
+      {
+        title: '选择工具并调整参数',
+        desc: '从工具栏选择「旋转、裁剪、写字、刻章、铅笔、去水印、抠图、一键抠图、尺寸」中的任意工具，在右侧面板调整参数，每次操作后点「应用」让改动生效。',
+      },
+      {
+        title: '随时撤销，最后下载',
+        desc: '每次应用的改动都会进入编辑历史，即使叠加了多个工具，也能随时「撤销 / 重做」。满意后点击「下载」，选择你想要的格式即可。',
+      },
+    ],
+    features: [
+      { title: '旋转与翻转', desc: '一键旋转 90°，在画布上拖动自由旋转到任意角度，也可水平 / 垂直翻转。' },
+      { title: '裁剪', desc: '拖动裁剪框取景，内置三分构图线，四角手柄可精确缩放。' },
+      { title: '添加文字', desc: '输入任意文字，点击画布放置、拖动移动，可调颜色、大小、透明度。' },
+      { title: 'Logo 印章', desc: '上传你的 Logo 或印章，放到图片任意位置，大小和透明度随意调整。' },
+      { title: '铅笔涂鸦', desc: '选好颜色和笔刷大小，直接在图片上绘制。' },
+      { title: '涂抹去水印', desc: '用笔刷涂过水印、印章或多余文字，Studio 会用周围像素把区域补回来。' },
+      { title: '手动抠图（套索）', desc: '沿主体画一圈即可保留或去除，可叠加 / 减去选区精细调整。' },
+      { title: '魔术棒一键抠图', desc: '点击相似颜色（比如背景），一键选中并去除。' },
+      { title: '调整尺寸', desc: '输入精确宽高，或锁定比例等比缩放。' },
+      { title: '100% 本地处理', desc: '一切都在浏览器内完成，图片绝不会离开你的设备。' },
+    ],
+    faqTitle: '全能编辑 Studio 常见问题',
+    faqs: [
+      {
+        q: 'Studio 真的免费吗？',
+        a: '完全免费，无广告、无水印、无需注册，所有工具都不收费。',
+      },
+      {
+        q: 'Studio 会把我的照片上传到服务器吗？',
+        a: '不会。所有处理都在浏览器内通过 Canvas API 完成，图片绝不会离开你的设备。',
+      },
+      {
+        q: '需要设计基础才能用 Studio 吗？',
+        a: '完全不需要。Studio 为所有人设计，每个工具都有分步教程，一个「应用」按钮就能让改动生效，不需要任何 Photoshop 知识。',
+      },
+      {
+        q: '手机能用 Studio 吗？',
+        a: '可以。Studio 完全适配手机、平板和电脑，同时支持触控和鼠标操作。',
+      },
+      {
+        q: '应用后还能撤销吗？',
+        a: '可以。每次应用的改动都会进入编辑历史，即使叠加了多个工具，也能随时「撤销 / 重做」。',
+      },
+      {
+        q: 'Studio 里有哪些工具？',
+        a: '旋转翻转、裁剪、写字、刻章、铅笔涂鸦、去水印、手动抠图、魔术棒一键抠图、调整尺寸，全部集中在一个工作台里处理单张图片。',
+      },
+    ],
   },
 }
 

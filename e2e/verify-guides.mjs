@@ -45,7 +45,13 @@ const clickImg = async (ix, iy) => {
   const r = await rect(2)
   await page.mouse.click(r.left + (ix / r.cw) * r.width, r.top + (iy / r.ch) * r.height)
 }
-const appliedShown = () => page.evaluate(() => /Applied|已应用/.test(document.body.textContent || ''))
+const appliedShown = () => page.evaluate(() => {
+  // The green "Applied" chip (only element with text-emerald-300). Body-text
+  // matching would false-positive on the SEO content now rendered below the
+  // workspace (it contains the words "Applied"/"应用").
+  const el = document.querySelector('[class*="text-emerald-300"]')
+  return !!el && /Applied|已应用/.test(el.textContent || '')
+})
 const overlayCount = () => page.evaluate(() => {
   const ov = document.querySelectorAll('canvas')[2]
   const d = ov.getContext('2d').getImageData(0, 0, ov.width, ov.height).data
@@ -57,9 +63,12 @@ const alphaAt = (x, y) => page.evaluate(([x, y]) => {
   const c = document.querySelectorAll('canvas')[1]
   return c.getContext('2d').getImageData(x, y, 1, 1).data[3]
 }, [x, y])
-// the teaching bubble = the element containing the apply-reminder line
+// the teaching bubble = the element containing the apply-reminder line. The
+// regex is deliberately specific ("on the right" / "点右侧") so the SEO content
+// below the workspace (which says "tap Apply" / "每次操作后点「应用」") can't
+// false-positive — it must match ONLY the bubble's own sentence.
 const tipRect = () => page.evaluate(() => {
-  const els = Array.from(document.querySelectorAll('div, p')).filter((d) => /Tap "Apply"|每次操作后/.test(d.textContent || ''))
+  const els = Array.from(document.querySelectorAll('div, p')).filter((d) => /Tap "Apply" on the right|每次操作后，点右侧/.test(d.textContent || ''))
   if (!els.length) return null
   const el = els.reduce((a, b) => (a.textContent.length <= b.textContent.length ? a : b)) // innermost
   return el.getBoundingClientRect().toJSON()
@@ -70,20 +79,51 @@ console.log('\n── 1. pick page tutorial (no image) ──')
 await page.goto(BASE + '/studio', { waitUntil: 'networkidle2', timeout: 60000 })
 await page.evaluate(() => sessionStorage.clear())
 await page.reload({ waitUntil: 'networkidle2' })
-const pick = await page.evaluate(() => ({
-  hasHeader: /每个工具怎么用|How to use each tool/.test(document.body.textContent || ''),
-  cards: Array.from(document.querySelectorAll('details')).length,
-}))
+const pick = await page.evaluate(() => {
+  // Scope to the StudioTutorial section — the page now also has the SEO FAQ
+  // accordion below it, whose <details> would inflate a global count.
+  const tut = Array.from(document.querySelectorAll('section')).find((s) => /每个工具怎么用|How to use each tool/.test(s.textContent || ''))
+  return {
+    hasHeader: !!tut,
+    cards: tut ? tut.querySelectorAll('details').length : 0,
+  }
+})
 check('tutorial header on pick page', pick.hasHeader, pick.cards + ' cards')
 check('9 expandable tool cards', pick.cards === 9, `${pick.cards}`)
-// expand the first card and confirm steps render
+// expand the first tutorial card and confirm steps render
 const stepsOk = await page.evaluate(() => {
-  const d = document.querySelector('details')
+  const tut = Array.from(document.querySelectorAll('section')).find((s) => /每个工具怎么用|How to use each tool/.test(s.textContent || ''))
+  const d = tut ? tut.querySelector('details') : null
   if (!d) return false
   d.open = true
   return d.querySelectorAll('li').length >= 3
 })
 check('expanded card shows steps', stepsOk)
+
+// ── 1b. pick page now also carries the long SEO content block ──
+const seoPick = await page.evaluate(() => {
+  const txt = document.body.textContent || ''
+  const seo = Array.from(document.querySelectorAll('section')).find((s) => /Studio 都能做什么|What you can do/.test(s.textContent || ''))
+  return {
+    features: !!seo,
+    featureCards: seo ? seo.querySelectorAll('div.rounded-2xl').length : 0,
+    faq: /全能编辑 Studio 常见问题|Studio Editor FAQ/.test(txt),
+    howto: /如何用 Studio 在线编辑图片|How to edit an image in Studio/.test(txt),
+    crossLinks: (() => {
+      // Scope to the SEO "Other free tools" block — the header nav also links to
+      // the 5 tools and would inflate a document-wide count.
+      const h = Array.from(document.querySelectorAll('h2')).find((x) => /其他免费工具|Other free tools/.test(x.textContent || ''))
+      const container = h ? h.parentElement : null
+      return container ? container.querySelectorAll('a[href]').length : -1
+    })(),
+    h1Count: document.querySelectorAll('h1').length,
+  }
+})
+check('SEO hero/features block on pick page', seoPick.features, `${seoPick.featureCards} feature cards`)
+check('SEO FAQ accordion present', seoPick.faq)
+check('SEO HowTo timeline present', seoPick.howto)
+check('SEO cross-links to 5 tool pages', seoPick.crossLinks === 5, `${seoPick.crossLinks}`)
+check('exactly one h1 on pick page', seoPick.h1Count === 1, `${seoPick.h1Count}`)
 
 // ── 2. first-visit teaching bubble → Apply ──
 console.log('\n── 2. first-visit bubble ──')

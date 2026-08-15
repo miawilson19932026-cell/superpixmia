@@ -2,6 +2,7 @@
 import { useCallback, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from '../../i18n'
 import EditorWorkspace, { StudioTutorial, type SourceImage } from './EditorWorkspace'
+import SeoContent from '../SeoContent'
 import CatMascot from '../CatMascot'
 
 const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/gif', 'image/bmp', 'image/svg+xml', 'image/x-icon', 'image/tiff', 'image/vnd.microsoft.icon']
@@ -35,7 +36,12 @@ export default function EditorPage() {
   }
 
   if (source) {
-    return <EditorWorkspace source={source} onReset={() => setSource(null)} />
+    return (
+      <div>
+        <EditorWorkspace source={source} onReset={() => setSource(null)} />
+        <SeoContent variant="studio" />
+      </div>
+    )
   }
 
   return (
@@ -100,6 +106,8 @@ export default function EditorPage() {
       <div className="mx-auto max-w-6xl w-full px-3 sm:px-6 pb-14">
         <StudioTutorial lang={lang} />
       </div>
+
+      <SeoContent variant="studio" />
     </div>
   )
 }

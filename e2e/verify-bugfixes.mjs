@@ -37,7 +37,12 @@ const btn = (re, last = false) => page.evaluate(([s, last]) => {
   if (el) { el.click(); return el.textContent.trim() } return null
 }, [re, last])
 const rect = (i) => page.evaluate((idx) => { const r = document.querySelectorAll('canvas')[idx].getBoundingClientRect(); const c = document.querySelectorAll('canvas')[idx]; return { left: r.left, top: r.top, width: r.width, height: r.height, cw: c.width, ch: c.height } }, i)
-const appliedShown = () => page.evaluate(() => /Applied|已应用/.test(document.body.textContent || ''))
+const appliedShown = () => page.evaluate(() => {
+  // The green "Applied" chip (only element with text-emerald-300). Body-text
+  // matching would false-positive on the SEO content below the workspace.
+  const el = document.querySelector('[class*="text-emerald-300"]')
+  return !!el && /Applied|已应用/.test(el.textContent || '')
+})
 const hash = () => page.evaluate(() => {
   const c = document.querySelectorAll('canvas')[1]
   const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data

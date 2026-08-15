@@ -13,7 +13,7 @@ import BgRemovePanel from './BgRemovePanel'
 import BgRefinePanel from './BgRefinePanel'
 import ConvertPanel from './ConvertPanel'
 import RemoveWatermarkPanel from './RemoveWatermarkPanel'
-import { toolPaths } from '../lib/routes'
+import { toolPaths, EDITOR_PATH } from '../lib/routes'
 import { TOOL_KEYS, toolIcons, toolLabelKey } from '../lib/tools'
 
 type Mode = 'single' | 'batch'
@@ -27,6 +27,40 @@ interface ImageItem {
 }
 
 const MAX_BATCH = 15
+
+// Homepage tool nav extras: Studio (recommended) plus the two AI cards that are
+// still under construction. The AI cards render with a distinct dashed style and
+// show a "coming soon" toast when clicked instead of navigating.
+const studioNavIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="14" height="16" rx="2" />
+    <rect x="7" y="6" width="14" height="16" rx="2" opacity="0.5" />
+    <path d="M11 12h7M11 15h4" opacity="0.8" />
+  </svg>
+)
+const aiGenNavIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="15" height="15" rx="2" />
+    <path d="M3 15l4-4 3 2.5 3.5-3.5 4.5 4" />
+    <path d="M19 2.5V6M17.25 4.25h3.5" />
+    <path d="M21 15v3M19.5 16.5h3" />
+  </svg>
+)
+const aiFactoryNavIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 21h18" />
+    <path d="M4 21V10l4 3v-3l4 3v-3l4 3v-3l4 3v11" />
+    <path d="M8 10V5" />
+    <path d="M6 4l2 2-2 2" />
+    <path d="M20 10V7" />
+    <path d="M18 6l2 2-2 2" />
+  </svg>
+)
+const AI_COMING_ITEMS = [
+  { id: 'ai-gen', icon: aiGenNavIcon, labelZh: 'AI 生图', labelEn: 'AI Image' },
+  { id: 'ai-factory', icon: aiFactoryNavIcon, labelZh: 'AI 工厂', labelEn: 'AI Factory' },
+]
+
 // SSR-safe: prerender runs in Node where navigator is undefined.
 const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
 const isIOS = /iPad|iPhone|iPod/.test(ua) ||
@@ -56,6 +90,13 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const [lightboxTrigger, setLightboxTrigger] = useState(0)
   const [bgProgress, setBgProgress] = useState(0)
   const [refineOpen, setRefineOpen] = useState(false)
+  // "Coming soon" toast for the under-construction AI cards
+  const [comingToast, setComingToast] = useState(false)
+  useEffect(() => {
+    if (!comingToast) return
+    const t = setTimeout(() => setComingToast(false), 2600)
+    return () => clearTimeout(t)
+  }, [comingToast])
 
   // Reset workspace when the focused tool changes (route change)
   useEffect(() => {
@@ -475,7 +516,8 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
 
   return (
     <main className="flex-1 px-3 sm:px-6 py-5 sm:py-6 pb-24 sm:pb-6 space-y-5">
-      {/* Tool Nav */}
+      {/* Tool Nav — the 5 real tools + Studio (recommended) + AI (coming soon).
+          Adding Studio fills the 4-col grid to a clean 2 rows. */}
       <div className="mx-auto max-w-2xl">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {TOOL_KEYS.map((key) => {
@@ -504,6 +546,43 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
               </button>
             )
           })}
+
+          {/* Studio — recommended */}
+          <button
+            type="button"
+            onClick={() => navigate(EDITOR_PATH)}
+            className="relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 glass backdrop-blur-xl border-[var(--accent)]/30 text-[var(--text-primary)] card-hover hover:border-[var(--accent)]/60 hover:-translate-y-0.5"
+          >
+            <span className="absolute -top-2 -right-1.5 z-10 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-1.5 py-0.5 text-[9px] font-bold text-black leading-none shadow-[0_2px_8px_rgba(251,146,60,0.55)]">
+              {lang === 'zh' ? '推荐' : 'Hot'}
+            </span>
+            <div className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center text-[var(--accent)]">
+              {studioNavIcon}
+            </div>
+            <span className="whitespace-nowrap leading-tight text-center">
+              {lang === 'zh' ? '全能编辑' : 'Studio'}
+            </span>
+          </button>
+
+          {/* AI cards — under construction, distinct dashed style */}
+          {AI_COMING_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setComingToast(true)}
+              className="relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 glass backdrop-blur-xl border border-dashed border-white/10 text-[var(--text-dim)]/80 hover:text-[var(--text-primary)] hover:border-orange-400/40 card-hover"
+            >
+              <span className="absolute -top-2 -right-1.5 z-10 rounded-full bg-orange-500/15 border border-orange-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-orange-300 leading-none whitespace-nowrap">
+                🔥 {lang === 'zh' ? '建设中' : 'Soon'}
+              </span>
+              <div className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center text-orange-300/80">
+                {item.icon}
+              </div>
+              <span className="whitespace-nowrap leading-tight text-center">
+                {lang === 'zh' ? item.labelZh : item.labelEn}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -732,6 +811,13 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
           }}
           onClose={() => setRefineOpen(false)}
         />
+      )}
+
+      {/* Coming-soon toast for the AI cards */}
+      {comingToast && (
+        <div className="fixed bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full glass border border-[var(--accent)]/30 text-sm text-[var(--text-primary)] shadow-[0_8px_30px_rgba(0,0,0,0.45)] animate-in">
+          {lang === 'zh' ? '🚧 敬请期待，AI 功能正在建设中' : '🚧 Coming soon — we are building it'}
+        </div>
       )}
 
       <style>{`

@@ -10,7 +10,7 @@
 //    crawlers (Facebook/WhatsApp/Twitter/LinkedIn/Discord/…) get the ENGLISH
 //    landscape card (og-image.jpg, 1200×630).
 import { getRouteSeo } from './src/lib/seo'
-import { ldToScript, zhToolLd, zhHomeFaqLd, zhArticleLd } from './src/lib/seo-jsonld'
+import { ldToScript, zhToolLd, zhHomeFaqLd, zhArticleLd, zhStudioLd } from './src/lib/seo-jsonld'
 import type { ToolType } from './src/types'
 
 const TOOL_PATHS: Record<string, ToolType> = {
@@ -37,6 +37,10 @@ function escapeAttr(s: string): string {
 function zhJsonLdBlocks(path: string): string[] {
   if (path === '/') {
     return [ldToScript(zhHomeFaqLd())]
+  }
+  if (path === '/studio') {
+    const { howTo, faq } = zhStudioLd()
+    return [ldToScript(howTo), ldToScript(faq)]
   }
   const tool = TOOL_PATHS[path]
   if (tool) {

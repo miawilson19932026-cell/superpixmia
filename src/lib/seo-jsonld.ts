@@ -8,7 +8,7 @@
 // Text comes from seo-content-data.ts — the SAME strings rendered visibly in
 // SeoContent.tsx, so FAQ questions and HowTo steps always match visible content.
 import type { ToolType } from '../types'
-import { homeContent, toolContent } from './seo-content-data'
+import { homeContent, toolContent, studioContent } from './seo-content-data'
 import { helpArticles } from './help-articles'
 import { blogArticles } from './blog-articles'
 import { getRouteSeo } from './seo'
@@ -172,8 +172,16 @@ export function articlePageLd(pathname: string, title: string, description: stri
   return [organizationLd(), softwareLd(), breadcrumbLd(pathname), articleLd(pathname, title, description)]
 }
 
-// /studio — the combined single-image editor.
+const studioHowToName = {
+  en: 'How to Edit an Image Online with SuperPixMia Studio',
+  zh: '如何用 SuperPixMia Studio 在线编辑图片',
+}
+
+// /studio — the combined single-image editor. FAQ + HowTo text comes from the
+// SAME studioContent strings rendered visibly on the page (single source of
+// truth), so Google's rich results always match the visible content.
 export function editorPageLd(): object[] {
+  const c = studioContent.en
   return [
     organizationLd(),
     {
@@ -200,12 +208,43 @@ export function editorPageLd(): object[] {
       ],
     },
     breadcrumbLd('/studio'),
-    faqLd([
-      { q: 'Is SuperPixMia Studio free?', a: 'Yes — Studio is completely free and runs 100% in your browser. No upload, no account, no watermarks.' },
-      { q: 'Does Studio upload my image to a server?', a: 'No. Every tool processes the image locally on your device, so your photos never leave your computer.' },
-      { q: 'What can Studio do?', a: 'Studio combines rotation, cropping, text, logo stamps, freehand drawing, watermark removal, manual cutout, click-to-remove background, and resizing into one workspace for a single image.' },
-    ]),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: studioHowToName.en,
+      description: c.intro,
+      totalTime: 'PT1M',
+      tool: { '@type': 'HowToTool', name: 'SuperPixMia Studio' },
+      step: c.howToSteps.map((s, i) => ({
+        '@type': 'HowToStep',
+        position: i + 1,
+        name: s.title,
+        text: s.desc,
+      })),
+    },
+    faqLd(c.faqs),
   ]
+}
+
+// Chinese HowTo + FAQPage for /studio — injected by the Edge middleware for
+// Chinese users and the Baidu spider.
+export function zhStudioLd(): { howTo: object; faq: object } {
+  const c = studioContent.zh
+  const howTo: object = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: studioHowToName.zh,
+    description: c.intro,
+    totalTime: 'PT1M',
+    tool: { '@type': 'HowToTool', name: 'SuperPixMia 全能编辑 Studio' },
+    step: c.howToSteps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.title,
+      text: s.desc,
+    })),
+  }
+  return { howTo, faq: faqLd(c.faqs) }
 }
 
 export function zhArticleLd(pathname: string): object | null {

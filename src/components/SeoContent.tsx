@@ -5,6 +5,7 @@ import { toolPaths, toolPathList } from '../lib/routes'
 import {
   homeContent,
   toolContent,
+  studioContent,
   otherToolsLabels,
   helpArticleLinks,
 } from '../lib/seo-content-data'
@@ -72,14 +73,18 @@ const homeToolLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
 
 interface SeoContentProps {
   tool?: ToolType
+  /** 'studio' renders the /studio editor's own content variant. */
+  variant?: 'studio'
 }
 
-export default function SeoContent({ tool }: SeoContentProps) {
+export default function SeoContent({ tool, variant }: SeoContentProps) {
   const { lang } = useTranslation()
   const en = lang === 'en'
+  const isStudio = variant === 'studio'
 
-  // Tool page: focused variant + cross-links. Home page: full overview.
-  const content = tool ? toolContent[tool][lang] : homeContent[lang]
+  // Tool page: focused variant + cross-links. Studio: its own content variant.
+  // Home page: full overview.
+  const content = isStudio ? studioContent[lang] : tool ? toolContent[tool][lang] : homeContent[lang]
 
   return (
     <section aria-label={content.faqTitle} className="py-14 sm:py-20">
@@ -91,14 +96,27 @@ export default function SeoContent({ tool }: SeoContentProps) {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
             {en ? 'Free · No Upload · 100% Local' : '免费 · 免上传 · 100% 本地'}
           </span>
-          <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight">
-            <span className="text-gradient">
-              {content.h1}
-            </span>
-            <span className="mt-1 block text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
-              {content.headline}
-            </span>
-          </h1>
+          {/* /studio already has an <h1> at the top of the page, so the studio
+              variant renders this hero as <h2> to avoid duplicate H1s. */}
+          {isStudio ? (
+            <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight">
+              <span className="text-gradient">
+                {content.h1}
+              </span>
+              <span className="mt-1 block text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
+                {content.headline}
+              </span>
+            </h2>
+          ) : (
+            <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight">
+              <span className="text-gradient">
+                {content.h1}
+              </span>
+              <span className="mt-1 block text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
+                {content.headline}
+              </span>
+            </h1>
+          )}
           <p className="mx-auto mt-5 max-w-2xl text-sm sm:text-base leading-relaxed text-[var(--text-dim)]">
             {content.intro}
           </p>
@@ -110,8 +128,32 @@ export default function SeoContent({ tool }: SeoContentProps) {
           </p>
         </div>
 
-        {/* ── Tools grid (home overview) / other-tools cross-links (tool pages) ── */}
-        {tool ? (
+        {/* ── Tools grid (home overview) / other-tools cross-links (tool + studio pages) ── */}
+        {isStudio ? (
+          <div className="mt-12">
+            <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-[var(--text-dim)]">
+              {en ? 'Other free tools' : '其他免费工具'}
+            </h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              {toolPathList.map(({ tool: otherTool, path }) => (
+                <Link
+                  key={otherTool}
+                  to={path}
+                  className="group relative rounded-2xl glass border border-white/[0.06] p-5 card-hover transition-transform duration-200 hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="glass-icon h-9 w-9 rounded-lg text-[var(--accent)]">
+                      {toolIcons[otherTool]}
+                    </span>
+                    <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                      {otherToolsLabels[lang][otherTool]}
+                    </h2>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : tool ? (
           <div className="mt-12">
             <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-[var(--text-dim)]">
               {en ? 'Other free tools' : '其他免费工具'}
@@ -157,6 +199,31 @@ export default function SeoContent({ tool }: SeoContentProps) {
               </Link>
             ))}
           </div>
+        )}
+
+        {/* ── Studio features grid ("what you can do") ── */}
+        {content.features && content.features.length > 0 && (
+          <section className="mt-12">
+            <h2 className="flex items-center gap-2.5 text-lg font-bold text-[var(--text-primary)]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent)]/12 text-[var(--accent)]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
+                </svg>
+              </span>
+              {en ? 'What you can do' : 'Studio 都能做什么'}
+            </h2>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              {content.features.map((f, i) => (
+                <div key={f.title} className="group relative rounded-2xl glass border border-white/[0.06] p-5 card-hover transition-transform duration-200 hover:-translate-y-0.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="glass-icon h-7 w-7 shrink-0 rounded-lg text-xs font-bold text-[var(--accent)]">{i + 1}</span>
+                    <h3 className="text-base font-semibold text-[var(--text-primary)]">{f.title}</h3>
+                  </div>
+                  <p className="mt-2.5 text-sm leading-relaxed text-[var(--text-dim)]">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* ── HowTo timeline ── */}
@@ -225,8 +292,8 @@ export default function SeoContent({ tool }: SeoContentProps) {
           </div>
         </section>
 
-        {/* ── Help articles (cross-links, tool pages only) ── */}
-        {tool && (
+        {/* ── Help articles (cross-links, tool + studio pages) ── */}
+        {(tool || isStudio) && (
           <section className="mt-14">
             <h2 className="flex items-center gap-2.5 text-lg font-bold text-[var(--text-primary)]">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent)]/12 text-[var(--accent)]">
