@@ -149,6 +149,7 @@ const zh: Translations = {
   studioPickHint: '仅支持单张图片，可组合使用下方任意工具，最后下载',
   studioOpen: '选择图片',
   studioUploadNew: '更换图片',
+  studioDelete: '删除图片',
   studioImport: '导入图片',
   studioToolsLabel: '工具',
   studioRotate: '旋转',

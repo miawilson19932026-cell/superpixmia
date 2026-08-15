@@ -144,6 +144,7 @@ export interface Translations {
   studioPickHint: string
   studioOpen: string
   studioUploadNew: string
+  studioDelete: string
   studioImport: string
   studioToolsLabel: string
   studioRotate: string

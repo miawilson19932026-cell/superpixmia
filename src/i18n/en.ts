@@ -149,6 +149,7 @@ const en: Translations = {
   studioPickHint: 'Single image only — combine any tools below, then download',
   studioOpen: 'Choose image',
   studioUploadNew: 'Change image',
+  studioDelete: 'Delete image',
   studioImport: 'Import image',
   studioToolsLabel: 'Tools',
   studioRotate: 'Rotate',

@@ -35,18 +35,18 @@ export default function EditorPage() {
     if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files)
   }
 
-  if (source) {
-    return (
-      <div>
-        <EditorWorkspace source={source} onReset={() => setSource(null)} />
-        <SeoContent variant="studio" />
-      </div>
-    )
-  }
-
   return (
-    <div>
-      <div className="mx-auto max-w-2xl w-full px-3 sm:px-6 pt-14 sm:pt-16 pb-10">
+    <>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden"
+        onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = '' }} />
+      {source ? (
+        <div>
+          <EditorWorkspace source={source} onReset={() => setSource(null)} onReplace={() => inputRef.current?.click()} />
+          <SeoContent variant="studio" />
+        </div>
+      ) : (
+        <div>
+          <div className="mx-auto max-w-2xl w-full px-3 sm:px-6 pt-14 sm:pt-16 pb-10">
       <h1 className="text-center text-2xl sm:text-3xl font-black">
         <span className="text-gradient">{lang === 'zh' ? '全能编辑 Studio' : 'Studio Editor'}</span>
       </h1>
@@ -96,8 +96,6 @@ export default function EditorPage() {
             <span>{t.dropFormats}</span>
             <span>{t.dropMaxSize}</span>
           </div>
-          <input ref={inputRef} type="file" accept="image/*" className="hidden"
-            onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = '' }} />
         </div>
           <CatMascot />
         </div>
@@ -107,7 +105,9 @@ export default function EditorPage() {
         <StudioTutorial lang={lang} />
       </div>
 
-      <SeoContent variant="studio" />
-    </div>
+          <SeoContent variant="studio" />
+      </div>
+      )}
+    </>
   )
 }

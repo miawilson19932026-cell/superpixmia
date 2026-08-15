@@ -113,10 +113,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export default function EditorWorkspace({
-  source, onReset,
+  source, onReset, onReplace,
 }: {
   source: SourceImage
   onReset: () => void
+  onReplace: () => void
 }) {
   const { t, lang } = useTranslation()
 
@@ -515,8 +516,7 @@ export default function EditorWorkspace({
       // phone photos — on a 3000px photo it becomes a ~6px dot and the user
       // "can't find the mouse". Scale the glyph by 1/scale so it always renders
       // at a constant, human-sized size on screen (~24px).
-      const ov = overRef.current
-      const scale = ov && ov.width ? ov.getBoundingClientRect().width / ov.width : 1
+      const scale = overRef.current ? dispGeom().scale : 1
       drawWand(ctx, hoverPt.x, hoverPt.y, 1 / scale)
     }
   }
@@ -573,12 +573,26 @@ export default function EditorWorkspace({
   }
 
   // ── Pointer handling (image-pixel coordinates) ──
+  // The canvas is CSS-stretched with object-contain, so the image may be
+  // letterboxed inside its box. Map screen→image using the fitted content
+  // geometry (offset + scale) so tool coordinates stay accurate.
+  const dispGeom = () => {
+    const ov = overRef.current!
+    const r = ov.getBoundingClientRect()
+    const scale = Math.min(r.width / curW, r.height / curH)
+    return {
+      scale,
+      offX: (r.width - curW * scale) / 2,
+      offY: (r.height - curH * scale) / 2,
+    }
+  }
   const toImg = (e: React.PointerEvent) => {
     const ov = overRef.current!
     const r = ov.getBoundingClientRect()
+    const g = dispGeom()
     return {
-      x: ((e.clientX - r.left) / r.width) * curW,
-      y: ((e.clientY - r.top) / r.height) * curH,
+      x: Math.min(curW, Math.max(0, (e.clientX - r.left - g.offX) / g.scale)),
+      y: Math.min(curH, Math.max(0, (e.clientY - r.top - g.offY) / g.scale)),
     }
   }
 
@@ -653,7 +667,7 @@ export default function EditorWorkspace({
   const startCrop = (p: { x: number; y: number }) => {
     const r = cropRect
     if (!r) return
-    const hit = (14 / overRef.current!.getBoundingClientRect().width) * curW
+    const hit = 14 / dispGeom().scale
     const near = (a: number, b: number) => Math.abs(a - b) <= hit
     const atL = near(p.x, r.x), atR = near(p.x, r.x + r.width)
     const atT = near(p.y, r.y), atB = near(p.y, r.y + r.height)
@@ -1288,11 +1302,20 @@ export default function EditorWorkspace({
         <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
-            onClick={onReset}
+            onClick={onReplace}
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-sm)] glass text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all shrink-0"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-            <span className="hidden sm:inline">{t.studioUploadNew}</span>
+            {t.studioUploadNew}
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            title={t.studioDelete}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-sm)] glass text-xs text-red-300/80 hover:text-red-300 transition-all shrink-0"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+            {t.studioDelete}
           </button>
           <span className="text-xs text-[var(--text-dim)] truncate font-mono">{source.file.name}</span>
           <span className="text-[11px] text-[var(--text-dim)]/60 shrink-0">{curW} × {curH}px</span>
@@ -1340,9 +1363,9 @@ export default function EditorWorkspace({
           {/* Canvas — base in-flow, overlay absolute inset-0 (same pattern as
               RemoveWatermarkPanel) so both canvases always align at any scale. */}
           <div className="order-2 lg:order-1 flex-1 min-w-0 glass rounded-[var(--radius-lg)] p-3 sm:p-4">
-            <div className="flex justify-center">
+            <div className="flex items-center justify-center">
               <div
-                className="relative w-fit select-none checkerboard rounded-[var(--radius-md)]"
+                className="relative w-full h-[45vh] sm:h-[58vh] select-none checkerboard rounded-[var(--radius-md)]"
                 style={{ touchAction: 'none', cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool] : 'default' }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -1353,11 +1376,11 @@ export default function EditorWorkspace({
               >
                 <canvas
                   ref={baseRef}
-                  className="block max-w-full max-h-[58vh] w-auto h-auto rounded-[var(--radius-md)]"
+                  className="absolute inset-0 w-full h-full object-contain rounded-[var(--radius-md)]"
                 />
                 <canvas
                   ref={overRef}
-                  className="absolute inset-0 w-full h-full rounded-[var(--radius-md)] pointer-events-none"
+                  className="absolute inset-0 w-full h-full object-contain rounded-[var(--radius-md)] pointer-events-none"
                   style={{ opacity: processing ? 0.6 : 1 }}
                 />
                 {processing && (

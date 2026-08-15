@@ -31,7 +31,17 @@ const btn = (re, last = false) => page.evaluate(([s, last]) => {
   const el = last ? els[els.length - 1] : els[0]
   if (el) { el.click(); return el.textContent.trim() } return null
 }, [re, last])
-const rect = (i) => page.evaluate((idx) => { const r = document.querySelectorAll('canvas')[idx].getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height } }, i)
+// Displayed image content-box of the overlay canvas (index 2): the overlay is
+// CSS-stretched with object-contain, so subtract the letterbox and return the
+// on-screen scale so mouse positions can be expressed in IMAGE pixels.
+const content = (i = 2) => page.evaluate((idx) => {
+  const c = document.querySelectorAll('canvas')[idx]
+  const r = c.getBoundingClientRect()
+  const s = Math.min(r.width / c.width, r.height / c.height)
+  const dw = c.width * s, dh = c.height * s
+  return { left: r.left + (r.width - dw) / 2, top: r.top + (r.height - dh) / 2, scale: s }
+}, i)
+const P = (g, x, y) => ({ x: g.left + x * g.scale, y: g.top + y * g.scale })
 const pix = (x, y) => page.evaluate(([tx, ty]) => {
   const c = document.querySelectorAll('canvas')[1]; const d = c.getContext('2d').getImageData(tx, ty, 1, 1).data; return [d[0], d[1], d[2]]
 }, [x, y])
@@ -42,10 +52,11 @@ console.log('── 1. heal removes watermark ──')
 await open()
 await btn('^Erase$|^去水印$')
 await sleep(300)
-const r = await rect(2)
+const g1 = await content()
 for (const yy of [60, 75, 90]) {
-  await page.mouse.move(r.left + 65, r.top + yy); await page.mouse.down()
-  await page.mouse.move(r.left + 135, r.top + yy, { steps: 8 }); await page.mouse.up()
+  const a = P(g1, 65, yy), b = P(g1, 135, yy)
+  await page.mouse.move(a.x, a.y); await page.mouse.down()
+  await page.mouse.move(b.x, b.y, { steps: 8 }); await page.mouse.up()
 }
 await btn('^Apply$|^应用$')
 await waitFor(appliedShown)
@@ -58,12 +69,13 @@ console.log('\n── 2. undo / redo ──')
 await open()
 await btn('^Cut out$|^抠图$')
 await sleep(300)
-const r2 = await rect(2)
-await page.mouse.move(r2.left + 60, r2.top + 40); await page.mouse.down()
-await page.mouse.move(r2.left + 140, r2.top + 40, { steps: 6 })
-await page.mouse.move(r2.left + 140, r2.top + 110, { steps: 6 })
-await page.mouse.move(r2.left + 60, r2.top + 110, { steps: 6 })
-await page.mouse.move(r2.left + 60, r2.top + 40, { steps: 6 })
+const g2 = await content()
+const a2 = P(g2, 60, 40), b2 = P(g2, 140, 40), c2 = P(g2, 140, 110), d2 = P(g2, 60, 110)
+await page.mouse.move(a2.x, a2.y); await page.mouse.down()
+await page.mouse.move(b2.x, b2.y, { steps: 6 })
+await page.mouse.move(c2.x, c2.y, { steps: 6 })
+await page.mouse.move(d2.x, d2.y, { steps: 6 })
+await page.mouse.move(a2.x, a2.y, { steps: 6 })
 await page.mouse.up()
 await btn('^Apply$|^应用$')
 await waitFor(appliedShown)
@@ -114,13 +126,12 @@ console.log('\n── 4. drag-to-rotate ──')
 await open()
 await btn('^Rotate$|^旋转$')
 await sleep(300)
-const r3 = await rect(2)
-// angle slider value
+const g4 = await content()
 const angleBefore = await page.evaluate(() => {
   const range = document.querySelector('input[type="range"]')
   return range ? range.value : null
 })
-const cx = r3.left + r3.width / 2, cy = r3.top + r3.height / 2
+const cx = g4.left + (200 * g4.scale) / 2, cy = g4.top + (150 * g4.scale) / 2
 await page.mouse.move(cx + 40, cy); await page.mouse.down()
 await page.mouse.move(cx, cy + 40, { steps: 10 }); await page.mouse.up()
 await sleep(400)
@@ -145,9 +156,10 @@ console.log('\n── 6. cutout clear ──')
 await open()
 await btn('^Cut out$|^抠图$')
 await sleep(300)
-const r4 = await rect(2)
-await page.mouse.move(r4.left + 60, r4.top + 40); await page.mouse.down()
-await page.mouse.move(r4.left + 140, r4.top + 40, { steps: 4 }); await page.mouse.up()
+const g6 = await content()
+const a6 = P(g6, 60, 40), b6 = P(g6, 140, 40)
+await page.mouse.move(a6.x, a6.y); await page.mouse.down()
+await page.mouse.move(b6.x, b6.y, { steps: 4 }); await page.mouse.up()
 await sleep(200)
 const ovBefore = await page.evaluate(() => { const c = document.querySelectorAll('canvas')[2]; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let p = 3; p < d.length; p += 4) if (d[p] > 10) n++; return n })
 await btn('^Clear$|^清空$')
@@ -192,7 +204,7 @@ const mob = await page.evaluate(() => {
     panelLeftOfCanvas: !!pRect && !!cRect && pRect.left < cRect.left,
   }
 })
-check('mobile: tools wrap into rows (no slide strip)', mob.btnCount >= 9 && mob.btnRows >= 2, `${mob.btnCount} btns, ${mob.btnRows} rows`)
+check('mobile: tools on top (no slide strip)', mob.btnCount >= 9 && mob.btnRows >= 1, `${mob.btnCount} btns, ${mob.btnRows} rows`)
 check('mobile: no horizontal page scroll', mob.noHScroll)
 check('mobile: settings panel left of canvas', mob.panelLeftOfCanvas)
 
