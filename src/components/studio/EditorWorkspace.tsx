@@ -139,6 +139,10 @@ export default function EditorWorkspace({
   const baseRef = useRef<HTMLCanvasElement>(null)
   const overRef = useRef<HTMLCanvasElement>(null)
   const dragRef = useRef<{ mode: string; startX: number; startY: number; orig: CropRect } | null>(null)
+  // Canvas box is sized to EXACTLY fit the image (no letterbox), so the fixed
+  // h-[45vh] box never leaves empty bands around small/portrait images.
+  const canvasCardRef = useRef<HTMLDivElement>(null)
+  const [disp, setDisp] = useState({ w: 0, h: 0 })
 
   // ── Per-tool state ──
   const [rotate, setRotate] = useState({ angle: 0, flipX: false, flipY: false })
@@ -215,6 +219,27 @@ export default function EditorWorkspace({
     c.width = curW
     c.height = curH
     c.getContext('2d')!.drawImage(curImg, 0, 0)
+  }, [curImg, curW, curH])
+
+  // Fit the canvas box to the image (object-contain vs the available area) so
+  // there is ZERO dead space: small images upscale to fill one axis, tall/wide
+  // images fill that axis exactly. Box aspect always equals image aspect.
+  useEffect(() => {
+    const card = canvasCardRef.current
+    if (!card || !curImg) return
+    const fit = () => {
+      // p-3 = 24px, sm:p-4 = 32px of horizontal padding inside the card.
+      const pad = window.innerWidth < 640 ? 24 : 32
+      const availW = card.clientWidth - pad
+      const availH = (window.innerWidth < 640 ? 0.45 : 0.58) * window.innerHeight
+      const s = Math.min(availW / curW, availH / curH)
+      setDisp({ w: Math.max(1, Math.round(curW * s)), h: Math.max(1, Math.round(curH * s)) })
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(card)
+    window.addEventListener('resize', fit)
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit) }
   }, [curImg, curW, curH])
 
   // Load the "seen" set once (sessionStorage — read in an effect so the SSR
@@ -1357,16 +1382,21 @@ export default function EditorWorkspace({
           {rail}
         </div>
 
-        {/* Canvas + panel — mobile: panel is a LEFT sidebar beside the canvas
-            (order 1/2); desktop keeps [canvas | panel] (lg:order 1/2). */}
-        <div className="flex flex-1 min-w-0 flex-row gap-3">
+        {/* Canvas + panel — mobile: canvas full-width on top, panel BELOW it
+            (tools already occupy the top row); desktop: [canvas | panel]. */}
+        <div className="flex flex-1 min-w-0 flex-col lg:flex-row gap-3">
           {/* Canvas — base in-flow, overlay absolute inset-0 (same pattern as
               RemoveWatermarkPanel) so both canvases always align at any scale. */}
-          <div className="order-2 lg:order-1 flex-1 min-w-0 glass rounded-[var(--radius-lg)] p-3 sm:p-4">
+          <div ref={canvasCardRef} className="flex-1 min-w-0 glass rounded-[var(--radius-lg)] p-3 sm:p-4">
             <div className="flex items-center justify-center">
               <div
-                className="relative w-full h-[45vh] sm:h-[58vh] select-none checkerboard rounded-[var(--radius-md)]"
-                style={{ touchAction: 'none', cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool] : 'default' }}
+                className="relative select-none checkerboard rounded-[var(--radius-md)]"
+                style={{
+                  width: disp.w ? disp.w : '100%',
+                  height: disp.h ? disp.h : '0.1px',
+                  touchAction: 'none',
+                  cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool] : 'default',
+                }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -1397,8 +1427,8 @@ export default function EditorWorkspace({
             </div>
           </div>
 
-          {/* Panel — left sidebar on mobile, right panel on desktop */}
-          <div className="order-1 lg:order-2 shrink-0 w-44 sm:w-48 lg:w-64 glass rounded-[var(--radius-lg)] p-3.5 space-y-3">
+          {/* Panel — full-width under the canvas on mobile, right panel on desktop */}
+          <div className="shrink-0 w-full lg:w-64 glass rounded-[var(--radius-lg)] p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">
               {activeTool ? (t[STUDIO_TOOLS.find((x) => x.id === activeTool)!.labelKey] as string) : (lang === 'zh' ? '工具' : 'Tools')}

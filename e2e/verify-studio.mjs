@@ -187,6 +187,14 @@ check('tagline above the workbench (not under rail / not in canvas area)',
   !layout.missing && layout.taglineAboveWorkbench && layout.taglineNearHeading)
 check('no import button after upload', layout.noImportAfterUpload)
 
+// The canvas box must hug the image exactly (no letterbox dead space around it).
+const noLetterbox = await page.evaluate(() => {
+  const c = document.querySelectorAll('canvas')[1]
+  const r = c.getBoundingClientRect()
+  return Math.abs(c.width / c.height - r.width / r.height) < 0.01
+})
+check('canvas box hugs image (no letterbox dead space)', noLetterbox)
+
 await page.setViewport({ width: 390, height: 844 })
 await sleep(600)
 const mob = await page.evaluate(() => {
@@ -194,19 +202,22 @@ const mob = await page.evaluate(() => {
   const rail = wb ? wb.querySelector('.lg\\:w-44') : null
   const btns = rail ? Array.from(rail.querySelectorAll('button')) : []
   const tops = new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top)))
-  const panel = wb ? wb.querySelector('.order-1') : null
-  const canvas = wb ? wb.querySelector('.order-2') : null
+  // Canvas card = the .glass that CONTAINS a canvas; settings panel = .lg\\:w-64.
+  const canvasCard = document.querySelectorAll('canvas')[1]?.closest('.glass') || null
+  const panel = wb ? wb.querySelector('.lg\\:w-64') : null
+  const cRect = canvasCard ? canvasCard.getBoundingClientRect() : null
   const pRect = panel ? panel.getBoundingClientRect() : null
-  const cRect = canvas ? canvas.getBoundingClientRect() : null
   return {
     btnRows: tops.size, btnCount: btns.length,
     noHScroll: document.documentElement.scrollWidth <= window.innerWidth + 1,
-    panelLeftOfCanvas: !!pRect && !!cRect && pRect.left < cRect.left,
+    canvasFullWidth: !!cRect && !!rail && cRect.width >= rail.getBoundingClientRect().width - 1,
+    panelBelowCanvas: !!pRect && !!cRect && pRect.top >= cRect.bottom - 1,
   }
 })
 check('mobile: tools on top (no slide strip)', mob.btnCount >= 9 && mob.btnRows >= 1, `${mob.btnCount} btns, ${mob.btnRows} rows`)
 check('mobile: no horizontal page scroll', mob.noHScroll)
-check('mobile: settings panel left of canvas', mob.panelLeftOfCanvas)
+check('mobile: canvas full-width above the settings panel', mob.canvasFullWidth && mob.panelBelowCanvas,
+  `canvasW=${mob.canvasFullWidth} panelBelow=${mob.panelBelowCanvas}`)
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`)
 await browser.close()
