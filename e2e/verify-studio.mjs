@@ -187,14 +187,6 @@ check('tagline above the workbench (not under rail / not in canvas area)',
   !layout.missing && layout.taglineAboveWorkbench && layout.taglineNearHeading)
 check('no import button after upload', layout.noImportAfterUpload)
 
-// The canvas box must hug the image exactly (no letterbox dead space around it).
-const noLetterbox = await page.evaluate(() => {
-  const c = document.querySelectorAll('canvas')[1]
-  const r = c.getBoundingClientRect()
-  return Math.abs(c.width / c.height - r.width / r.height) < 0.01
-})
-check('canvas box hugs image (no letterbox dead space)', noLetterbox)
-
 await page.setViewport({ width: 390, height: 844 })
 await sleep(600)
 const mob = await page.evaluate(() => {
@@ -218,6 +210,38 @@ check('mobile: tools on top (no slide strip)', mob.btnCount >= 9 && mob.btnRows 
 check('mobile: no horizontal page scroll', mob.noHScroll)
 check('mobile: canvas full-width above the settings panel', mob.canvasFullWidth && mob.panelBelowCanvas,
   `canvasW=${mob.canvasFullWidth} panelBelow=${mob.panelBelowCanvas}`)
+
+// ── 8. canvas box hugs image — every image type × breakpoint (no letterbox) ──
+console.log('\n── 8. no letterbox across image types & breakpoints ──')
+const openImg = async (img) => {
+  await page.goto(BASE + '/studio', { waitUntil: 'networkidle2', timeout: 60000 })
+  await (await page.$('input[type="file"]')).uploadFile(fileURLToPath(new URL(img, import.meta.url)))
+  await waitFor(() => page.evaluate(() => document.querySelectorAll('canvas')[1]?.width > 100))
+}
+const LB_IMAGES = [
+  ['portrait 1200×1600', './_photo.png'],
+  ['landscape 1000×800', './mobile-big.png'],
+  ['small 200×150', './test-pink-watermark.png'],
+]
+const LB_VIEWPORTS = [
+  ['mobile 390×844', 390, 844],
+  ['desktop 1400×900', 1400, 900],
+]
+for (const [bp, w, h] of LB_VIEWPORTS) {
+  for (const [label, img] of LB_IMAGES) {
+    await page.setViewport({ width: w, height: h })
+    await openImg(img)
+    await sleep(500)
+    const lb = await page.evaluate(() => {
+      const c = document.querySelectorAll('canvas')[1]
+      const r = c.getBoundingClientRect()
+      return { imgAspect: c.width / c.height, boxAspect: r.width / r.height }
+    })
+    check(`no letterbox — ${label} @ ${bp}`,
+      Math.abs(lb.imgAspect - lb.boxAspect) < 0.01,
+      `img=${lb.imgAspect.toFixed(3)} box=${lb.boxAspect.toFixed(3)}`)
+  }
+}
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`)
 await browser.close()

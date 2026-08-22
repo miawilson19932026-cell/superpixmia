@@ -28,3 +28,6 @@ dist-ssr
 
 # Vercel
 .vercel
+
+# Environment files (contain secrets — never commit)
+.env*
