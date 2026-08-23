@@ -13,6 +13,7 @@ import { HOME_TOOL, EDITOR_PATH } from './lib/routes'
 import { helpArticles } from './lib/help-articles'
 import { blogArticles } from './lib/blog-articles'
 import EditorPage from './components/studio/EditorPage'
+import GifMakerPage from './components/GifMakerPage'
 
 // A tool page = focused tool workspace + its per-tool SEO content block.
 // The workspace is the exact same component used on the homepage — only the
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/convert" element={<ToolPage tool="convert" />} />
         <Route path="/remove-watermark" element={<ToolPage tool="remove-watermark" />} />
         <Route path={EDITOR_PATH} element={<EditorPage />} />
+        <Route path="/gif-maker" element={<GifMakerPage />} />
         <Route path="/help" element={<HelpHome />} />
         {helpArticles.map((a) => (
           <Route key={a.path} path={a.path} element={<HelpArticlePage data={a} />} />

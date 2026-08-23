@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 // The combined single-image editor's tool ids. These are NOT part of ToolType —
 // they live only inside the /studio workbench.
 export type StudioToolId =
+  | 'select'
   | 'rotate'
   | 'crop'
   | 'text'
@@ -11,19 +12,32 @@ export type StudioToolId =
   | 'heal'
   | 'cutout'
   | 'remove'
+  | 'stamp'
   | 'resize'
 
 // Tools that paint / mask on the canvas get a "Clear" in their panel; the rest
-// are pure-parameter transforms.
-export const PAINT_TOOLS: StudioToolId[] = ['pencil', 'heal', 'cutout', 'remove', 'text', 'logo']
+// are pure-parameter transforms. Select is the neutral resting state — it never
+// draws, it only lets the user pan / zoom to inspect the result.
+export const PAINT_TOOLS: StudioToolId[] = ['pencil', 'heal', 'cutout', 'remove', 'stamp', 'text', 'logo']
 
 export interface StudioToolDef {
   id: StudioToolId
-  labelKey: 'studioRotate' | 'studioCrop' | 'studioText' | 'studioLogo' | 'studioPencil' | 'studioHeal' | 'studioCutout' | 'studioRemove' | 'studioResize'
+  labelKey: 'studioSelect' | 'studioRotate' | 'studioCrop' | 'studioText' | 'studioLogo' | 'studioPencil' | 'studioHeal' | 'studioCutout' | 'studioRemove' | 'studioStamp' | 'studioResize'
   icon: ReactNode
 }
 
 export const STUDIO_TOOLS: StudioToolDef[] = [
+  {
+    id: 'select',
+    labelKey: 'studioSelect',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+        {/* mouse-pointer cursor — inspect / pan the result */}
+        <path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+        <path d="m13 13 6 6" />
+      </svg>
+    ),
+  },
   {
     id: 'rotate',
     labelKey: 'studioRotate',
@@ -113,6 +127,18 @@ export const STUDIO_TOOLS: StudioToolDef[] = [
         <path d="M7 8H3" />
         <path d="M21 16h-4" />
         <path d="M11 3H9" />
+      </svg>
+    ),
+  },
+  {
+    id: 'stamp',
+    labelKey: 'studioStamp',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+        {/* clone stamp — two overlapping source/target circles */}
+        <circle cx="10" cy="13" r="5.5" />
+        <circle cx="15" cy="8" r="3.5" />
+        <path d="M5 3v3M3.5 4.5h3M20 18v3M18.5 19.5h3" />
       </svg>
     ),
   },

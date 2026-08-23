@@ -3,9 +3,9 @@
 //  1. Home header shows the Sign in button.
 //  2. Clicking it opens the LoginModal (email + password + tabs).
 //  3. Submitting without Supabase env shows a friendly inline error (no crash).
-//  4. Batch ZIP gate: on /compress in batch mode with 2 processed images, the
-//     button reads "Sign in to download ZIP" and clicking opens the modal
-//     instead of downloading.
+//  4. Batch ZIP quota: on /compress in batch mode with 2 processed images, the
+//     1st download fires free (no login); the 2nd opens the login modal (site-
+//     wide free-download quota).
 import puppeteer from 'puppeteer-core'
 import { fileURLToPath } from 'url'
 
@@ -120,8 +120,14 @@ check('code method shows send-code button', !!codeSendBtn, codeSendBtn || '')
 await page.mouse.click(40, 40)
 await sleep(400)
 
-// ── 6. Batch ZIP gate on /compress ──
+// ── 6. Batch ZIP download: 1st free, 2nd asks to sign in ──
 await page.goto(BASE + '/compress', { waitUntil: 'networkidle2', timeout: 60000 })
+await page.evaluate(() => {
+  localStorage.removeItem('spm-free-dl') // fresh download quota
+  window.__dl = []
+  const orig = HTMLAnchorElement.prototype.click
+  HTMLAnchorElement.prototype.click = function () { if (this.download) window.__dl.push(this.download); return orig.call(this) }
+})
 // Switch to batch mode
 const toggled = await page.evaluate(() => {
   const b = Array.from(document.querySelectorAll('button')).find((x) => /^批量$|^Batch$/.test((x.textContent || '').trim()))
@@ -146,20 +152,28 @@ const dlLabel = await waitFor(() => page.evaluate(() => {
   return (b.textContent || '').replace(/↓/g, '').trim()
 }), 30000)
 check('download button rendered after processing', !!dlLabel, dlLabel || '')
-check('batch button reads "Sign in to download ZIP" when logged out', !!dlLabel && /download ZIP|下载ZIP/i.test(dlLabel), dlLabel || '')
+check('batch button is a plain download (no login label)', !!dlLabel && !/sign in|登录/.test(dlLabel), dlLabel || '')
 
-// Click it → modal opens instead of downloading
-const clicked = await page.evaluate(() => {
+// First click (fresh quota) → the ZIP actually downloads (free, no login).
+const clicked1 = await page.evaluate(() => {
   const b = Array.from(document.querySelectorAll('button')).find((x) => (x.textContent || '').includes('↓'))
   if (!b) return false
   b.click()
   return true
 })
-const gateModal = await waitFor(() => page.evaluate(() => !!document.querySelector('input[type=email]')))
-check('batch ZIP click opens login modal (gated)', !!clicked && !!gateModal)
+const fired = await waitFor(() => page.evaluate(() => window.__dl.length > 0), 30000)
+check('batch 1st download fires (free, no login)', !!clicked1 && !!fired,
+  JSON.stringify(await page.evaluate(() => window.__dl)))
 
-const navigations = await page.evaluate(() => performance.getEntriesByType('navigation').length)
-check('no unexpected download navigation', navigations >= 0)
+// Second click → quota exhausted → login modal opens instead of downloading.
+await page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('button')).find((x) => (x.textContent || '').includes('↓'))
+  b && b.click()
+})
+const gateModal = await waitFor(() => page.evaluate(() => !!document.querySelector('input[type=email]')))
+check('batch 2nd download opens login modal', !!gateModal)
+const dlCount2 = await page.evaluate(() => window.__dl.length)
+check('batch 2nd download blocked (no new download)', dlCount2 === 1, `${dlCount2} downloads`)
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`)
 if (pageErrors.length) console.log('page errors:', pageErrors)

@@ -16,8 +16,26 @@ await page.setViewport({ width: 1400, height: 900 })
 page.on('pageerror', (e) => console.log('pageerror:', e.message))
 page.on('console', (m) => { if (m.type() === 'error') console.log('console.error:', m.text()) })
 
-const open = async () => {
+const open = async (authed = false) => {
   await page.goto(BASE + '/studio', { waitUntil: 'networkidle2', timeout: 60000 })
+  // Deterministic auth state per section: signed-in sections inject a fake
+  // Supabase session (fixed storageKey 'spm-auth-token'); the rest clear it.
+  // Reloading afterwards keeps every section starting from a known state.
+  // NOTE: created_at is 2020 (NOT "now") — AuthProvider treats accounts < 2 min
+  // old as needing a password-setup prompt, and that modal would block the canvas.
+  await page.evaluate((a) => {
+    if (a) {
+      localStorage.setItem('spm-auth-token', JSON.stringify({
+        access_token: 'e2e-fake-token', refresh_token: 'e2e-fake-refresh', expires_in: 3600,
+        expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'bearer',
+        user: { id: 'e2e-user', email: 'e2e@test.com', aud: 'authenticated', role: 'authenticated', created_at: '2020-01-01T00:00:00.000Z' },
+      }))
+    } else {
+      localStorage.removeItem('spm-auth-token')
+      localStorage.removeItem('spm-free-dl') // fresh free-download quota per section
+    }
+  }, authed)
+  await page.reload({ waitUntil: 'networkidle2', timeout: 60000 })
   await page.evaluate(() => {
     window.__dl = []
     const orig = HTMLAnchorElement.prototype.click
@@ -102,24 +120,55 @@ const cornerRedo = await page.evaluate(() => {
 })
 check('redo re-applied cutout (corner transparent)', cornerRedo === 0, `alpha=${cornerRedo}`)
 
-// ── 3. Download dialog ──
-console.log('\n── 3. download dialog ──')
+// ── 3. Site-wide free-download quota: 1st download free, 2nd asks to sign in ──
+console.log('\n── 3. free-download quota (1st free, 2nd → login, signed-in unlimited) ──')
+const dlDialogState = () => page.evaluate(() => {
+  const body = document.body.textContent || ''
+  // Keyed off the "Dimensions" label — the image-info badge ALWAYS shows the
+  // "N × Mpx" text next to the filename, so dims alone can't detect the dialog.
+  const hasDims = /Dimensions|尺寸/.test(body) && /\d+ × \d+px/.test(body)
+  const hasFmt = /PNG|JPEG|WebP/.test(body)
+  const hasLogin = !!document.querySelector('input[type="email"]')
+  const reason = /不限次|unlimited/.test(body)
+  return { hasDims, hasFmt, hasLogin, reason }
+})
+
+// 3a. Logged out with fresh quota → the confirm dialog works, download fires.
 await open()
 await btn('Download$|下载$')
 await sleep(400)
-const dlDialog = await page.evaluate(() => {
-  const body = document.body.textContent || ''
-  const hasDims = /Dimensions|尺寸/.test(body) && /\d+ × \d+px/.test(body)
-  const hasFmt = /PNG|JPEG|WebP/.test(body)
-  return { hasDims, hasFmt }
-})
-check('dialog shows readonly dims', dlDialog.hasDims)
-check('dialog shows format options', dlDialog.hasFmt)
+const firstDlg = await dlDialogState()
+check('logged-out 1st download: dialog shows dims', firstDlg.hasDims)
+check('logged-out 1st download: dialog shows formats', firstDlg.hasFmt)
 await btn('^PNG$')
-await btn('Download$|下载$', true)  // last matching = the modal's confirm button
+await btn('Download$|下载$', true) // last matching = the dialog's confirm button
 await sleep(1500)
-const dl = await page.evaluate(() => window.__dl)
-check('dialog download fires', dl.length > 0, dl[0] || '')
+const dl1 = await page.evaluate(() => window.__dl.length)
+check('logged-out 1st download fires (free, no login)', dl1 === 1, `${dl1} downloads`)
+
+// 3b. Same logged-out session, 2nd download → quota exhausted → login modal.
+await btn('Download$|下载$')
+await sleep(400)
+await btn('^PNG$')
+await btn('Download$|下载$', true)
+await sleep(800)
+const gate2 = await dlDialogState()
+const dl2 = await page.evaluate(() => window.__dl.length)
+check('2nd download blocked: login modal opens, no new download', gate2.hasLogin && dl2 === dl1, `login=${gate2.hasLogin}, dl=${dl1}→${dl2}`)
+check('login modal says downloads are unlimited after sign-in', gate2.reason)
+
+// 3c. Signed-in (injected session) → dialog works, download fires (unlimited).
+await open(true)
+await btn('Download$|下载$')
+await sleep(400)
+const signedDlg = await dlDialogState()
+check('signed-in: dialog shows dims', signedDlg.hasDims)
+check('signed-in: dialog shows formats', signedDlg.hasFmt)
+await btn('^PNG$')
+await btn('Download$|下载$', true)
+await sleep(1500)
+const dl3 = await page.evaluate(() => window.__dl.length)
+check('signed-in download fires', dl3 === 1, `${dl3} downloads`)
 
 // ── 4. drag-to-rotate ──
 console.log('\n── 4. drag-to-rotate ──')
@@ -178,7 +227,7 @@ const layout = await page.evaluate(() => {
   const heading = tagline.parentElement && tagline.parentElement.querySelector('h1')
   return {
     missing: false,
-    taglineAboveWorkbench: !wb && !tagline.closest('.lg\\:w-44') && !tagline.closest('.flex-1'),
+    taglineAboveWorkbench: !wb && !tagline.closest('.lg\\:w-20') && !tagline.closest('.flex-1'),
     taglineNearHeading: !!heading,
     noImportAfterUpload: importBtn === undefined,
   }
@@ -191,7 +240,7 @@ await page.setViewport({ width: 390, height: 844 })
 await sleep(600)
 const mob = await page.evaluate(() => {
   const wb = document.querySelector('.flex.flex-col.lg\\:flex-row')
-  const rail = wb ? wb.querySelector('.lg\\:w-44') : null
+  const rail = wb ? wb.querySelector('.lg\\:w-20') : null
   const btns = rail ? Array.from(rail.querySelectorAll('button')) : []
   const tops = new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top)))
   // Canvas card = the .glass that CONTAINS a canvas; settings panel = .lg\\:w-64.
@@ -242,6 +291,145 @@ for (const [bp, w, h] of LB_VIEWPORTS) {
       `img=${lb.imgAspect.toFixed(3)} box=${lb.boxAspect.toFixed(3)}`)
   }
 }
+
+// ── 9. New fixes: workspace reset, crop re-seed after undo, ratio lock, zoom, dim pill ──
+console.log('\n── 9. new interaction fixes ──')
+await page.setViewport({ width: 1400, height: 900 })
+
+// 9a. Uploading a new image fully resets the workspace (stale edits gone).
+await open()
+await btn('^Rotate$|^旋转$')
+await sleep(200)
+await btn('^Apply$|^应用$')
+await waitFor(appliedShown)
+await sleep(1000)
+await (await page.$('input[type="file"]')).uploadFile(fileURLToPath(new URL('./_photo.png', import.meta.url)))
+await waitFor(() => page.evaluate(() => document.querySelectorAll('canvas')[1]?.width > 1000))
+const newCanvasW = await page.evaluate(() => document.querySelectorAll('canvas')[1].width)
+check('new image replaces canvas (1200px wide)', newCanvasW === 1200, `canvasW=${newCanvasW}`)
+check('new image resets undo stack', (await undoDisabled()) === true)
+
+// 9b. Crop → apply switches to Select (clean result, no lingering crop box).
+// Undo reverts the image but stays in Select — nothing to re-click.
+await open()
+await btn('^Crop$|^裁剪$')
+await sleep(400)
+const ovCount = () => page.evaluate(() => {
+  const c = document.querySelectorAll('canvas')[2]
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data
+  let n = 0
+  for (let p = 3; p < d.length; p += 4) if (d[p] > 10) n++
+  return n
+})
+const applyBtnDisabled = () => page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('button')).find((x) => /^Apply$|^应用$/.test(x.textContent || ''))
+  return b ? b.disabled : null
+})
+check('crop box drawn on overlay', (await ovCount()) > 0)
+await btn('^Apply$|^应用$')
+await waitFor(appliedShown)
+await sleep(1000)
+// Apply switches to the Select tool → overlay cleared so the result is seen
+// clean, and Apply is disabled (nothing to commit in Select mode).
+check('apply switches to Select (overlay cleared)', (await ovCount()) === 0)
+check('Select has nothing to apply (button disabled)', (await applyBtnDisabled()) === true)
+// Undo reverts the image but Select stays — the overlay stays clean.
+await btn('Undo$|撤销$')
+await sleep(1200)
+check('undo stays in Select (overlay still clean)', (await ovCount()) === 0)
+
+// 9c. Aspect-ratio lock: pick 1:1 → the crop box becomes square.
+await open()
+await btn('^Crop$|^裁剪$')
+await sleep(300)
+await btn('^1:1$')
+await sleep(300)
+const ratio = await page.evaluate(() => {
+  const c = document.querySelectorAll('canvas')[2]
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data
+  const W = c.width, H = c.height
+  let minX = W, maxX = -1, minY = H, maxY = -1
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (d[(y * W + x) * 4 + 3] < 10) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+  return { w: maxX - minX + 1, h: maxY - minY + 1 }
+})
+check('crop 1:1 ratio locked', Math.abs(ratio.w - ratio.h) / Math.max(1, ratio.h) < 0.05, `${ratio.w}×${ratio.h}`)
+
+// 9d. Mouse-wheel view zoom (transform on the box) + reset back to fit.
+const boxTransform = () => page.evaluate(() => {
+  const b = document.querySelector('.relative.select-none.checkerboard')
+  return b ? getComputedStyle(b).transform : 'none'
+})
+await open()
+await sleep(400)
+check('default view zoom has no transform', (await boxTransform()) === 'none')
+await page.evaluate(() => {
+  const c = document.querySelectorAll('canvas')[1]
+  const r = c.getBoundingClientRect()
+  const card = c.closest('.overflow-hidden')
+  card.dispatchEvent(new WheelEvent('wheel', {
+    deltaY: -120, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2,
+    bubbles: true, cancelable: true,
+  }))
+})
+await sleep(300)
+const ztr = await boxTransform()
+check('wheel zoom applies a CSS transform', ztr !== 'none', ztr)
+await btn('^Reset$|^复位$')
+await sleep(300)
+check('reset button returns to fit', (await boxTransform()) === 'none')
+
+// 9e. Live dimensions shown in the RIGHT crop panel (moved off the canvas per
+// feedback) — always nonzero: current image size, or live crop-box size.
+await btn('^Crop$|^裁剪$')
+await sleep(400)
+const dims = await page.evaluate(() => {
+  return Array.from(document.querySelectorAll('.font-mono'))
+    .map((s) => s.textContent || '').filter((t) => /^\d+px$/.test(t))
+})
+check('live dimensions in right crop panel (no 0px)', dims.length >= 2 && !dims.some((d) => d === '0px'), dims.join(', ') || 'none')
+
+// ── 10. Clone stamp (临摹) ──
+console.log('\n── 10. clone stamp ──')
+await open()
+await btn('^Clone$|^临摹$')
+await sleep(300)
+const g10 = await content()
+// First click with no source sets the source point → emerald marker on overlay.
+const s10 = P(g10, 40, 40)
+await page.mouse.click(s10.x, s10.y)
+await sleep(300)
+const srcMarker = await page.evaluate(() => {
+  const d = document.querySelectorAll('canvas')[2].getContext('2d').getImageData(40, 40, 1, 1).data
+  return d[1] > 100 && d[1] > d[0] + 50 // emerald dot
+})
+check('first click sets source marker', srcMarker, `g=${srcMarker}`)
+// Drag from (100,100)→(160,160) clones source-region pixels onto the overlay.
+const a10 = P(g10, 100, 100), b10 = P(g10, 160, 160)
+await page.mouse.move(a10.x, a10.y); await page.mouse.down()
+await page.mouse.move(b10.x, b10.y, { steps: 10 }); await page.mouse.up()
+await sleep(300)
+const cloneOn = await page.evaluate(() => {
+  const d = document.querySelectorAll('canvas')[2].getContext('2d').getImageData(120, 120, 1, 1).data
+  return d[3] > 0 // brush spot painted with cloned pixels
+})
+check('brush stroke paints cloned pixels', cloneOn, `alpha=${cloneOn}`)
+await btn('^Apply$|^应用$')
+await waitFor(appliedShown)
+await sleep(1000)
+const stampAfter = await page.evaluate(() => {
+  const d = document.querySelectorAll('canvas')[2].getContext('2d').getImageData(120, 120, 1, 1).data
+  return d[3]
+})
+check('apply switches to select (overlay cleared)', stampAfter === 0, `alpha=${stampAfter}`)
 
 console.log(`\n=== ${pass} passed, ${fail} failed ===`)
 await browser.close()

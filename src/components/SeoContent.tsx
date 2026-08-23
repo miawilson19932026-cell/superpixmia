@@ -6,6 +6,7 @@ import {
   homeContent,
   toolContent,
   studioContent,
+  gifMakerContent,
   otherToolsLabels,
   helpArticleLinks,
 } from '../lib/seo-content-data'
@@ -73,18 +74,20 @@ const homeToolLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
 
 interface SeoContentProps {
   tool?: ToolType
-  /** 'studio' renders the /studio editor's own content variant. */
-  variant?: 'studio'
+  /** Standalone pages with their own content variant (they already render an <h1>). */
+  variant?: 'studio' | 'gif-maker'
 }
 
 export default function SeoContent({ tool, variant }: SeoContentProps) {
   const { lang } = useTranslation()
   const en = lang === 'en'
   const isStudio = variant === 'studio'
+  const isGif = variant === 'gif-maker'
+  const isStandalone = isStudio || isGif
 
-  // Tool page: focused variant + cross-links. Studio: its own content variant.
-  // Home page: full overview.
-  const content = isStudio ? studioContent[lang] : tool ? toolContent[tool][lang] : homeContent[lang]
+  // Tool page: focused variant + cross-links. Studio / GIF Maker: their own
+  // content variants. Home page: full overview.
+  const content = isStudio ? studioContent[lang] : isGif ? gifMakerContent[lang] : tool ? toolContent[tool][lang] : homeContent[lang]
 
   return (
     <section aria-label={content.faqTitle} className="py-14 sm:py-20">
@@ -96,9 +99,9 @@ export default function SeoContent({ tool, variant }: SeoContentProps) {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
             {en ? 'Free · No Upload · 100% Local' : '免费 · 免上传 · 100% 本地'}
           </span>
-          {/* /studio already has an <h1> at the top of the page, so the studio
-              variant renders this hero as <h2> to avoid duplicate H1s. */}
-          {isStudio ? (
+          {/* /studio and /gif-maker already render an <h1> at the top of the
+              page, so standalone variants render this hero as <h2>. */}
+          {isStandalone ? (
             <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight">
               <span className="text-gradient">
                 {content.h1}
@@ -128,8 +131,8 @@ export default function SeoContent({ tool, variant }: SeoContentProps) {
           </p>
         </div>
 
-        {/* ── Tools grid (home overview) / other-tools cross-links (tool + studio pages) ── */}
-        {isStudio ? (
+        {/* ── Tools grid (home overview) / other-tools cross-links (tool + standalone pages) ── */}
+        {isStandalone ? (
           <div className="mt-12">
             <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-[var(--text-dim)]">
               {en ? 'Other free tools' : '其他免费工具'}
@@ -210,7 +213,7 @@ export default function SeoContent({ tool, variant }: SeoContentProps) {
                   <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
                 </svg>
               </span>
-              {en ? 'What you can do' : 'Studio 都能做什么'}
+              {en ? 'What you can do' : isStudio ? 'Studio 都能做什么' : 'GIF 合成器能做什么'}
             </h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {content.features.map((f, i) => (

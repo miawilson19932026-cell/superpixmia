@@ -685,6 +685,125 @@ export const studioContent: Record<'en' | 'zh', Content> = {
   },
 }
 
+export const gifMakerContent: Record<'en' | 'zh', Content> = {
+  en: {
+    h1: 'GIF Maker',
+    headline: 'Turn Multiple Images into an Animated GIF — Right in Your Browser',
+    intro:
+      'SuperPixMia GIF Maker stitches 2 or more images into a single animated GIF. Drop in the frames, drag to reorder them, pick a frame rate, and generate a looping GIF in seconds. Transparent PNG frames keep their transparency, so you can build animated stickers straight from your cut-out images. Perfect for memes, product shots, and the frame-by-frame AI animation workflow.',
+    privacy:
+      'Everything happens locally in your browser — your frames are never uploaded to any server. That makes GIF Maker safe for personal photos, brand assets, and work files. No account, no watermark, no hidden costs.',
+    howToTitle: 'How to make a GIF',
+    howToSteps: [
+      {
+        title: 'Add 2 or more frame images',
+        desc: 'Click the upload area or drag multiple images in at once. PNG, JPEG, WebP, AVIF, GIF, BMP, SVG, ICO, and TIFF are supported — and transparent PNGs keep their transparent background.',
+      },
+      {
+        title: 'Order the frames and tune the settings',
+        desc: 'The images play in the order they are listed, so use the up / down buttons to arrange them. Set the frame rate (1–30 fps), toggle infinite loop, and optionally cap the max edge to keep the file small.',
+      },
+      {
+        title: 'Generate and download',
+        desc: 'Click Generate GIF to preview the animation instantly, then Download to save it. Frames of different sizes are automatically centered on a transparent canvas.',
+      },
+    ],
+    features: [
+      { title: 'Transparent frames', desc: 'Cut-out PNGs keep their transparent background — build animated stickers directly.' },
+      { title: 'Frame rate control', desc: 'Choose any speed from 1 to 30 fps; higher is smoother but produces a larger file.' },
+      { title: 'Infinite loop', desc: 'Loop the animation forever, or play it through once.' },
+      { title: 'Smart downscaling', desc: 'Cap the longest edge at 256 / 512 / 1024 px to keep GIFs light and fast to load.' },
+      { title: 'Any common format', desc: 'PNG, JPEG, WebP, AVIF, GIF, BMP, SVG, ICO, and TIFF can all be used as frames.' },
+      { title: '100% local', desc: 'Every frame stays on your device — nothing is ever uploaded.' },
+    ],
+    faqTitle: 'GIF Maker FAQ',
+    faqs: [
+      {
+        q: 'Is SuperPixMia GIF Maker really free?',
+        a: 'Yes. Your first download is free with no account. After that, sign in to keep downloading unlimited GIFs — signing up is free too.',
+      },
+      {
+        q: 'Are my images uploaded to a server?',
+        a: 'No. GIF Maker encodes everything in your browser using the Canvas API and a client-side GIF encoder, so your frames never leave your device.',
+      },
+      {
+        q: 'Can I make a transparent GIF?',
+        a: 'Yes. Transparent PNG frames keep their transparency — the GIF preserves a per-frame transparent palette entry, which is exactly what animated stickers need.',
+      },
+      {
+        q: 'What if my frames are different sizes?',
+        a: 'Frames are automatically centered on a transparent canvas of the largest size, so mixed sizes still line up correctly.',
+      },
+      {
+        q: 'How many frames can I use?',
+        a: 'Up to 30 frames. Each frame can be any of the common image formats, and you can reorder or remove frames at any time.',
+      },
+      {
+        q: 'Why does my GIF look slightly blurry or big?',
+        a: 'GIF is an 8-bit format with a 256-color limit per frame, so subtle gradients can show minor banding. Keep the max edge at 512 or below for the best size-to-quality balance.',
+      },
+    ],
+  },
+  zh: {
+    h1: 'GIF 合成器',
+    headline: '把多张图片合成为动图 GIF，浏览器里直接搞定',
+    intro:
+      'SuperPixMia GIF 合成器把 2 张及以上的图片拼成一张动图 GIF。放入帧图片、拖动调整顺序、选好帧率，几秒钟就能生成一张循环播放的动图。透明 PNG 帧会保留透明背景，抠好的透明贴纸可以直接拿来做动图。做表情包、产品展示、以及「AI 逐帧生成动画」的工作流都特别合适。',
+    privacy:
+      '所有处理都在你的浏览器本地完成，帧图片绝不会上传到任何服务器。处理私人照片、品牌素材和工作文件都很安全。无需注册、无水印、无隐藏收费。',
+    howToTitle: '如何合成一张 GIF',
+    howToSteps: [
+      {
+        title: '添加 2 张及以上帧图片',
+        desc: '点击上传区域，或一次性把多张图片拖进来。支持 PNG、JPEG、WebP、AVIF、GIF、BMP、SVG、ICO、TIFF 等格式——透明 PNG 会保留透明背景。',
+      },
+      {
+        title: '排序帧并调整参数',
+        desc: '图片会按列表顺序播放，用「上移 / 下移」调整顺序。设置帧率（1–30 帧/秒）、是否无限循环，也可以限制最大边长让文件更小。',
+      },
+      {
+        title: '生成并下载',
+        desc: '点击「生成 GIF」立即预览动画效果，满意后点「下载」保存。尺寸不同的帧会自动居中铺在透明画布上。',
+      },
+    ],
+    features: [
+      { title: '透明帧', desc: '抠好的透明 PNG 保留透明背景，可以直接合成透明动图贴纸。' },
+      { title: '帧率可调', desc: '从 1 到 30 帧/秒随意选择，越高越流畅、文件也越大。' },
+      { title: '无限循环', desc: '动图无限循环播放，也可以选择只播放一次。' },
+      { title: '智能缩放', desc: '把最大边长限制在 256 / 512 / 1024px，动图更小、加载更快。' },
+      { title: '支持常见格式', desc: 'PNG、JPEG、WebP、AVIF、GIF、BMP、SVG、ICO、TIFF 都可以当帧图。' },
+      { title: '100% 本地处理', desc: '所有帧都留在你的设备上，绝不对外上传。' },
+    ],
+    faqTitle: 'GIF 合成器常见问题',
+    faqs: [
+      {
+        q: 'GIF 合成器真的免费吗？',
+        a: '免费。首次下载无需注册；之后登录即可不限次下载——注册也是免费的。',
+      },
+      {
+        q: '我的图片会被上传到服务器吗？',
+        a: '不会。GIF 合成器通过浏览器 Canvas API 和纯前端编码器完成所有工作，帧图片绝不会离开你的设备。',
+      },
+      {
+        q: '能做出透明背景的 GIF 吗？',
+        a: '可以。透明 PNG 帧会保留透明背景，GIF 里每一帧都有独立的透明色板，这正是透明动图贴纸需要的。',
+      },
+      {
+        q: '帧图片尺寸不一样怎么办？',
+        a: '会自动按最大尺寸铺一张透明画布，把每帧居中放好，尺寸不同也能对齐。',
+      },
+      {
+        q: '最多能放多少帧？',
+        a: '最多 30 帧。每帧支持各种常见图片格式，随时可以重新排序或删除。',
+      },
+      {
+        q: '为什么动图看起来有点糊或文件很大？',
+        a: 'GIF 是 8 位格式，每帧最多 256 色，细腻的渐变可能出现轻微色带。把最大边长控制在 512 以内，体积和画质最平衡。',
+      },
+    ],
+  },
+}
+
 // Cross-link labels for the "other tools" block on tool pages
 export const otherToolsLabels: Record<'en' | 'zh', Record<ToolType, string>> = {
   en: {

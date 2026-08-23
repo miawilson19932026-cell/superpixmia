@@ -10,7 +10,7 @@
 //    crawlers (Facebook/WhatsApp/Twitter/LinkedIn/Discord/…) get the ENGLISH
 //    landscape card (og-image.jpg, 1200×630).
 import { getRouteSeo } from './src/lib/seo'
-import { ldToScript, zhToolLd, zhHomeFaqLd, zhArticleLd, zhStudioLd } from './src/lib/seo-jsonld'
+import { ldToScript, zhToolLd, zhHomeFaqLd, zhArticleLd, zhStudioLd, zhGifMakerLd } from './src/lib/seo-jsonld'
 import type { ToolType } from './src/types'
 
 const TOOL_PATHS: Record<string, ToolType> = {
@@ -23,9 +23,9 @@ const TOOL_PATHS: Record<string, ToolType> = {
 
 const HELP_PATHS = ['/help', '/help/how-to-remove-bg', '/help/png-compression-guide', '/help/image-formats-comparison', '/help/resize-image-guide']
 
-const BLOG_PATHS = ['/blog', '/blog/wechat-images-blurry', '/blog/how-ai-sees-images']
+const BLOG_PATHS = ['/blog', '/blog/wechat-images-blurry', '/blog/how-ai-sees-images', '/blog/ai-image-prompt-guide', '/blog/make-ai-gif']
 
-const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS, ...BLOG_PATHS, '/studio'])
+const SEO_PATHS = new Set(['/', ...Object.keys(TOOL_PATHS), ...HELP_PATHS, ...BLOG_PATHS, '/studio', '/gif-maker'])
 
 function escapeAttr(s: string): string {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -40,6 +40,10 @@ function zhJsonLdBlocks(path: string): string[] {
   }
   if (path === '/studio') {
     const { howTo, faq } = zhStudioLd()
+    return [ldToScript(howTo), ldToScript(faq)]
+  }
+  if (path === '/gif-maker') {
+    const { howTo, faq } = zhGifMakerLd()
     return [ldToScript(howTo), ldToScript(faq)]
   }
   const tool = TOOL_PATHS[path]
@@ -119,4 +123,4 @@ export default async function middleware(request: Request): Promise<Response> {
   })
 }
 
-export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/remove-watermark', '/studio', '/help', '/help/:path*', '/blog', '/blog/:path*'] }
+export const config = { matcher: ['/', '/index.html', '/compress', '/remove-bg', '/resize', '/convert', '/remove-watermark', '/studio', '/gif-maker', '/help', '/help/:path*', '/blog', '/blog/:path*'] }

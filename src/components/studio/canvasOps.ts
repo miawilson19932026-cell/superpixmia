@@ -107,6 +107,43 @@ export async function removeMasked(blob: Blob, mask: (Uint8Array | boolean[]) | 
   return canvasToBlob(c, 'png')
 }
 
+// ── Clone stamp (临摹): copy a brush-sized disc from the ORIGINAL base image
+// ── at (pt − offset) onto each brush point. The source is always the untouched
+// base, never the partially-painted canvas, so overlapping strokes copy fresh
+// pixels instead of stacking (PS's aligned clone behavior).
+export async function cloneStamp(
+  blob: Blob,
+  strokes: { src: { x: number; y: number }; pts: StrokePt[] }[],
+  W: number,
+  H: number,
+  size: number,
+): Promise<Blob> {
+  if (!strokes.length) return blob
+  const img = await loadBlobImage(blob)
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')!
+  ctx.drawImage(img, 0, 0)
+  const r = Math.max(1, size / 2)
+  for (const s of strokes) {
+    if (!s.pts.length) continue
+    const dx0 = s.pts[0].x - s.src.x
+    const dy0 = s.pts[0].y - s.src.y
+    for (const p of s.pts) {
+      const sx = p.x - dx0
+      const sy = p.y - dy0
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+      ctx.clip()
+      ctx.drawImage(img, sx - r, sy - r, r * 2, r * 2, p.x - r, p.y - r, r * 2, r * 2)
+      ctx.restore()
+    }
+  }
+  return canvasToBlob(c, getOutputFormat(blob))
+}
+
 // ── Magic wand: connected region around (x,y) within RGB tolerance ──
 // Returns a boolean[] (W×H, true = selected). Color is compared against the
 // pixel at the seed point, so clicking a sky region selects sky-like pixels.
@@ -185,6 +222,41 @@ export function floodFill(
     }
   }
   return selected
+}
+
+// Grow a binary mask outward by `radius` px (morphological dilation, separable
+// two-pass sliding window). Used on magic-wand selections so the thin
+// anti-aliased fringe between the subject and a flat background (the "白边"
+// leftover) is swallowed before the area is made transparent.
+export function dilateMask(mask: Uint8Array, W: number, H: number, radius = 2): Uint8Array {
+  const r = Math.max(1, Math.round(radius))
+  const win = 2 * r + 1
+  const tmp = new Uint8Array(mask.length)
+  // horizontal pass
+  for (let y = 0; y < H; y++) {
+    const row = y * W
+    let sum = 0
+    for (let i = 0; i < W + r; i++) {
+      if (i < W) sum += mask[row + i]
+      const drop = i - win
+      if (drop >= 0 && drop < W) sum -= mask[row + drop]
+      const out = i - r
+      if (out >= 0 && out < W && sum > 0) tmp[row + out] = 1
+    }
+  }
+  // vertical pass
+  const out = new Uint8Array(mask.length)
+  for (let x = 0; x < W; x++) {
+    let sum = 0
+    for (let i = 0; i < H + r; i++) {
+      if (i < H) sum += tmp[i * W + x]
+      const drop = i - win
+      if (drop >= 0 && drop < H) sum -= tmp[drop * W + x]
+      const outY = i - r
+      if (outY >= 0 && outY < H && sum > 0) out[outY * W + x] = 1
+    }
+  }
+  return out
 }
 
 // Marching-squares outline of a binary mask. Returns one compact Path2D of

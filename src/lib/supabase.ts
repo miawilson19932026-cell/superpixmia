@@ -18,6 +18,9 @@ export function getSupabase(): SupabaseClient | null {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true, // handles email-confirm / password-recovery redirects
+        // Fixed storage key so the session lives at a known location (e2e tests
+        // inject a fake session here to exercise the login-gated flows).
+        storageKey: 'spm-auth-token',
       },
     })
   }

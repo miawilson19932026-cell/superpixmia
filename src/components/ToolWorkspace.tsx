@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../i18n'
-import { useAuth } from '../lib/auth'
+import { useAuth, tryConsumeFreeDownload } from '../lib/auth'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
 import { resizeImage, compressImage, convertImage, getResultExtension, removeWatermark } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
@@ -15,7 +15,7 @@ import BgRefinePanel from './BgRefinePanel'
 import ConvertPanel from './ConvertPanel'
 import RemoveWatermarkPanel from './RemoveWatermarkPanel'
 import { toolPaths, EDITOR_PATH } from '../lib/routes'
-import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS } from '../lib/tools'
+import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS, gifNavIcon } from '../lib/tools'
 
 type Mode = 'single' | 'batch'
 type ToolResult = { blob: Blob; url: string } | null
@@ -96,10 +96,6 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
   const currentImage = images[currentIndex] ?? null
   const imageCount = images.length
   const hasImage = imageCount > 0
-  // Batch ZIP is the only login-gated action in Phase 1. WeChat can't download
-  // ZIP at all (it shows an open-in-browser alert), so it's exempt from the gate.
-  const isBatchZip = mode === 'batch' && imageCount > 1
-  const zipLocked = isBatchZip && !user && !isWeChat
 
   // ── Save a single result ──
   const saveToolResult = useCallback((tool: ToolType, blob: Blob, idx: number) => {
@@ -371,6 +367,12 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
 
     if (validResults.length === 0) return
 
+    // Site-wide free-download quota: the 1st download is free for logged-out
+    // visitors, the 2nd+ asks them to sign in (signed-in = unlimited). WeChat
+    // is exempt — it can't trigger a real file download here (long-press to
+    // save is handled by the lightbox), so gating it only adds friction.
+    if (!isWeChat && !tryConsumeFreeDownload(user, openLogin)) return
+
     if (mode === 'single' || validResults.length === 1) {
       const result = validResults[0]
       const blob = result.blob
@@ -395,10 +397,6 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
         URL.revokeObjectURL(url)
       }
     } else {
-      if (!user && !isWeChat) {
-        openLogin() // batch ZIP is the only login-gated action in Phase 1
-        return
-      }
       const zip = new JSZip()
       results.forEach((result, idx) => {
         if (!result) return
@@ -553,6 +551,21 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
             <span className="whitespace-nowrap leading-tight text-center">
               {lang === 'zh' ? '全能编辑' : 'Studio'}
             </span>
+          </button>
+
+          {/* GIF Maker — new standalone tool */}
+          <button
+            type="button"
+            onClick={() => navigate('/gif-maker')}
+            className="relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 glass backdrop-blur-xl border-white/[0.06] text-[var(--text-dim)] hover:text-[var(--text-primary)] card-hover"
+          >
+            <span className="absolute top-1 right-1 z-10 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 px-1.5 py-0.5 text-[9px] font-bold text-black leading-none shadow-[0_2px_8px_rgba(16,185,129,0.5)]">
+              {lang === 'zh' ? '新' : 'New'}
+            </span>
+            <div className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 flex items-center justify-center text-emerald-400">
+              {gifNavIcon}
+            </div>
+            <span className="whitespace-nowrap leading-tight text-center">{t.gifMaker}</span>
           </button>
 
           {/* AI cards — under construction, distinct dashed style */}
@@ -775,7 +788,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
                 >
                   ↓ {isWeChat
                     ? (mode === 'batch' && imageCount > 1 ? t.downloadZip : (lang === 'zh' ? '预览并长按保存' : 'Preview & Long-press'))
-                    : (zipLocked ? t.downloadZipLogin : (mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download))
+                    : (mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download)
                   }
                 </button>
               </div>
@@ -791,7 +804,7 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
                 onClick={download}
                 className="hidden sm:block px-8 py-3 btn-gradient text-sm font-semibold rounded-[var(--radius-md)]"
               >
-                ↓ {zipLocked ? t.downloadZipLogin : (mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download)}
+                ↓ {mode === 'batch' && imageCount > 1 ? t.downloadZip : t.download}
               </button>
             </div>
           )}

@@ -8,7 +8,7 @@
 // Text comes from seo-content-data.ts — the SAME strings rendered visibly in
 // SeoContent.tsx, so FAQ questions and HowTo steps always match visible content.
 import type { ToolType } from '../types'
-import { homeContent, toolContent, studioContent } from './seo-content-data'
+import { homeContent, toolContent, studioContent, gifMakerContent } from './seo-content-data'
 import { helpArticles } from './help-articles'
 import { blogArticles } from './blog-articles'
 import { getRouteSeo } from './seo'
@@ -237,6 +237,77 @@ export function zhStudioLd(): { howTo: object; faq: object } {
     description: c.intro,
     totalTime: 'PT1M',
     tool: { '@type': 'HowToTool', name: 'SuperPixMia 全能编辑 Studio' },
+    step: c.howToSteps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.title,
+      text: s.desc,
+    })),
+  }
+  return { howTo, faq: faqLd(c.faqs) }
+}
+
+const gifMakerHowToName = {
+  en: 'How to Make an Animated GIF Online with SuperPixMia GIF Maker',
+  zh: '如何用 SuperPixMia GIF 合成器制作动图',
+}
+
+// /gif-maker — the multi-frame GIF assembler. FAQ + HowTo text comes from the
+// SAME gifMakerContent strings rendered visibly on the page (single source of
+// truth), mirroring how /studio builds its structured data.
+export function gifMakerPageLd(): object[] {
+  const c = gifMakerContent.en
+  return [
+    organizationLd(),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'SuperPixMia GIF Maker',
+      url: `${SITE}/gif-maker`,
+      description: c.intro,
+      applicationCategory: 'MultimediaApplication',
+      operatingSystem: 'Any',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      featureList: [
+        'Turn multiple images into an animated GIF',
+        'Transparent PNG frames keep their transparency',
+        'Frame rate control from 1 to 30 fps',
+        'Infinite loop or play once',
+        'Smart downscaling to keep files light',
+        'Up to 30 frames',
+        '100% client-side — frames never leave your device',
+      ],
+    },
+    breadcrumbLd('/gif-maker'),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: gifMakerHowToName.en,
+      description: c.intro,
+      totalTime: 'PT1M',
+      tool: { '@type': 'HowToTool', name: 'SuperPixMia GIF Maker' },
+      step: c.howToSteps.map((s, i) => ({
+        '@type': 'HowToStep',
+        position: i + 1,
+        name: s.title,
+        text: s.desc,
+      })),
+    },
+    faqLd(c.faqs),
+  ]
+}
+
+// Chinese HowTo + FAQPage for /gif-maker — injected by the Edge middleware for
+// Chinese users and the Baidu spider.
+export function zhGifMakerLd(): { howTo: object; faq: object } {
+  const c = gifMakerContent.zh
+  const howTo: object = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: gifMakerHowToName.zh,
+    description: c.intro,
+    totalTime: 'PT1M',
+    tool: { '@type': 'HowToTool', name: 'SuperPixMia GIF 合成器' },
     step: c.howToSteps.map((s, i) => ({
       '@type': 'HowToStep',
       position: i + 1,

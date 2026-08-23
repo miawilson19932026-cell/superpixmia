@@ -79,6 +79,8 @@ export interface Translations {
   cropTitle: string
   cropRatio: string
   cropFree: string
+  cropCustom: string
+  cropTip: string
   cropApply: string
   cropHint: string
   cropDragHint: string
@@ -147,6 +149,7 @@ export interface Translations {
   studioDelete: string
   studioImport: string
   studioToolsLabel: string
+  studioSelect: string
   studioRotate: string
   studioCrop: string
   studioText: string
@@ -155,6 +158,7 @@ export interface Translations {
   studioHeal: string
   studioCutout: string
   studioRemove: string
+  studioStamp: string
   studioResize: string
   studioApply: string
   studioUndo: string
@@ -206,7 +210,8 @@ export interface Translations {
   authPrivacyNote: string
   authSignOut: string
   authClose: string
-  downloadZipLogin: string
+  // Shown in the login modal when the free-download quota is exhausted
+  authDlLimit: string
   // Auth — OTP email-code sign-up flow (verify email, then set a password)
   authStepEmail: string
   authStepCode: string
@@ -226,6 +231,41 @@ export interface Translations {
   authUseCodeLogin: string
   authUsePassword: string
   authDone: string
+  authSetPasswordTitle: string
+  authSetPasswordHint: string
+  authSkip: string
+  authCodeCooldown: string
+  // GIF Maker (/gif-maker) — N images → animated GIF
+  gifMaker: string
+  gifMakerTagline: string
+  gifMakerPickTitle: string
+  gifMakerOpen: string
+  gifMakerFrames: string
+  gifMakerOrder: string
+  gifMakerUp: string
+  gifMakerDown: string
+  gifMakerRemove: string
+  gifMakerFps: string
+  gifMakerFpsHint: string
+  gifMakerLoop: string
+  gifMakerLoopOn: string
+  gifMakerLoopOff: string
+  gifMakerResize: string
+  gifMakerResizeOriginal: string
+  gifMakerGenerate: string
+  gifMakerGenerating: string
+  gifMakerDownload: string
+  gifMakerDownloading: string
+  gifMakerPreview: string
+  gifMakerNeedFrames: string
+  gifMakerMaxFrames: string
+  gifMakerAddMore: string
+  gifMakerClearAll: string
+  gifMakerSize: string
+  gifMakerSizeHint: string
+  gifMakerTransparentHint: string
+  gifMakerMixedSizeHint: string
+  gifMakerGenerated: string
 }
 
 // Detect language from URL param, browser, or localStorage

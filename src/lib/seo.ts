@@ -229,6 +229,23 @@ export const SEO_ROUTES: Record<string, RouteSeo> = {
     ogTitle: 'Studio — Free Single-Image Editor in Your Browser',
     ogDescription: 'Rotate, crop, add text, stamp a logo, draw, erase watermarks, cut out subjects, and resize one image in a single free workspace. No upload.',
   },
+  '/gif-maker': {
+    en: {
+      title: 'Free GIF Maker — Combine Images into an Animated GIF Online',
+      description:
+        'Combine 2+ images into an animated GIF in your browser. Transparent PNG frames, frame-rate control, infinite loop, and smart downscaling. 100% local — nothing is uploaded. First download is free.',
+      keywords: 'make a gif, gif maker, animated gif, create gif from images, transparent gif, gif maker online, combine images into gif',
+    },
+    zh: {
+      title: 'GIF 合成器 - 在线把多张图片合成动图，免费免上传',
+      description:
+        '免费在线 GIF 合成器，把 2 张及以上图片合成为动图 GIF。支持透明 PNG 帧、帧率调节、无限循环、智能缩放。100% 浏览器本地处理，不上传。首次下载免费。',
+      keywords: 'GIF合成器,动图制作,在线GIF,图片合成GIF,透明GIF,表情包制作,GIF生成',
+    },
+    canonical: `${SITE}/gif-maker`,
+    ogTitle: 'Free GIF Maker — Combine Images into an Animated GIF',
+    ogDescription: 'Combine multiple images into an animated GIF with transparent frames, frame rate control, and infinite loop. 100% in your browser.',
+  },
   '/blog': {
     en: {
       title: 'Image Tips & Tutorials — SuperPixMia Blog',

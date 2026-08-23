@@ -7,13 +7,16 @@ import { useTranslation } from '../../i18n'
 import type { CropRect } from '../../utils/crop'
 import { cropImage, rotateImage, resizeImage, watermarkImage, removeWatermark, convertImage, formatSize, getOutputFormat } from '../../utils'
 import { downloadBlob } from '../../utils/download'
+import { useAuth, tryConsumeFreeDownload } from '../../lib/auth'
 import type { OutputFormat } from '../../types'
 import { STUDIO_TOOLS, type StudioToolId } from './tools'
 import {
   compositeStrokes,
   buildMaskFromStrokes,
   removeMasked,
+  cloneStamp,
   floodFill,
+  dilateMask,
   maskOutlinePath,
   type Stroke,
   type StrokePt,
@@ -59,7 +62,11 @@ const FONT = `system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-s
 // first time the tool is picked, pointing at the Apply button. Persisted per
 // browser session (sessionStorage) so re-uploading an image doesn't re-teach.
 const TIP_SEEN_KEY = 'spm-studio-tip-seen'
+// One-time crop tutorial (localStorage — unlike the per-session tool tips, this
+// is remembered across visits: each customer is shown it at most once).
+const CROP_TIP_KEY = 'spm-crop-tip-seen'
 const TOOL_TIPS: Record<StudioToolId, { en: string; zh: string }> = {
+  select: { en: 'Drag to pan, scroll to zoom — just inspecting the result.', zh: '拖动平移，滚轮缩放——此处只查看效果。' },
   rotate: { en: 'Drag on the canvas, or use the buttons / slider to rotate.', zh: '在画布上拖动，或用按钮 / 滑块旋转。' },
   crop: { en: 'Drag inside the box to move it, drag corners to resize.', zh: '拖动选框移动，拖四角可缩放。' },
   text: { en: 'Type your text, then click the canvas to place it.', zh: '输入文字，然后点击画布放置。' },
@@ -68,6 +75,7 @@ const TOOL_TIPS: Record<StudioToolId, { en: string; zh: string }> = {
   heal: { en: 'Paint over the watermark you want to remove.', zh: '涂抹要清除的水印区域。' },
   cutout: { en: 'Trace a loop over the area, then pick Keep or Remove.', zh: '沿区域画一圈，选「保留」或「去除」。' },
   remove: { en: 'Click similar areas (like the background) to select them.', zh: '点击相似区域（如背景）选中它们。' },
+  stamp: { en: 'Click to set a source point, then paint to copy it (Alt+click re-picks).', zh: '先点击设置源点，再涂抹复制该处内容（Alt+点击可重新取源）。' },
   resize: { en: 'Enter a new width or height.', zh: '输入新的宽或高。' },
 }
 
@@ -120,6 +128,7 @@ export default function EditorWorkspace({
   onReplace: () => void
 }) {
   const { t, lang } = useTranslation()
+  const { user, openLogin } = useAuth()
 
   // ── Committed result stack (undo/redo). histIdx points into history;
   //     -1 means "no edits yet" → current falls back to the source file. ──
@@ -127,7 +136,9 @@ export default function EditorWorkspace({
   const [histIdx, setHistIdx] = useState(-1)
   const current: Blob = histIdx >= 0 && history[histIdx] ? history[histIdx] : source.file
 
-  const [activeTool, setActiveTool] = useState<StudioToolId | null>(null)
+  // Select is the resting tool — the studio opens on it, and applying any edit
+  // returns to it so the result is seen clean (no lingering crop box / overlay).
+  const [activeTool, setActiveTool] = useState<StudioToolId | null>('select')
   const [processing, setProcessing] = useState(false)
   const [applied, setApplied] = useState(false)
 
@@ -139,14 +150,34 @@ export default function EditorWorkspace({
   const baseRef = useRef<HTMLCanvasElement>(null)
   const overRef = useRef<HTMLCanvasElement>(null)
   const dragRef = useRef<{ mode: string; startX: number; startY: number; orig: CropRect } | null>(null)
+  // Set by undo/redo/clear while a tool stays active: after the committed image
+  // reloads, re-run initToolDefaults so the selected tool (crop box, resize dims…)
+  // comes back immediately without re-clicking it.
+  const pendingReinitRef = useRef<StudioToolId | null>(null)
   // Canvas box is sized to EXACTLY fit the image (no letterbox), so the fixed
   // h-[45vh] box never leaves empty bands around small/portrait images.
   const canvasCardRef = useRef<HTMLDivElement>(null)
   const [disp, setDisp] = useState({ w: 0, h: 0 })
+  // View-only zoom/pan — a CSS transform on the image box. Image dimensions are
+  // NEVER touched; dispGeom()/toImg() already read getBoundingClientRect() which
+  // includes the transform, so tool coordinates stay accurate while zoomed.
+  const [viewZoom, setViewZoom] = useState(1)
+  const [viewPan, setViewPan] = useState({ x: 0, y: 0 })
+  const [panning, setPanning] = useState(false)
+  const imageBoxRef = useRef<HTMLDivElement>(null)
+  // Hold Space (outside inputs) to drag-pan over any tool.
+  const spaceDownRef = useRef(false)
 
   // ── Per-tool state ──
   const [rotate, setRotate] = useState({ angle: 0, flipX: false, flipY: false })
   const [cropRect, setCropRect] = useState<CropRect | null>(null)
+  // Aspect-ratio lock for crop (null = free drag). Kept in a ref too so the
+  // async crop-box re-seed after undo/redo can respect the chosen ratio.
+  const [cropRatio, setCropRatio] = useState<{ w: number; h: number } | null>(null)
+  const cropRatioRef = useRef<{ w: number; h: number } | null>(null)
+  useEffect(() => { cropRatioRef.current = cropRatio }, [cropRatio])
+  // Draft W:H values for the custom-ratio inputs (applied on "确认").
+  const [cropCustom, setCropCustom] = useState({ w: 4, h: 3 })
   const [textState, setTextState] = useState({
     text: '', color: '#ffffff', fontSize: 0.06, opacity: 1, x: 0, y: 0, hasPos: false, font: FONT,
   })
@@ -156,6 +187,10 @@ export default function EditorWorkspace({
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null)
   const [pencilState, setPencilState] = useState({ color: '#ffffff', size: 10 })
   const [healState, setHealState] = useState({ size: 30, erase: false })
+  // Clone stamp (临摹): Alt+click sets a source point, then painting copies the
+  // pixels around the source to the brush. Each stroke locks the source point and
+  // keeps a fixed offset from the brush (PS-style aligned clone).
+  const [stampState, setStampState] = useState({ size: 30, src: null as { x: number; y: number } | null })
   const [removeTol, setRemoveTol] = useState(32)
   const [removeClicks, setRemoveClicks] = useState(0)
   const [removeMode, setRemoveMode] = useState<'add' | 'erase'>('add')
@@ -172,6 +207,15 @@ export default function EditorWorkspace({
   const seenRef = useRef<Set<StudioToolId>>(new Set())
   const [tipTool, setTipTool] = useState<StudioToolId | null>(null)
   const [tipPos, setTipPos] = useState<{ x: number; y: number; place: 'left' | 'bottom' } | null>(null)
+  // One-time crop how-to banner (once per customer, persisted in localStorage).
+  const [cropTip, setCropTip] = useState(false)
+
+  // Auto-dismiss the crop banner after a few seconds (manual close also works).
+  useEffect(() => {
+    if (!cropTip) return
+    const t = setTimeout(() => setCropTip(false), 8000)
+    return () => clearTimeout(t)
+  }, [cropTip])
 
   // Paint-state lives in refs (mutable during drag); compose() is called by
   // the pointer handlers directly.
@@ -180,6 +224,7 @@ export default function EditorWorkspace({
   const cutoutRef = useRef<StrokePt[]>([])
   const cutoutMaskRef = useRef<boolean[] | null>(null) // true = keep the pixel
   const removeRef = useRef<Uint8Array | null>(null)
+  const stampStrokesRef = useRef<{ src: { x: number; y: number }; pts: StrokePt[] }[]>([])
   // Rapid-wand-click handling: the flood-fill runs off the pointer handler (so
   // the click never freezes the cursor) and a click arriving while one is still
   // computing is QUEUED (latest wins) and replayed right after — never silently
@@ -207,6 +252,13 @@ export default function EditorWorkspace({
       setCurImg(img)
       setCurW(img.width)
       setCurH(img.height)
+      // Undo/redo/clear left the tool active → re-init its defaults with the
+      // freshly reloaded image dims so it works immediately (crop box, resize…).
+      const reinit = pendingReinitRef.current
+      if (reinit) {
+        pendingReinitRef.current = null
+        initToolDefaults(reinit, img.width, img.height)
+      }
     }
     img.src = url
     return () => { alive = false; URL.revokeObjectURL(url) }
@@ -241,6 +293,45 @@ export default function EditorWorkspace({
     window.addEventListener('resize', fit)
     return () => { ro.disconnect(); window.removeEventListener('resize', fit) }
   }, [curImg, curW, curH])
+
+  // Mouse-wheel view zoom (any tool, view-only). React's onWheel is passive, so
+  // a native non-passive listener is needed to preventDefault (stop page scroll).
+  // The box's getBoundingClientRect() already includes the CSS transform, so the
+  // cursor-relative pan math keeps the image point under the cursor stationary.
+  useEffect(() => {
+    const card = canvasCardRef.current
+    if (!card) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const box = imageBoxRef.current
+      if (!box) return
+      const rect = box.getBoundingClientRect()
+      const cx = e.clientX - rect.left - rect.width / 2
+      const cy = e.clientY - rect.top - rect.height / 2
+      setViewZoom((prev) => {
+        const factor = e.deltaY < 0 ? 1.12 : 0.88
+        const next = Math.max(1, Math.min(5, prev * factor))
+        const scale = next / prev
+        setViewPan((p) => (next <= 1 ? { x: 0, y: 0 } : { x: cx - scale * (cx - p.x), y: cy - scale * (cy - p.y) }))
+        return next
+      })
+    }
+    card.addEventListener('wheel', onWheel, { passive: false })
+    return () => card.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Space = pan modifier (except while typing in a panel input).
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null
+      const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+      if (e.code === 'Space' && !typing) spaceDownRef.current = true
+    }
+    const up = (e: KeyboardEvent) => { if (e.code === 'Space') spaceDownRef.current = false }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
+  }, [])
 
   // Load the "seen" set once (sessionStorage — read in an effect so the SSR
   // prerender pass never touches window.sessionStorage).
@@ -294,6 +385,7 @@ export default function EditorWorkspace({
       case 'heal': drawHeal(ctx); break
       case 'cutout': drawCutout(ctx); break
       case 'remove': drawRemove(ctx); break
+      case 'stamp': drawStamp(ctx); break
       case 'resize': drawResize(ctx, curImg); break
     }
   }
@@ -302,7 +394,7 @@ export default function EditorWorkspace({
   useEffect(() => {
     compose()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool, curImg, curW, curH, rotate, cropRect, textState, logoState, logoImg, resizeState, hoverPt])
+  }, [activeTool, curImg, curW, curH, rotate, cropRect, textState, logoState, logoImg, stampState, resizeState, hoverPt])
 
   // ── Preview drawers ──
   const drawRotate = (ctx: CanvasRenderingContext2D, img: HTMLImageElement) => {
@@ -576,6 +668,63 @@ export default function EditorWorkspace({
     ctx.restore()
   }
 
+  // Clone stamp preview: the strokes already painted (sampled from the ORIGINAL
+  // base image, never the painted result — so overlapping strokes copy fresh
+  // pixels, exactly like PS), plus the source marker and a dashed brush cursor.
+  const drawStamp = (ctx: CanvasRenderingContext2D) => {
+    if (!curImg) return
+    const r = Math.max(1, stampState.size / 2)
+    for (const s of stampStrokesRef.current) {
+      if (!s.pts.length) continue
+      const dx0 = s.pts[0].x - s.src.x
+      const dy0 = s.pts[0].y - s.src.y
+      for (const p of s.pts) {
+        const sx = p.x - dx0
+        const sy = p.y - dy0
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+        ctx.clip()
+        ctx.drawImage(curImg, sx - r, sy - r, r * 2, r * 2, p.x - r, p.y - r, r * 2, r * 2)
+        ctx.restore()
+      }
+    }
+    // Source point marker — an emerald ring + crosshair so the user sees where
+    // the clone is being sampled from.
+    if (stampState.src) {
+      const { x, y } = stampState.src
+      ctx.save()
+      ctx.strokeStyle = 'rgba(16,185,129,0.95)'
+      ctx.lineWidth = 1.5
+      ctx.setLineDash([])
+      ctx.beginPath()
+      ctx.arc(x, y, r, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.moveTo(x - 14, y); ctx.lineTo(x - 6, y)
+      ctx.moveTo(x + 6, y); ctx.lineTo(x + 14, y)
+      ctx.moveTo(x, y - 14); ctx.lineTo(x, y - 6)
+      ctx.moveTo(x, y + 6); ctx.lineTo(x, y + 14)
+      ctx.stroke()
+      ctx.fillStyle = 'rgba(16,185,129,0.9)'
+      ctx.beginPath()
+      ctx.arc(x, y, 2, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
+    // Brush cursor on hover / drag.
+    if (hoverPt) {
+      ctx.save()
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+      ctx.lineWidth = 1
+      ctx.setLineDash([4, 3])
+      ctx.beginPath()
+      ctx.arc(hoverPt.x, hoverPt.y, r, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.restore()
+    }
+  }
+
   const drawResize = (ctx: CanvasRenderingContext2D, img: HTMLImageElement) => {
     // No-op preview: target size already equals the current image.
     if (resizeState.width === curW && resizeState.height === curH) return
@@ -622,7 +771,18 @@ export default function EditorWorkspace({
   }
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (!activeTool || !overRef.current) return
+    if (!overRef.current) return
+    // Drag to pan the view: the Select tool (zoomed in), or Space held over any
+    // tool. Never a tool operation — pan bypasses the tool switch below.
+    if ((activeTool === 'select' && viewZoom > 1) || spaceDownRef.current) {
+      if (e.button !== 0) return
+      e.preventDefault()
+      overRef.current.setPointerCapture(e.pointerId)
+      dragRef.current = { mode: 'pan', startX: e.clientX, startY: e.clientY, orig: { x: viewPan.x, y: viewPan.y, width: 0, height: 0 } }
+      setPanning(true)
+      return
+    }
+    if (!activeTool) return
     e.preventDefault()
     overRef.current.setPointerCapture(e.pointerId)
     const p = toImg(e)
@@ -639,18 +799,28 @@ export default function EditorWorkspace({
         compose()
         break
       case 'remove': doRemoveClick(p); break
+      case 'stamp':
+        // Alt+click re-picks the source; with no source yet, the FIRST click sets
+        // it (so touch users never need Alt). Either way no painting happens.
+        if (e.altKey || !stampState.src) { setStampState((s) => ({ ...s, src: p })); setHoverPt(p); return }
+        beginStamp(p)
+        break
     }
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!activeTool) return
-    const p = toImg(e)
-    if (!dragRef.current) {
-      // Hover tracking (no drag): the crop crosshair and the remove tool's magic
-      // wand follow the pointer so users always see exactly where they are.
-      if (activeTool === 'crop' || activeTool === 'remove') setHoverPt(p)
+    const d = dragRef.current
+    if (d?.mode === 'pan') {
+      setViewPan({ x: d.orig.x + (e.clientX - d.startX), y: d.orig.y + (e.clientY - d.startY) })
       return
     }
+    if (!activeTool) return
+    const p = toImg(e)
+    // The crop crosshair and the remove tool's wand follow the pointer on BOTH
+    // hover and drag — while dragging out a crop box the dot+line crosshair
+    // stays glued to the cursor instead of freezing at the press point.
+    if (activeTool === 'crop' || activeTool === 'remove' || activeTool === 'stamp') setHoverPt(p)
+    if (!dragRef.current) return
     switch (activeTool) {
       case 'rotate': moveRotate(p); break
       case 'crop': moveCrop(p); break
@@ -662,12 +832,14 @@ export default function EditorWorkspace({
         cutoutRef.current = [...cutoutRef.current, p]
         compose()
         break
+      case 'stamp': extendStamp(p); break
     }
   }
 
   const onPointerUp = () => {
     const d = dragRef.current
     dragRef.current = null
+    setPanning(false)
     // Release = close the loop → the traced region becomes a selection.
     if (d?.mode === 'path') commitCutout()
   }
@@ -686,6 +858,97 @@ export default function EditorWorkspace({
     let angle = (d.orig.y + delta) % 360
     if (angle < 0) angle += 360
     setRotate((s) => ({ ...s, angle: Math.round(angle) }))
+  }
+
+  // Refit a crop box to a target aspect ratio, centered on the old box and
+  // clamped inside the image bounds (with a 24px floor). Used when a ratio
+  // preset is chosen or the crop box is re-seeded while a ratio is locked.
+  const MIN_RECT = 24
+  const fitToRatio = (r: CropRect, ratio: { w: number; h: number }, W: number, H: number): CropRect => {
+    const ar = ratio.w / ratio.h
+    const cx = clamp(r.x + r.width / 2, 0, W)
+    const cy = clamp(r.y + r.height / 2, 0, H)
+    const maxW = Math.max(MIN_RECT, Math.min(W, 2 * cx, 2 * (W - cx)))
+    const maxH = Math.max(MIN_RECT, Math.min(H, 2 * cy, 2 * (H - cy)))
+    let w = r.width
+    let h = w / ar
+    if (w > maxW) { w = maxW; h = w / ar }
+    if (h > maxH) { h = maxH; w = h * ar }
+    if (w > maxW) { w = maxW; h = w / ar }
+    if (w < MIN_RECT) w = MIN_RECT
+    if (h < MIN_RECT) h = MIN_RECT
+    if (w > maxW) w = maxW
+    if (h > maxH) h = maxH
+    if (w / h > ar) w = h * ar; else h = w / ar
+    const x = clamp(cx - w / 2, 0, Math.max(0, W - w))
+    const y = clamp(cy - h / 2, 0, Math.max(0, H - h))
+    return { x: Math.round(x), y: Math.round(y), width: Math.max(1, Math.round(w)), height: Math.max(1, Math.round(h)) }
+  }
+
+  // Aspect-locked corner/edge drag: keep the opposite corner/edge as anchor,
+  // drive the dominant axis from the pointer, derive the other axis from the
+  // ratio, then clamp to bounds + MIN. 'move' passes through untouched.
+  const aspectResize = (orig: CropRect, dx: number, dy: number, mode: string, ar: number, W: number, H: number): CropRect => {
+    const r = orig
+    let w = r.width, h = r.height, x = r.x, y = r.y
+    const domX = Math.abs(dx) >= Math.abs(dy)
+    const arW = (ah: number) => ah * ar
+    const arH = (aw: number) => aw / ar
+    switch (mode) {
+      case 'se': {
+        const aw = W - r.x, ah = H - r.y
+        if (domX) { w = clamp(r.width + dx, MIN_RECT, aw); h = arH(w); if (h > ah) { h = ah; w = arW(h) } }
+        else { h = clamp(r.height + dy, MIN_RECT, ah); w = arW(h); if (w > aw) { w = aw; h = arH(w) } }
+        break
+      }
+      case 'nw': {
+        const aw = r.x + r.width, ah = r.y + r.height
+        if (domX) { w = clamp(r.width - dx, MIN_RECT, aw); h = arH(w); if (h > ah) { h = ah; w = arW(h) } }
+        else { h = clamp(r.height - dy, MIN_RECT, ah); w = arW(h); if (w > aw) { w = aw; h = arH(w) } }
+        x = r.x + r.width - w; y = r.y + r.height - h
+        break
+      }
+      case 'ne': {
+        const aw = W - r.x, ah = r.y + r.height
+        if (domX) { w = clamp(r.width + dx, MIN_RECT, aw); h = arH(w); if (h > ah) { h = ah; w = arW(h) } }
+        else { h = clamp(r.height - dy, MIN_RECT, ah); w = arW(h); if (w > aw) { w = aw; h = arH(w) } }
+        y = r.y + r.height - h
+        break
+      }
+      case 'sw': {
+        const aw = r.x + r.width, ah = H - r.y
+        if (domX) { w = clamp(r.width - dx, MIN_RECT, aw); h = arH(w); if (h > ah) { h = ah; w = arW(h) } }
+        else { h = clamp(r.height + dy, MIN_RECT, ah); w = arW(h); if (w > aw) { w = aw; h = arH(w) } }
+        x = r.x + r.width - w
+        break
+      }
+      case 'e': {
+        w = clamp(r.width + dx, MIN_RECT, W - r.x); h = arH(w)
+        y = clamp(r.y + (r.height - h) / 2, 0, Math.max(0, H - h))
+        break
+      }
+      case 'w': {
+        w = clamp(r.width - dx, MIN_RECT, r.x + r.width); h = arH(w)
+        x = r.x + r.width - w; y = clamp(r.y + (r.height - h) / 2, 0, Math.max(0, H - h))
+        break
+      }
+      case 's': {
+        h = clamp(r.height + dy, MIN_RECT, H - r.y); w = arW(h)
+        x = clamp(r.x + (r.width - w) / 2, 0, Math.max(0, W - w))
+        break
+      }
+      case 'n': {
+        h = clamp(r.height - dy, MIN_RECT, r.y + r.height); w = arW(h)
+        x = clamp(r.x + (r.width - w) / 2, 0, Math.max(0, W - w)); y = r.y + r.height - h
+        break
+      }
+    }
+    if (w < MIN_RECT) { w = MIN_RECT; h = arH(w) }
+    if (h < MIN_RECT) { h = MIN_RECT; w = arW(h) }
+    w = Math.min(w, W); h = Math.min(h, H)
+    if (w / h > ar) w = arW(h); else h = arH(w)
+    x = clamp(x, 0, Math.max(0, W - w)); y = clamp(y, 0, Math.max(0, H - h))
+    return { x: Math.round(x), y: Math.round(y), width: Math.max(1, Math.round(w)), height: Math.max(1, Math.round(h)) }
   }
 
   // Crop drag: detect handle, then move/resize.
@@ -715,6 +978,13 @@ export default function EditorWorkspace({
     const r = d!.orig
     const dx = p.x - d!.startX
     const dy = p.y - d!.startY
+    // When an aspect ratio is locked, handles resize to the ratio; only the
+    // free 'move' keeps the box's current size.
+    if (cropRatioRef.current && d!.mode !== 'move') {
+      const ar = cropRatioRef.current.w / cropRatioRef.current.h
+      setCropRect(aspectResize(r, dx, dy, d!.mode, ar, curW, curH))
+      return
+    }
     const MIN = 24
     let nx = r.x, ny = r.y, nw = r.width, nh = r.height
     switch (d!.mode) {
@@ -732,6 +1002,12 @@ export default function EditorWorkspace({
       case 'e': nw = clamp(r.width + dx, MIN, curW - r.x); break
     }
     setCropRect({ x: Math.round(nx), y: Math.round(ny), width: Math.round(nw), height: Math.round(nh) })
+  }
+
+  // Choose an aspect ratio (null = free). Refits the live crop box to match.
+  const setRatio = (r: { w: number; h: number } | null) => {
+    setCropRatio(r)
+    if (r && cropRect) setCropRect(fitToRatio(cropRect, r, curW, curH))
   }
 
   // Text / logo: click empty space to place, or drag the box to move.
@@ -783,6 +1059,23 @@ export default function EditorWorkspace({
     if (!last) return
     last.pts = [...last.pts, p]
     last.erase = erase
+    compose()
+  }
+
+  // Clone stamp: a stroke locks the source point at press time; each brush spot
+  // samples the pixel `(point − offset)` — the offset stays fixed for the whole
+  // stroke, so the clone follows the cursor just like PS.
+  const beginStamp = (p: { x: number; y: number }) => {
+    stampStrokesRef.current = [...stampStrokesRef.current, { src: { ...stampState.src! }, pts: [p] }]
+    dragRef.current = { mode: 'stroke', startX: p.x, startY: p.y, orig: { x: 0, y: 0, width: 0, height: 0 } }
+    compose()
+  }
+
+  const extendStamp = (p: { x: number; y: number }) => {
+    const arr = stampStrokesRef.current
+    const last = arr[arr.length - 1]
+    if (!last) return
+    last.pts = [...last.pts, p]
     compose()
   }
 
@@ -848,15 +1141,20 @@ export default function EditorWorkspace({
           pxDataRef.current = { img, data }
         }
         const sel = floodFill(data, Math.round(px), Math.round(py), tol)
+        // Dilation swallows the anti-aliased fringe between the subject and a
+        // flat background (the "白边" that survives max-tolerance fills), so the
+        // edge comes out clean. Only the SELECT (add) path — erase is manual
+        // precision, keep it raw.
+        const add = mode === 'erase' ? sel : dilateMask(sel, W, H, 2)
         const existing = removeRef.current
         if (mode === 'erase') {
           if (!existing) return
           for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = 0
         } else {
           if (!existing) {
-            removeRef.current = sel
+            removeRef.current = add
           } else {
-            for (let i = 0; i < sel.length; i++) if (sel[i]) existing[i] = 1
+            for (let i = 0; i < add.length; i++) if (add[i]) existing[i] = 1
           }
         }
         removeVersionRef.current++
@@ -882,6 +1180,7 @@ export default function EditorWorkspace({
     cutoutRef.current = []
     cutoutMaskRef.current = null
     removeRef.current = null
+    stampStrokesRef.current = []
   }
 
   // Wipe every in-progress preview so the overlay shows nothing on top of the
@@ -897,7 +1196,12 @@ export default function EditorWorkspace({
     if (logoState.imageUrl) URL.revokeObjectURL(logoState.imageUrl)
     setLogoImg(null)
     setLogoState((s) => ({ ...s, imageUrl: null, x: 0, y: 0, hasPos: false }))
+    setStampState((s) => ({ ...s, src: null }))
     setApplied(false)
+    // Return to fit view on any committed change (apply/undo/redo/clear).
+    setViewZoom(1)
+    setViewPan({ x: 0, y: 0 })
+    setPanning(false)
   }
 
   const apply = async () => {
@@ -951,6 +1255,9 @@ export default function EditorWorkspace({
         case 'remove':
           blob = await removeMasked(current, removeRef.current)
           break
+        case 'stamp':
+          blob = await cloneStamp(current, stampStrokesRef.current, curW, curH, stampState.size)
+          break
         case 'resize':
           blob = await resizeImage(current, { width: Math.round(resizeState.width), height: Math.round(resizeState.height) })
           break
@@ -964,6 +1271,10 @@ export default function EditorWorkspace({
         setHistory(trimmed)
         setHistIdx(trimmed.length - 1)
         resetPreview()
+        // After applying, return to the Select tool so the result is seen clean
+        // (no crop box / mask lingering). The "已应用" banner stays up.
+        setActiveTool('select')
+        setHoverPt(null)
         setApplied(true)
         setTipTool(null) // applying is the lesson — stop teaching
         // Clear the preview immediately instead of waiting for the new image to
@@ -980,6 +1291,7 @@ export default function EditorWorkspace({
 
   const undo = () => {
     if (histIdx < 0) return
+    if (activeTool) pendingReinitRef.current = activeTool
     setHistIdx((i) => i - 1)
     resetPreview()
     dragRef.current = null
@@ -989,6 +1301,7 @@ export default function EditorWorkspace({
 
   const redo = () => {
     if (histIdx >= history.length - 1) return
+    if (activeTool) pendingReinitRef.current = activeTool
     setHistIdx((i) => i + 1)
     resetPreview()
     dragRef.current = null
@@ -997,6 +1310,7 @@ export default function EditorWorkspace({
   }
 
   const clearTool = () => {
+    if (activeTool) pendingReinitRef.current = activeTool
     resetPreview()
     dragRef.current = null
     setHoverPt(null)
@@ -1005,6 +1319,10 @@ export default function EditorWorkspace({
 
   // Download confirmation dialog → actually save.
   const doDownload = async () => {
+    // Site-wide free-download quota: 1st download free for logged-out visitors,
+    // 2nd+ asks them to sign in. The dialog stays open so after logging in they
+    // can hit the confirm button again (signed-in = unlimited).
+    if (!tryConsumeFreeDownload(user, openLogin)) return
     let blob = current
     if (dlFormat !== 'same') {
       const file = new File([current], `out.${getOutputFormat(current)}`, { type: current.type })
@@ -1015,12 +1333,37 @@ export default function EditorWorkspace({
     downloadBlob(blob, `${base}-studio`)
   }
 
+  // Re-initialize a tool's defaults. Called on selection and, with fresh dims,
+  // after undo/redo/clear so an active tool works again without re-clicking it.
+  const initToolDefaults = (tool: StudioToolId, w = curW, h = curH) => {
+    if (tool === 'crop' && !cropRect) {
+      const base = { x: Math.round(w * 0.1), y: Math.round(h * 0.1), width: Math.round(w * 0.8), height: Math.round(h * 0.8) }
+      setCropRect(cropRatioRef.current ? fitToRatio(base, cropRatioRef.current, w, h) : base)
+    }
+    if (tool === 'resize') setResizeState({ width: w, height: h, lock: true })
+    if (tool === 'text' && !textState.hasPos) setTextState((s) => ({ ...s, x: w * 0.3, y: h * 0.3 }))
+    if (tool === 'logo' && !logoState.hasPos) setLogoState((s) => ({ ...s, x: w * 0.4, y: h * 0.4 }))
+  }
+
+  const dismissCropTip = () => {
+    setCropTip(false)
+    try { localStorage.setItem(CROP_TIP_KEY, '1') } catch { /* ignore */ }
+  }
+
   const selectTool = (tool: StudioToolId) => {
+    pendingReinitRef.current = null
     setActiveTool(tool)
     setApplied(false)
     setHoverPt(null)
-    // First visit to a tool → teach with a bubble pointing at Apply.
-    if (!seenRef.current.has(tool)) {
+    // Crop: show the one-time how-to banner the first time (per customer).
+    if (tool === 'crop') {
+      try {
+        if (!localStorage.getItem(CROP_TIP_KEY)) setCropTip(true)
+      } catch { /* ignore */ }
+    }
+    // First visit to an EDITING tool → teach with a bubble pointing at Apply.
+    // Select has nothing to apply, so no bubble (its panel shows a hint instead).
+    if (tool !== 'select' && !seenRef.current.has(tool)) {
       const next = new Set(seenRef.current)
       next.add(tool)
       seenRef.current = next
@@ -1029,12 +1372,7 @@ export default function EditorWorkspace({
     } else {
       setTipTool(null)
     }
-    if (tool === 'crop' && !cropRect) {
-      setCropRect({ x: Math.round(curW * 0.1), y: Math.round(curH * 0.1), width: Math.round(curW * 0.8), height: Math.round(curH * 0.8) })
-    }
-    if (tool === 'resize') setResizeState({ width: curW, height: curH, lock: true })
-    if (tool === 'text' && !textState.hasPos) setTextState((s) => ({ ...s, x: curW * 0.3, y: curH * 0.3 }))
-    if (tool === 'logo' && !logoState.hasPos) setLogoState((s) => ({ ...s, x: curW * 0.4, y: curH * 0.4 }))
+    initToolDefaults(tool)
   }
 
   const onPickLogo = (file: File) => {
@@ -1059,7 +1397,7 @@ export default function EditorWorkspace({
             onClick={() => selectTool(tool.id)}
             title={t[tool.labelKey] as string}
             className={`
-              shrink-0 flex items-center lg:flex-col gap-2 lg:gap-1 px-2.5 lg:px-0 lg:w-16 lg:py-2.5
+              shrink-0 flex items-center lg:flex-col gap-2 lg:gap-1 px-2.5 lg:px-0 lg:w-full lg:py-2.5
               rounded-[var(--radius-sm)] transition-all
               ${active
                 ? 'glass-active text-[var(--accent)]'
@@ -1085,6 +1423,19 @@ export default function EditorWorkspace({
       )
     }
     switch (activeTool) {
+      case 'select':
+        return (
+          <div className="space-y-3">
+            <p className="text-xs text-[var(--text-dim)] leading-relaxed">
+              {lang === 'zh'
+                ? '「选择」是默认状态：拖动空白处平移、滚轮缩放，方便查看编辑效果。切换到其他工具即可继续编辑。'
+                : 'Select is the resting state: drag to pan, scroll to zoom — handy for inspecting the result. Pick a tool below to keep editing.'}
+            </p>
+            <div className="flex gap-2">
+              <ToolButton onClick={() => { setViewZoom(1); setViewPan({ x: 0, y: 0 }) }}>{t.resetZoom}</ToolButton>
+            </div>
+          </div>
+        )
       case 'rotate':
         return (
           <div className="space-y-3">
@@ -1108,14 +1459,51 @@ export default function EditorWorkspace({
         return (
           <div className="space-y-3">
             <p className="text-xs text-[var(--text-dim)]">{t.studioCropHint}</p>
+            <Field label={t.cropRatio}>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { r: null as { w: number; h: number } | null, label: t.cropFree },
+                  { r: { w: 1, h: 1 }, label: '1:1' },
+                  { r: { w: 4, h: 3 }, label: '4:3' },
+                  { r: { w: 3, h: 4 }, label: '3:4' },
+                  { r: { w: 16, h: 9 }, label: '16:9' },
+                  { r: { w: 9, h: 16 }, label: '9:16' },
+                ].map((p) => {
+                  const active = !!p.r && !!cropRatio && cropRatio.w === p.r.w && cropRatio.h === p.r.h
+                  return (
+                    <ToolButton key={p.label} active={active} onClick={() => setRatio(p.r)}>
+                      {p.label}
+                    </ToolButton>
+                  )
+                })}
+              </div>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <NumInput value={cropCustom.w} onChange={(v) => setCropCustom((s) => ({ ...s, w: v }))} />
+                <span className="text-[var(--text-dim)]">:</span>
+                <NumInput value={cropCustom.h} onChange={(v) => setCropCustom((s) => ({ ...s, h: v }))} />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const w = Math.round(cropCustom.w)
+                    const h = Math.round(cropCustom.h)
+                    if (w >= 1 && h >= 1) setRatio({ w, h })
+                  }}
+                  className="px-2.5 py-2 rounded-[var(--radius-sm)] glass text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)]"
+                >
+                  {t.cropCustom}
+                </button>
+              </div>
+            </Field>
+            {/* Live dimensions — crop-box size while cropping, otherwise the
+                current image size (never 0, even right after applying a crop). */}
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="glass rounded-[var(--radius-sm)] px-2.5 py-2 flex items-center justify-between gap-2">
                 <span className="text-[var(--text-dim)]">{t.studioWidth}</span>
-                <span className="font-mono text-[var(--text-primary)]">{cropRect ? Math.round(cropRect.width) : 0}px</span>
+                <span className="font-mono text-[var(--text-primary)]">{cropRect ? Math.round(cropRect.width) : curW}px</span>
               </div>
               <div className="glass rounded-[var(--radius-sm)] px-2.5 py-2 flex items-center justify-between gap-2">
                 <span className="text-[var(--text-dim)]">{t.studioHeight}</span>
-                <span className="font-mono text-[var(--text-primary)]">{cropRect ? Math.round(cropRect.height) : 0}px</span>
+                <span className="font-mono text-[var(--text-primary)]">{cropRect ? Math.round(cropRect.height) : curH}px</span>
               </div>
             </div>
           </div>
@@ -1265,6 +1653,32 @@ export default function EditorWorkspace({
             )}
           </div>
         )
+      case 'stamp':
+        return (
+          <div className="space-y-3">
+            <p className="text-xs text-[var(--text-dim)]">
+              {lang === 'zh'
+                ? '先点击画布设置「源点」（或按住 Alt 点击重新取源），然后像画笔一样涂抹，源点周围的内容会被复制到涂抹处——和 PS 的仿制图章一样。'
+                : 'Click the canvas to set a source point (Alt+click re-picks it), then paint — pixels around the source are copied to where you brush, just like the Clone Stamp in PS.'}
+            </p>
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className={`h-2 w-2 rounded-full ${stampState.src ? 'bg-emerald-400' : 'bg-white/25'}`} />
+              <span className="text-[var(--text-dim)]">
+                {stampState.src
+                  ? (lang === 'zh'
+                    ? `源点 (${Math.round(stampState.src.x)}, ${Math.round(stampState.src.y)})`
+                    : `Source (${Math.round(stampState.src.x)}, ${Math.round(stampState.src.y)})`)
+                  : (lang === 'zh' ? '未设置源点' : 'No source yet')}
+              </span>
+            </div>
+            <Field label={t.studioBrushSize}>
+              <Slider value={stampState.size} min={5} max={120} onChange={(v) => setStampState((s) => ({ ...s, size: v }))} />
+            </Field>
+            <div className="flex gap-2">
+              <ToolButton onClick={clearTool}>{t.studioClear}</ToolButton>
+            </div>
+          </div>
+        )
       case 'resize':
         return (
           <div className="space-y-3">
@@ -1293,6 +1707,13 @@ export default function EditorWorkspace({
             >
               {resizeState.lock ? `🔒 ${t.studioLockRatio}` : `🔓 ${t.studioLockRatio}`}
             </button>
+            <div className="flex gap-2">
+              <ToolButton
+                onClick={() => setResizeState({ width: curW, height: curH, lock: true })}
+              >
+                {t.studioReset}
+              </ToolButton>
+            </div>
           </div>
         )
     }
@@ -1300,15 +1721,17 @@ export default function EditorWorkspace({
 
   const canApply = () => {
     if (!activeTool) return false
+    if (activeTool === 'select') return false // nothing to commit — just inspecting
     if (activeTool === 'text') return !!textState.text.trim()
     if (activeTool === 'logo') return !!logoState.imageUrl
+    if (activeTool === 'stamp') return stampStrokesRef.current.length > 0
     return true
   }
 
   return (
     // w-full: this container is a flex item of the page column flex. `mx-auto`
     // (auto cross margins) disables flex stretch, so without an explicit width
-    // the tool rail's content (9 buttons) blows the layout out past the viewport
+    // the tool rail's content (11 buttons) blows the layout out past the viewport
     // on mobile. w-full caps it at the viewport; max-w-6xl + mx-auto keep desktop
     // centered at 1152px.
     <div className="mx-auto max-w-6xl w-full min-w-0 px-3 sm:px-6 py-4 sm:py-6">
@@ -1375,10 +1798,10 @@ export default function EditorWorkspace({
       </div>
 
       {/* Workbench */}
-      <div className="flex flex-col lg:flex-row gap-3">
+      <div className="flex flex-col lg:flex-row gap-2">
         {/* Tool module — mobile: tools wrap into a top grid (no horizontal
             scroll); desktop: vertical left rail. */}
-        <div className="flex flex-col gap-2 lg:w-44">
+        <div className="flex flex-col gap-2 lg:w-20">
           {rail}
         </div>
 
@@ -1387,21 +1810,23 @@ export default function EditorWorkspace({
         <div className="flex flex-1 min-w-0 flex-col lg:flex-row gap-3">
           {/* Canvas — base in-flow, overlay absolute inset-0 (same pattern as
               RemoveWatermarkPanel) so both canvases always align at any scale. */}
-          <div ref={canvasCardRef} className="flex-1 min-w-0 glass rounded-[var(--radius-lg)] p-3 sm:p-4">
+          <div ref={canvasCardRef} className="relative flex-1 min-w-0 glass rounded-[var(--radius-lg)] p-3 sm:p-4 overflow-hidden">
             <div className="flex items-center justify-center">
               <div
+                ref={imageBoxRef}
                 className="relative select-none checkerboard rounded-[var(--radius-md)]"
                 style={{
                   width: disp.w ? disp.w : '100%',
                   height: disp.h ? disp.h : '0.1px',
                   touchAction: 'none',
-                  cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool] : 'default',
+                  transform: viewZoom > 1 ? `translate(${viewPan.x}px, ${viewPan.y}px) scale(${viewZoom})` : undefined,
+                  cursor: activeTool && PAINT_CURSOR[activeTool] ? PAINT_CURSOR[activeTool]
+                    : viewZoom > 1 ? (panning ? 'grabbing' : 'grab') : 'default',
                 }}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
-                onPointerLeave={() => setHoverPt(null)}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 <canvas
@@ -1413,18 +1838,105 @@ export default function EditorWorkspace({
                   className="absolute inset-0 w-full h-full object-contain rounded-[var(--radius-md)] pointer-events-none"
                   style={{ opacity: processing ? 0.6 : 1 }}
                 />
-                {processing && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px] z-10 rounded-[var(--radius-md)]">
-                    <span className="text-sm text-[var(--text-primary)] animate-pulse">{t.studioDownloading}</span>
-                  </div>
-                )}
-                {applied && (
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 backdrop-blur-md whitespace-nowrap">
-                    {t.studioApplied}
-                  </div>
-                )}
+                {/* Crop rulers — ticks along the top + left EDGES of the image
+                    (hugging the box, OUTSIDE the image) instead of inside the crop
+                    box. Anchored off the box itself (relative), so no rect
+                    measurement timing issues; tick scale = disp/curW exactly. Font
+                    is fixed screen px. Only at fit view — zooming is detail work. */}
+                {activeTool === 'crop' && viewZoom === 1 && disp.w > 0 && (() => {
+                  const sc = disp.w / curW
+                  const step = [10, 20, 25, 50, 100, 200, 250, 500, 1000].find((s) => s >= 40 / sc) ?? 2000
+                  const stripW = 18
+                  const stripH = 16
+                  const xs: number[] = []
+                  const ys: number[] = []
+                  for (let v = 0; v <= curW; v += step) xs.push(v)
+                  for (let v = 0; v <= curH; v += step) ys.push(v)
+                  return (
+                    <>
+                      {/* Top strip — X pixel positions */}
+                      <div data-ruler="top" className="absolute z-20 pointer-events-none overflow-hidden border-b border-white/15" style={{ top: -stripH, left: 0, width: '100%', height: stripH, background: 'rgba(10,10,24,0.72)' }}>
+                        {xs.map((v) => (
+                          <span key={`x${v}`} className="absolute bottom-0" style={{ left: v * sc }}>
+                            <span className="block w-px bg-white/50" style={{ height: v % (step * 2) === 0 ? 8 : 5 }} />
+                          </span>
+                        ))}
+                        {xs.filter((v) => v % (step * 2) === 0).map((v) => (
+                          <span key={`xl${v}`} className="absolute bottom-0.5 leading-none" style={{ left: v * sc + 2, fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                      {/* Left strip — Y pixel positions */}
+                      <div data-ruler="left" className="absolute z-20 pointer-events-none overflow-hidden border-r border-white/15" style={{ top: 0, left: -stripW, width: stripW, height: '100%', background: 'rgba(10,10,24,0.72)' }}>
+                        {ys.map((v) => (
+                          <span key={`y${v}`} className="absolute right-0" style={{ top: v * sc }}>
+                            <span className="block h-px bg-white/50" style={{ width: v % (step * 2) === 0 ? 8 : 5 }} />
+                          </span>
+                        ))}
+                        {ys.filter((v) => v % (step * 2) === 0).map((v) => (
+                          <span key={`yl${v}`} className="absolute right-0.5 leading-none" style={{ top: v * sc + 2, fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
+            {/* One-time crop how-to banner (localStorage — shown once per customer) */}
+            {cropTip && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 max-w-[calc(100%-24px)] px-3 py-2 rounded-xl glass border border-[var(--accent)]/35 text-xs text-[var(--text-primary)] shadow-[0_8px_30px_rgba(0,0,0,0.45)]">
+                <span className="shrink-0">✂️</span>
+                <span className="leading-snug">{t.cropTip}</span>
+                <button type="button" onClick={dismissCropTip} aria-label="dismiss" className="shrink-0 text-[var(--text-dim)] hover:text-[var(--text-primary)]">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="h-3.5 w-3.5"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
+              </div>
+            )}
+            {/* Processing + applied overlays live OUTSIDE the zoomed box so they
+                keep a constant on-screen size at any zoom level. */}
+            {processing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px] z-10 rounded-[var(--radius-lg)]">
+                <span className="text-sm text-[var(--text-primary)] animate-pulse">{t.studioDownloading}</span>
+              </div>
+            )}
+            {applied && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 backdrop-blur-md whitespace-nowrap">
+                {t.studioApplied}
+              </div>
+            )}
+            {viewZoom > 1 ? (
+              <div className="absolute bottom-2 right-2 z-20 flex items-center gap-1 glass rounded-full px-2 py-1 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => { setViewZoom(1); setViewPan({ x: 0, y: 0 }) }}
+                  className="px-2 py-0.5 rounded-full text-[var(--text-dim)] hover:text-[var(--text-primary)]"
+                >
+                  {t.resetZoom}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewZoom((z) => Math.max(1, z - 0.5))}
+                  className="h-6 w-6 rounded-full text-[var(--text-dim)] hover:text-[var(--text-primary)]"
+                >
+                  −
+                </button>
+                <span className="font-mono tabular-nums w-10 text-center text-[var(--text-primary)]">{Math.round(viewZoom * 100)}%</span>
+                <button
+                  type="button"
+                  onClick={() => setViewZoom((z) => Math.min(5, z + 0.5))}
+                  className="h-6 w-6 rounded-full text-[var(--text-dim)] hover:text-[var(--text-primary)]"
+                >
+                  +
+                </button>
+              </div>
+            ) : (
+              <span className="absolute bottom-2 right-2 z-20 pointer-events-none text-[10px] text-[var(--text-dim)]/60 whitespace-nowrap">
+                {t.zoomHint}
+              </span>
+            )}
           </div>
 
           {/* Panel — full-width under the canvas on mobile, right panel on desktop */}
@@ -1740,6 +2252,9 @@ const TUTORIALS: { id: StudioToolId; labelEn: string; labelZh: string; stepsEn: 
 // as a friendly rainbow instead of a row of identical boxes. All class names are
 // literal so Tailwind v4 picks them up.
 const TUTORIAL_TINTS: Record<StudioToolId, { tile: string; dot: string; line: string; open: string }> = {
+  // Select is the resting state — tint exists to satisfy the Record, but the
+  // tutorial grid only renders entries present in TUTORIALS, so no card shows.
+  select: { tile: 'bg-slate-400/10 text-slate-300 ring-1 ring-inset ring-slate-400/25 group-open:bg-slate-400/20 group-open:ring-slate-400/50', dot: 'bg-slate-400/15 text-slate-300', line: 'from-slate-400/50', open: 'group-open:border-slate-400/30' },
   rotate: { tile: 'bg-cyan-400/10 text-cyan-300 ring-1 ring-inset ring-cyan-400/25 group-open:bg-cyan-400/20 group-open:ring-cyan-400/50', dot: 'bg-cyan-400/15 text-cyan-300', line: 'from-cyan-400/50', open: 'group-open:border-cyan-400/30' },
   crop: { tile: 'bg-emerald-400/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/25 group-open:bg-emerald-400/20 group-open:ring-emerald-400/50', dot: 'bg-emerald-400/15 text-emerald-300', line: 'from-emerald-400/50', open: 'group-open:border-emerald-400/30' },
   text: { tile: 'bg-amber-400/10 text-amber-300 ring-1 ring-inset ring-amber-400/25 group-open:bg-amber-400/20 group-open:ring-amber-400/50', dot: 'bg-amber-400/15 text-amber-300', line: 'from-amber-400/50', open: 'group-open:border-amber-400/30' },
@@ -1748,6 +2263,7 @@ const TUTORIAL_TINTS: Record<StudioToolId, { tile: string; dot: string; line: st
   heal: { tile: 'bg-rose-400/10 text-rose-300 ring-1 ring-inset ring-rose-400/25 group-open:bg-rose-400/20 group-open:ring-rose-400/50', dot: 'bg-rose-400/15 text-rose-300', line: 'from-rose-400/50', open: 'group-open:border-rose-400/30' },
   cutout: { tile: 'bg-indigo-400/10 text-indigo-300 ring-1 ring-inset ring-indigo-400/25 group-open:bg-indigo-400/20 group-open:ring-indigo-400/50', dot: 'bg-indigo-400/15 text-indigo-300', line: 'from-indigo-400/50', open: 'group-open:border-indigo-400/30' },
   remove: { tile: 'bg-violet-400/10 text-violet-300 ring-1 ring-inset ring-violet-400/25 group-open:bg-violet-400/20 group-open:ring-violet-400/50', dot: 'bg-violet-400/15 text-violet-300', line: 'from-violet-400/50', open: 'group-open:border-violet-400/30' },
+  stamp: { tile: 'bg-teal-400/10 text-teal-300 ring-1 ring-inset ring-teal-400/25 group-open:bg-teal-400/20 group-open:ring-teal-400/50', dot: 'bg-teal-400/15 text-teal-300', line: 'from-teal-400/50', open: 'group-open:border-teal-400/30' },
   resize: { tile: 'bg-sky-400/10 text-sky-300 ring-1 ring-inset ring-sky-400/25 group-open:bg-sky-400/20 group-open:ring-sky-400/50', dot: 'bg-sky-400/15 text-sky-300', line: 'from-sky-400/50', open: 'group-open:border-sky-400/30' },
 }
 

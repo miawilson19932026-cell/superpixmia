@@ -28,6 +28,17 @@ export const AI_COMING_ITEMS: { id: string; icon: ReactNode; labelZh: string; la
   { id: 'ai-factory', icon: aiFactoryNavIcon, labelZh: '图片工厂', labelEn: 'Image Factory' },
 ]
 
+// ── GIF Maker (/gif-maker) — shared by the homepage nav grid and mobile drawer.
+export const gifNavIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="5" width="18" height="14" rx="3" />
+    <path d="M7 9l5 3-5 3V9z" fill="currentColor" opacity="0.6" />
+    <circle cx="17" cy="10" r="1" fill="currentColor" />
+    <circle cx="17" cy="14" r="1" fill="currentColor" opacity="0.6" />
+    <circle cx="20" cy="12" r="1" fill="currentColor" opacity="0.35" />
+  </svg>
+)
+
 // Order used by the tool switcher and the help-side navigation.
 // crop / rotate / watermark moved into the /studio editor (2026-08-14).
 export const TOOL_KEYS: ToolType[] = ['resize', 'compress', 'remove-bg', 'convert', 'remove-watermark']

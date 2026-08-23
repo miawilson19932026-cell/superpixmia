@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import { useAuth } from '../lib/auth'
-import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS } from '../lib/tools'
+import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS, gifNavIcon } from '../lib/tools'
 import { toolPaths, EDITOR_PATH } from '../lib/routes'
 
 export default function Header() {
@@ -134,8 +134,8 @@ export default function Header() {
               </div>
             ) : (
               <button
-                onClick={openLogin}
-                className="hidden sm:block px-4 py-1.5 btn-gradient text-xs font-semibold rounded-[var(--radius-sm)]"
+                onClick={() => openLogin()}
+                className="block px-3 sm:px-4 py-1.5 btn-gradient text-xs font-semibold rounded-[var(--radius-sm)] whitespace-nowrap"
               >
                 {t.authSignIn}
               </button>
@@ -195,23 +195,13 @@ export default function Header() {
 
           {/* Nav links */}
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {user ? (
+            {user && (
               <div className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2.5 glass">
                 <span className="text-xs text-[var(--text-dim)] truncate">{user.email ?? '—'}</span>
                 <button onClick={signOut} className="shrink-0 text-xs font-medium text-[var(--accent)]">
                   {t.authSignOut}
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={() => {
-                  openLogin()
-                  closeMenu()
-                }}
-                className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 btn-gradient text-sm font-semibold"
-              >
-                {t.authSignIn}
-              </button>
             )}
             <MobileNavLink to="/" onClick={closeMenu} active={pathname === '/'}>
               {t.navHome}
@@ -264,6 +254,23 @@ export default function Header() {
                   </NavLink>
                 )
               })}
+              {/* GIF Maker — new standalone tool */}
+              <NavLink
+                to="/gif-maker"
+                onClick={closeMenu}
+                className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition-all ${
+                  pathname === '/gif-maker'
+                    ? 'glass-active text-[var(--accent)]'
+                    : 'text-[var(--text-dim)] hover:bg-white/[0.04]'
+                }`}
+              >
+                <span className="h-4 w-4 shrink-0 text-emerald-400">{gifNavIcon}</span>
+                <span className="truncate">{t.gifMaker}</span>
+                <span className="ml-auto shrink-0 rounded-full bg-emerald-400/15 px-1.5 py-0.5 text-[8px] font-semibold text-emerald-300 leading-none">
+                  {lang === 'zh' ? '新' : 'New'}
+                </span>
+              </NavLink>
+
               {/* AI coming-soon cards — dashed orange, same style as the homepage
                   nav grid, so the new features show up in the mobile drawer too. */}
               {AI_COMING_ITEMS.map((item) => (

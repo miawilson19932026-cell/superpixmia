@@ -28,6 +28,7 @@ const ROUTES = [
   { path: '/convert', tool: 'convert', article: null },
   { path: '/remove-watermark', tool: 'remove-watermark', article: null },
   { path: '/studio', tool: null, article: null },
+  { path: '/gif-maker', tool: null, article: null },
   { path: '/help', tool: null, article: null },
   { path: '/help/how-to-remove-bg', tool: null, article: 'how-to-remove-bg' },
   { path: '/help/png-compression-guide', tool: null, article: 'png-compression-guide' },
@@ -36,6 +37,8 @@ const ROUTES = [
   { path: '/blog', tool: null, article: null },
   { path: '/blog/wechat-images-blurry', tool: null, article: 'wechat-images-blurry' },
   { path: '/blog/how-ai-sees-images', tool: null, article: 'how-ai-sees-images' },
+  { path: '/blog/ai-image-prompt-guide', tool: null, article: 'ai-image-prompt-guide' },
+  { path: '/blog/make-ai-gif', tool: null, article: 'make-ai-gif' },
 ]
 
 function escapeAttr(s) {
@@ -103,6 +106,8 @@ try {
       ldBlocks = seoJsonLd.homePageLd()
     } else if (route.path === '/studio') {
       ldBlocks = seoJsonLd.editorPageLd()
+    } else if (route.path === '/gif-maker') {
+      ldBlocks = seoJsonLd.gifMakerPageLd()
     } else if (route.tool) {
       ldBlocks = seoJsonLd.toolPageLd(route.tool)
     } else if (route.path === '/help') {

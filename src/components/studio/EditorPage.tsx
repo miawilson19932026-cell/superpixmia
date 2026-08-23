@@ -41,7 +41,7 @@ export default function EditorPage() {
         onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = '' }} />
       {source ? (
         <div>
-          <EditorWorkspace source={source} onReset={() => setSource(null)} onReplace={() => inputRef.current?.click()} />
+          <EditorWorkspace key={source.url} source={source} onReset={() => setSource(null)} onReplace={() => inputRef.current?.click()} />
           <SeoContent variant="studio" />
         </div>
       ) : (
