@@ -18,10 +18,13 @@ export default function ProfileModal() {
   }
 
   // Same overlay + glass card pattern as LoginModal, just wider (max-w-md) for
-  // the extra fields and vertically scrollable on short viewports.
+  // the extra fields and vertically scrollable on short viewports. The form is
+  // in compact mode (fields pair up, smaller avatars) and Skip is a real
+  // full-width secondary button — not a tiny link — so the two exits (save /
+  // skip) are equally obvious and easy to tap.
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-2xl glass modal-card border border-white/10 p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-md rounded-2xl glass modal-card border border-white/10 p-5 space-y-4 max-h-[85vh] overflow-y-auto">
         <button
           type="button"
           onClick={onSkip}
@@ -34,14 +37,16 @@ export default function ProfileModal() {
         </button>
         <h2 className="text-base font-semibold text-[var(--text-primary)]">{t.profileTitle}</h2>
         <p className="text-xs leading-relaxed text-[var(--text-dim)]">{t.profileSubtitle}</p>
-        <ProfileForm initial={getProfile(user)} submitLabel={t.profileSave} onDone={closeProfile} />
-        <button
-          type="button"
-          onClick={onSkip}
-          className="w-full text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-colors py-1"
-        >
-          {t.profileSkip}
-        </button>
+        <ProfileForm compact initial={getProfile(user)} submitLabel={t.profileSave} onDone={closeProfile} />
+        <div className="pt-1 border-t border-white/[0.06]">
+          <button
+            type="button"
+            onClick={onSkip}
+            className="w-full py-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-sm font-medium text-[var(--text-dim)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-all"
+          >
+            {t.profileSkipLater}
+          </button>
+        </div>
       </div>
     </div>
   )

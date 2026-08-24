@@ -283,6 +283,7 @@ const en: Translations = {
   profileReasonOtherPlaceholder: 'Describe your use case…',
   profileSave: 'Save',
   profileSkip: 'Skip for now',
+  profileSkipLater: 'Skip — I’ll do it later',
   profileSaveSuccess: 'Profile saved — thanks!',
   profileSaveError: 'Save failed, please try again',
   profilePageTitle: 'Personal Center',

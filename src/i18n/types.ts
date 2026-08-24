@@ -278,6 +278,7 @@ export interface Translations {
   profileReasonOtherPlaceholder: string
   profileSave: string
   profileSkip: string
+  profileSkipLater: string
   profileSaveSuccess: string
   profileSaveError: string
   profilePageTitle: string

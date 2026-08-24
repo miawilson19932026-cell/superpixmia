@@ -135,11 +135,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // First-login profile prompt: ask once per account+browser until the user
-  // saves or skips (profile_completed in user_metadata), and never at the same
-  // time as the set-password overlay — when that closes, passwordSetupOpen
-  // flips false and this effect re-runs to open the profile prompt instead.
+  // saves or skips (profile_completed in user_metadata). Never at the same time
+  // as the set-password overlay OR while the login modal is still open — the
+  // OTP sign-up flow ends with a set-password step, and a profile prompt sliding
+  // in over it made users think sign-up was done (password never saved → the
+  // "wrong password" on next login). When the login modal / password overlay
+  // closes, this effect re-runs and opens the profile prompt instead.
   useEffect(() => {
-    if (!user || passwordSetupOpen) return
+    if (!user || passwordSetupOpen || loginOpen) return
     if (user.user_metadata?.profile_completed) return
     try {
       if (localStorage.getItem(profileFlagKey(user.id))) return
@@ -148,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* storage unavailable — still show the prompt */
     }
     setProfileOpen(true)
-  }, [user, passwordSetupOpen])
+  }, [user, passwordSetupOpen, loginOpen])
 
   const openLogin = useCallback((reason?: string) => {
     setLoginReason(reason ?? null)

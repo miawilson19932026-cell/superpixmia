@@ -8,10 +8,15 @@ import { COUNTRIES } from '../lib/countries'
 // Optional persona fields, shared by the first-login ProfileModal and the
 // /profile personal center edit form. Every field is optional — an empty form
 // still saves (which just marks the profile as completed).
+//
+// `compact` is used inside the first-login modal: shorter fields pair up in
+// two-column rows, the avatar grid shrinks and reason tags tighten to a 3-col
+// grid so the whole prompt fits without a long scroll.
 interface Props {
   initial?: Profile
   submitLabel: string
   onDone?: () => void
+  compact?: boolean
 }
 
 export const GENDER_OPTIONS = ['male', 'female', 'other', 'prefer_not'] as const
@@ -70,7 +75,7 @@ export function reasonLabel(t: Translations, v: string): string {
   }
 }
 
-export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
+export default function ProfileForm({ initial, submitLabel, onDone, compact }: Props) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [nickname, setNickname] = useState(initial?.nickname ?? '')
@@ -108,7 +113,8 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
     setAvatar(key)
   }
 
-  // One shared cell renderer for both avatar groups.
+  // One shared cell renderer for both avatar groups. Compact shrinks the cells
+  // (w-9 vs w-11) so the picker takes less room inside the first-login modal.
   const avatarGrid = (list: AnimeAvatarDef[]) => (
     <div className="grid grid-cols-5 gap-2">
       {list.map((a) => {
@@ -126,7 +132,7 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
                 : 'opacity-75 hover:opacity-100 hover:scale-105'
             }`}
           >
-            <span className="block rounded-full overflow-hidden w-11 h-11">
+            <span className={`block rounded-full overflow-hidden ${compact ? 'w-9 h-9' : 'w-11 h-11'}`}>
               <AnimeAvatar avatar={a.key} className="w-full h-full" />
             </span>
           </button>
@@ -162,7 +168,7 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className={compact ? 'space-y-3' : 'space-y-4'}>
       <div>
         <label className={labelCls}>{t.profileNickname}</label>
         <input
@@ -175,48 +181,76 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
         />
       </div>
 
-      <div>
-        <label className={labelCls}>{t.profileBirthday}</label>
-        <input
-          type="date"
-          value={birthday}
-          onChange={(e) => setBirthday(e.target.value)}
-          className={`${inputCls} [color-scheme:dark]`}
-          // Native date inputs only expand when the calendar icon is clicked.
-          // Opening the picker from anywhere in the field feels more natural.
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect()
-            // Right ~28px is the native calendar icon — let it do its own thing;
-            // anywhere else, open the picker programmatically.
-            if (e.clientX < rect.right - 28) {
-              try { e.currentTarget.showPicker?.() } catch { /* picker already open / unsupported */ }
-            }
-          }}
-        />
+      {/* Birthday + gender share a row in compact mode to halve the height. */}
+      <div className={compact ? 'grid grid-cols-2 gap-3' : 'space-y-4'}>
+        <div>
+          <label className={labelCls}>{t.profileBirthday}</label>
+          <input
+            type="date"
+            value={birthday}
+            onChange={(e) => setBirthday(e.target.value)}
+            className={`${inputCls} [color-scheme:dark]`}
+            // Native date inputs only expand when the calendar icon is clicked.
+            // Opening the picker from anywhere in the field feels more natural.
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              // Right ~28px is the native calendar icon — let it do its own thing;
+              // anywhere else, open the picker programmatically.
+              if (e.clientX < rect.right - 28) {
+                try { e.currentTarget.showPicker?.() } catch { /* picker already open / unsupported */ }
+              }
+            }}
+          />
+        </div>
+
+        <div>
+          <label className={labelCls}>{t.profileGender}</label>
+          <select value={gender} onChange={(e) => onGenderChange(e.target.value)} className={inputCls}>
+            <option value="">{t.profileOccupationPlaceholder}</option>
+            {GENDER_OPTIONS.map((v) => (
+              <option key={v} value={v}>
+                {genderLabel(t, v)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div>
-        <label className={labelCls}>{t.profileGender}</label>
-        <select value={gender} onChange={(e) => onGenderChange(e.target.value)} className={inputCls}>
-          <option value="">{t.profileOccupationPlaceholder}</option>
-          {GENDER_OPTIONS.map((v) => (
-            <option key={v} value={v}>
-              {genderLabel(t, v)}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Country + occupation share a row in compact mode. */}
+      <div className={compact ? 'grid grid-cols-2 gap-3' : 'space-y-4'}>
+        <div>
+          <label className={labelCls}>{t.profileCountry}</label>
+          <select value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls}>
+            <option value="">{t.profileCountryPlaceholder}</option>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.en} {c.native}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <div>
-        <label className={labelCls}>{t.profileCountry}</label>
-        <select value={country} onChange={(e) => setCountry(e.target.value)} className={inputCls}>
-          <option value="">{t.profileCountryPlaceholder}</option>
-          {COUNTRIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.en} {c.native}
-            </option>
-          ))}
-        </select>
+        <div>
+          <label className={labelCls}>{t.profileOccupation}</label>
+          <select value={occupation} onChange={(e) => setOccupation(e.target.value)} className={inputCls}>
+            <option value="">{t.profileOccupationPlaceholder}</option>
+            {OCCUPATION_OPTIONS.map((v) => (
+              <option key={v} value={v}>
+                {occupationLabel(t, v)}
+              </option>
+            ))}
+          </select>
+          {occupation === 'other' && (
+            <input
+              type="text"
+              value={occupationOther}
+              onChange={(e) => setOccupationOther(e.target.value)}
+              placeholder={t.profileOccupationOtherPlaceholder}
+              className={`${inputCls} mt-2`}
+              maxLength={40}
+            />
+          )}
+        </div>
       </div>
 
       {/* Anime avatar picker — 20 hand-drawn looks in two groups. Picking a
@@ -229,31 +263,11 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
         {avatarGrid(COOL_AVATARS)}
       </div>
 
-      <div>
-        <label className={labelCls}>{t.profileOccupation}</label>
-        <select value={occupation} onChange={(e) => setOccupation(e.target.value)} className={inputCls}>
-          <option value="">{t.profileOccupationPlaceholder}</option>
-          {OCCUPATION_OPTIONS.map((v) => (
-            <option key={v} value={v}>
-              {occupationLabel(t, v)}
-            </option>
-          ))}
-        </select>
-        {occupation === 'other' && (
-          <input
-            type="text"
-            value={occupationOther}
-            onChange={(e) => setOccupationOther(e.target.value)}
-            placeholder={t.profileOccupationOtherPlaceholder}
-            className={`${inputCls} mt-2`}
-            maxLength={40}
-          />
-        )}
-      </div>
-
+      {/* Usage reasons — a tight 3-col grid in compact mode; the chips carry
+          generous padding so they are easy to tap. */}
       <div>
         <label className={labelCls}>{t.profileReason}</label>
-        <div className="flex flex-wrap gap-1.5">
+        <div className={compact ? 'grid grid-cols-3 gap-1.5' : 'flex flex-wrap gap-1.5'}>
           {REASON_OPTIONS.map((v) => {
             const active = reasons.includes(v)
             return (
@@ -262,7 +276,7 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
                 type="button"
                 onClick={() => toggleReason(v)}
                 aria-pressed={active}
-                className={`px-3 py-2 rounded-[var(--radius-sm)] border text-xs font-medium transition-all ${
+                className={`min-h-[36px] flex items-center justify-center px-2 py-2 rounded-[var(--radius-sm)] border text-xs font-medium transition-all ${
                   active
                     ? 'border-[var(--accent)] bg-[var(--accent-glow)] text-[var(--accent)]'
                     : 'border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]'

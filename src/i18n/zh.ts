@@ -283,6 +283,7 @@ const zh: Translations = {
   profileReasonOtherPlaceholder: '写一下你的具体用途…',
   profileSave: '保存',
   profileSkip: '跳过',
+  profileSkipLater: '跳过，以后再填',
   profileSaveSuccess: '保存成功，谢谢！',
   profileSaveError: '保存失败，请重试',
   profilePageTitle: '个人中心',
