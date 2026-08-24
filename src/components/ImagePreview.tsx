@@ -3,6 +3,7 @@ import type { DragEvent } from 'react'
 import { useTranslation } from '../i18n'
 import { formatSize } from '../utils'
 import { uploadForWechat } from '../utils/wechat'
+import { useBackdropDismiss } from '../lib/useBackdropDismiss'
 
 // SSR-safe: prerender runs in Node where navigator is undefined.
 const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
@@ -149,6 +150,7 @@ export default function ImagePreview({
     setLightbox(true)
   }
 
+  const { onBackdropPointerDown, onBackdropClick } = useBackdropDismiss()
   const closeLightbox = () => setLightbox(false)
 
   // External trigger (e.g. WeChat download button)
@@ -667,7 +669,8 @@ export default function ImagePreview({
       {lightbox && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={closeLightbox}
+          onPointerDownCapture={onBackdropPointerDown}
+          onClick={(e) => onBackdropClick(e, closeLightbox)}
         >
           <div
             className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-[var(--radius-xl)] glass backdrop-blur-2xl overflow-hidden shadow-2xl"

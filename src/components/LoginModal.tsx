@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth, passwordFlagKey } from '../lib/auth'
+import { useBackdropDismiss } from '../lib/useBackdropDismiss'
 import { useTranslation } from '../i18n'
 
 type Mode = 'signin' | 'signup'
@@ -49,6 +50,9 @@ export default function LoginModal() {
     return () => clearInterval(id)
   }, [cooldown])
 
+  // Drag-to-close guard (shared with the lightbox + dialogs): see useBackdropDismiss.
+  const { onBackdropPointerDown, onBackdropClick } = useBackdropDismiss()
+
   const inputCls =
     'w-full bg-[var(--bg-input)] border border-[var(--border)] hover:border-[var(--border-hover)] focus:border-[var(--accent)] text-[var(--text-primary)] text-sm rounded-[var(--radius-sm)] px-3 py-2.5 outline-none transition-colors'
   const btnCls =
@@ -77,7 +81,8 @@ export default function LoginModal() {
     return (
       <div
         className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-        onClick={skip}
+        onPointerDownCapture={onBackdropPointerDown}
+        onClick={(e) => onBackdropClick(e, skip)}
       >
         <div
           className="relative w-full max-w-sm rounded-2xl glass border border-white/10 p-5 space-y-4"
@@ -277,7 +282,8 @@ export default function LoginModal() {
   return (
     <div
       className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={closeLogin}
+      onPointerDownCapture={onBackdropPointerDown}
+      onClick={(e) => onBackdropClick(e, closeLogin)}
     >
       <div
         className="relative w-full max-w-sm rounded-2xl glass border border-white/10 p-5 space-y-4"

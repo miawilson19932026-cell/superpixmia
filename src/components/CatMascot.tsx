@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from '../i18n'
+import { useBackdropDismiss } from '../lib/useBackdropDismiss'
 
 // SSR-safe: prerender runs in Node where navigator is undefined.
 const isWeChat = typeof navigator !== 'undefined' && /MicroMessenger/i.test(navigator.userAgent)
@@ -82,6 +83,7 @@ export default function CatMascot({ positionClass, bubbleBelow }: { positionClas
   const [clicked, setClicked] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const idxRef = useRef(0)
+  const { onBackdropPointerDown, onBackdropClick } = useBackdropDismiss()
 
   // Cycle frames with per-frame timing
   useEffect(() => {
@@ -237,7 +239,8 @@ export default function CatMascot({ positionClass, bubbleBelow }: { positionClas
       {showGuide && (
         <div
           className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-          onClick={() => setShowGuide(false)}
+          onPointerDownCapture={onBackdropPointerDown}
+          onClick={(e) => onBackdropClick(e, () => setShowGuide(false))}
         >
           {/* Top bar mockup — WeChat browser chrome */}
           <div className="w-full max-w-sm mb-6 animate-in">

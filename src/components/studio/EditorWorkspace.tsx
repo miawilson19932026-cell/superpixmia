@@ -8,6 +8,7 @@ import type { CropRect } from '../../utils/crop'
 import { cropImage, rotateImage, resizeImage, watermarkImage, removeWatermark, convertImage, formatSize, getOutputFormat } from '../../utils'
 import { downloadBlob } from '../../utils/download'
 import { useAuth, tryConsumeFreeDownload } from '../../lib/auth'
+import { useBackdropDismiss } from '../../lib/useBackdropDismiss'
 import type { OutputFormat } from '../../types'
 import { STUDIO_TOOLS, type StudioToolId } from './tools'
 import {
@@ -200,6 +201,7 @@ export default function EditorWorkspace({
   const [hoverPt, setHoverPt] = useState<{ x: number; y: number } | null>(null)
   const [dlOpen, setDlOpen] = useState(false)
   const [dlFormat, setDlFormat] = useState<'same' | OutputFormat>('same')
+  const { onBackdropPointerDown, onBackdropClick } = useBackdropDismiss()
 
   // First-visit teaching bubble — shown once per tool per browser session,
   // pointing at the Apply button so users learn every change needs Apply.
@@ -2007,7 +2009,8 @@ export default function EditorWorkspace({
       {dlOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => setDlOpen(false)}
+          onPointerDownCapture={onBackdropPointerDown}
+          onClick={(e) => onBackdropClick(e, () => setDlOpen(false))}
         >
           <div
             className="w-full max-w-sm rounded-2xl glass border border-white/10 p-5 space-y-4"
