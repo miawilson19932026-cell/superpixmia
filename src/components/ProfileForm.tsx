@@ -170,6 +170,16 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
           value={birthday}
           onChange={(e) => setBirthday(e.target.value)}
           className={`${inputCls} [color-scheme:dark]`}
+          // Native date inputs only expand when the calendar icon is clicked.
+          // Opening the picker from anywhere in the field feels more natural.
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect()
+            // Right ~28px is the native calendar icon — let it do its own thing;
+            // anywhere else, open the picker programmatically.
+            if (e.clientX < rect.right - 28) {
+              try { e.currentTarget.showPicker?.() } catch { /* picker already open / unsupported */ }
+            }
+          }}
         />
       </div>
 
