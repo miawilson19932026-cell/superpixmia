@@ -25,16 +25,19 @@ interface FrameItem {
 
 const RESIZE_OPTIONS = [0, 256, 512, 1024]
 // Quick-pick frame rates, weighted toward slow values — GIFs (esp. slide-show
-// style from stills) read best at 1–5 fps; anything faster than ~8fps can feel
-// frantic for screenshots. The slider below still allows any value 0.5–30.
-const FPS_PRESETS = [0.5, 1, 2, 3, 5, 8, 10, 15, 24, 30]
+// style from stills) read best at 1–3 fps (each frame holds ~330–1000ms); 5fps
+// is still fine, and faster than ~8fps feels frantic for screenshots. The
+// slider below still allows any value 0.5–24.
+const FPS_PRESETS = [0.5, 1, 1.5, 2, 3, 5, 8, 12, 16, 24]
 
 export default function GifMakerPage() {
   const { t, lang } = useTranslation()
   const { user, openLogin } = useAuth()
 
   const [frames, setFrames] = useState<FrameItem[]>([])
-  const [fps, setFps] = useState(5)
+  // Default 2fps = each frame holds 500ms — a relaxed, readable pace for
+  // still-image slideshows. Users wanting faster motion pick a higher preset.
+  const [fps, setFps] = useState(2)
   const [loop, setLoop] = useState(true)
   const [maxEdge, setMaxEdge] = useState(512)
   const [format, setFormat] = useState<'gif' | 'webm'>('gif')
@@ -339,9 +342,9 @@ export default function GifMakerPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-medium text-[var(--text-primary)]">{t.gifMakerFps}</label>
-                    <span className="text-xs font-bold text-[var(--accent)]">{fpsValue} fps</span>
+                    <span className="text-xs font-bold text-[var(--accent)]">{fpsValue} fps · {Math.round(1000 / fpsValue)} ms/frame</span>
                   </div>
-                  <input type="range" min={0.5} max={30} step={0.5} value={fps}
+                  <input type="range" min={0.5} max={24} step={0.5} value={fps}
                     onChange={(e) => setFps(Number(e.target.value))}
                     className="w-full accent-[var(--accent)]" />
                   <div className="grid grid-cols-5 gap-1.5 mt-2">

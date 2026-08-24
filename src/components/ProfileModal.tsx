@@ -21,7 +21,7 @@ export default function ProfileModal() {
   // the extra fields and vertically scrollable on short viewports.
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-2xl glass border border-white/10 p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-md rounded-2xl glass modal-card border border-white/10 p-5 space-y-4 max-h-[90vh] overflow-y-auto">
         <button
           type="button"
           onClick={onSkip}

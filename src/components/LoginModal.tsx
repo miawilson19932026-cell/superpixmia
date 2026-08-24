@@ -85,7 +85,7 @@ export default function LoginModal() {
         onClick={(e) => onBackdropClick(e, skip)}
       >
         <div
-          className="relative w-full max-w-sm rounded-2xl glass border border-white/10 p-5 space-y-4"
+          className="relative w-full max-w-sm rounded-2xl glass modal-card border border-white/10 p-5 space-y-4"
           onClick={(e) => e.stopPropagation()}
         >
           <h3 className="text-base font-bold text-gradient">{t.authSetPasswordTitle}</h3>
@@ -286,7 +286,7 @@ export default function LoginModal() {
       onClick={(e) => onBackdropClick(e, closeLogin)}
     >
       <div
-        className="relative w-full max-w-sm rounded-2xl glass border border-white/10 p-5 space-y-4"
+        className="relative w-full max-w-sm rounded-2xl glass modal-card border border-white/10 p-5 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sign in / Create account tabs */}

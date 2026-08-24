@@ -2013,7 +2013,7 @@ export default function EditorWorkspace({
           onClick={(e) => onBackdropClick(e, () => setDlOpen(false))}
         >
           <div
-            className="w-full max-w-sm rounded-2xl glass border border-white/10 p-5 space-y-4"
+            className="w-full max-w-sm rounded-2xl glass modal-card border border-white/10 p-5 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <h4 className="text-sm font-semibold text-[var(--text-primary)]">{t.studioDlTitle}</h4>

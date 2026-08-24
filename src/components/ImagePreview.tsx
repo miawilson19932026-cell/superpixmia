@@ -673,7 +673,7 @@ export default function ImagePreview({
           onClick={(e) => onBackdropClick(e, closeLightbox)}
         >
           <div
-            className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-[var(--radius-xl)] glass backdrop-blur-2xl overflow-hidden shadow-2xl"
+            className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-[var(--radius-xl)] glass lightbox-card backdrop-blur-2xl overflow-hidden shadow-2xl"
             style={{ border: '1px solid rgba(139,92,246,0.1)' }}
             onClick={(e) => e.stopPropagation()}
           >

@@ -393,3 +393,21 @@ details[open] .accordion-body {
   50% { transform: translateX(1px) scale(0.94); }
   75% { transform: translateX(-1px) scale(1.04); }
 }
+
+/* Modal / dialog card entrance — a subtle pop so overlays feel intentional
+   instead of snapping in. Backdrop stays instant (single-frame darken). */
+@keyframes modal-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-card {
+  animation: modal-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Large lightbox uses a gentler fade (a big image scaling looks odd). */
+@keyframes lightbox-fade {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+.lightbox-card {
+  animation: lightbox-fade 0.28s ease-out;
+}

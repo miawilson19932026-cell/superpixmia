@@ -6,6 +6,8 @@ export interface Translations {
   navHome: string
   navBlog: string
   navHelp: string
+  heroTitle: string
+  heroTagline: string
   toolResize: string
   toolCompress: string
   toolRemoveBg: string
