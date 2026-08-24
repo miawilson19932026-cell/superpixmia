@@ -30,7 +30,7 @@ const btn = (re, last = false) => page.evaluate(([s, last]) => {
 console.log('── 1. homepage card ──')
 await page.goto(BASE + '/', { waitUntil: 'networkidle2', timeout: 60000 })
 const cardFound = await page.evaluate(() => {
-  const b = Array.from(document.querySelectorAll('button')).find((x) => /GIF 合成器|GIF Maker/.test(x.textContent || ''))
+  const b = Array.from(document.querySelectorAll('button')).find((x) => /动效合成器|Animation Maker|GIF 合成器|GIF Maker/.test(x.textContent || ''))
   if (!b) return false
   b.click()
   return true
@@ -38,7 +38,7 @@ const cardFound = await page.evaluate(() => {
 check('homepage grid shows a GIF Maker card', cardFound)
 await waitFor(() => page.url().includes('/gif-maker'), 10000)
 check('clicking the card navigates to /gif-maker', page.url().includes('/gif-maker'))
-check('/gif-maker renders the title', await page.evaluate(() => /GIF 合成器|GIF Maker/.test(document.body.textContent || '')))
+check('/gif-maker renders the title', await page.evaluate(() => /动效合成器|Animation Maker/.test(document.body.textContent || '')))
 
 const open = async (authed = false) => {
   await page.goto(BASE + '/gif-maker', { waitUntil: 'networkidle2', timeout: 60000 })

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback, ty
 import type { User } from '@supabase/supabase-js'
 import { getSupabase } from './supabase'
 import LoginModal from '../components/LoginModal'
+import ProfileModal from '../components/ProfileModal'
 
 interface AuthContextValue {
   user: User | null
@@ -14,6 +15,9 @@ interface AuthContextValue {
   sendCode: (email: string, forSignup: boolean) => Promise<Error | null>
   verifyCode: (email: string, token: string) => Promise<Error | null>
   setPassword: (password: string) => Promise<Error | null>
+  // Verify the current password, then set a new one. updateUser({password})
+  // requires a fresh session, so this signs in first (proving ownership).
+  changePassword: (current: string, next: string) => Promise<Error | null>
   signOut: () => Promise<void>
   loginOpen: boolean
   // Reason the login modal was opened (e.g. 'download-limit') so it can show
@@ -25,6 +29,11 @@ interface AuthContextValue {
   // password yet — LoginModal shows the set-password form for it.
   passwordSetupOpen: boolean
   closePasswordSetup: () => void
+  // Optional first-login profile-completion prompt (ProfileModal). All fields
+  // optional; saving or skipping sets profile_completed so it never repeats.
+  profileOpen: boolean
+  openProfile: () => void
+  closeProfile: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -33,6 +42,12 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 // so the "set a password" prompt shows at most once per account + device.
 export function passwordFlagKey(email: string): string {
   return 'spm:pw:' + email.trim().toLowerCase()
+}
+// localStorage flag: set once the first-login profile prompt has been shown for
+// this account + browser, so a refresh doesn't re-open it mid-flow. The durable
+// "done" flag lives in user_metadata (profile_completed).
+function profileFlagKey(userId: string): string {
+  return 'spm:profile:' + userId
 }
 function hasPasswordFlag(user: User): boolean {
   try {
@@ -48,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loginOpen, setLoginOpen] = useState(false)
   const [loginReason, setLoginReason] = useState<string | null>(null)
   const [passwordSetupOpen, setPasswordSetupOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   // True while a session is being established by the app itself (password
   // login / code login / code sign-up). A SIGNED_IN that appears WITHOUT this
   // flag means the user arrived via a link they clicked in the email — for a
@@ -118,6 +134,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // First-login profile prompt: ask once per account+browser until the user
+  // saves or skips (profile_completed in user_metadata), and never at the same
+  // time as the set-password overlay — when that closes, passwordSetupOpen
+  // flips false and this effect re-runs to open the profile prompt instead.
+  useEffect(() => {
+    if (!user || passwordSetupOpen) return
+    if (user.user_metadata?.profile_completed) return
+    try {
+      if (localStorage.getItem(profileFlagKey(user.id))) return
+      localStorage.setItem(profileFlagKey(user.id), '1')
+    } catch {
+      /* storage unavailable — still show the prompt */
+    }
+    setProfileOpen(true)
+  }, [user, passwordSetupOpen])
+
   const openLogin = useCallback((reason?: string) => {
     setLoginReason(reason ?? null)
     setLoginOpen(true)
@@ -127,6 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoginOpen(false)
   }, [])
   const closePasswordSetup = useCallback(() => setPasswordSetupOpen(false), [])
+  const openProfile = useCallback(() => setProfileOpen(true), [])
+  const closeProfile = useCallback(() => setProfileOpen(false), [])
 
   const signIn = useCallback(async (email: string, password: string) => {
     const supabase = getSupabase()
@@ -167,6 +201,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error
   }, [])
 
+  const changePassword = useCallback(async (current: string, next: string) => {
+    const supabase = getSupabase()
+    if (!supabase) return new Error('Auth is not configured')
+    if (!user?.email) return new Error('No email')
+    // updateUser({password}) needs a recent session — re-authenticating with
+    // the current password both proves ownership and refreshes the session.
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: user.email, password: current })
+    if (signInErr) return signInErr
+    const { error } = await supabase.auth.updateUser({ password: next })
+    return error
+  }, [user])
+
   const signOut = useCallback(async () => {
     const supabase = getSupabase()
     if (supabase) await supabase.auth.signOut()
@@ -175,10 +221,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, signIn, sendCode, verifyCode, setPassword, signOut, loginOpen, loginReason, openLogin, closeLogin, passwordSetupOpen, closePasswordSetup }}
+      value={{ user, loading, signIn, sendCode, verifyCode, setPassword, changePassword, signOut, loginOpen, loginReason, openLogin, closeLogin, passwordSetupOpen, closePasswordSetup, profileOpen, openProfile, closeProfile }}
     >
       {children}
       <LoginModal />
+      <ProfileModal />
     </AuthContext.Provider>
   )
 }
@@ -221,4 +268,56 @@ export function tryConsumeFreeDownload(user: User | null, openLogin: (reason?: s
     /* storage unavailable — still allow the download */
   }
   return true
+}
+
+// ── User profile (persona fields) ────────────────────────────────────────────
+// Optional first-login profile: nickname, birthday, gender, occupation, and
+// usage reasons. Stored in Supabase user_metadata so it follows the account
+// across devices — no DB table / RLS needed. Every field is optional; saving
+// or skipping sets profile_completed so the first-login prompt never repeats.
+// Values are option keys (e.g. 'developer', 'male', 'bg'), kept as short
+// strings so they are easy to aggregate in the Supabase dashboard.
+export interface Profile {
+  nickname?: string
+  birthday?: string // YYYY-MM-DD
+  gender?: string
+  avatar?: string // anime avatar key, e.g. 'female-3' (avatars.tsx)
+  country?: string // ISO 3166-1 alpha-2 code, e.g. 'CN' (countries.ts)
+  occupation?: string
+  occupationOther?: string // filled when occupation === 'other'
+  reasons?: string[]
+}
+
+// Read persona fields back from user_metadata, normalizing empty values away.
+export function getProfile(user: User): Profile {
+  const m = user.user_metadata ?? {}
+  return {
+    nickname: m.nickname || undefined,
+    birthday: m.birthday || undefined,
+    gender: m.gender || undefined,
+    avatar: m.avatar || undefined,
+    country: m.country || undefined,
+    occupation: m.occupation || undefined,
+    occupationOther: m.occupationOther || undefined,
+    reasons: Array.isArray(m.reasons) && m.reasons.length ? m.reasons : undefined,
+  }
+}
+
+// Persist the profile (writes to the active session's user_metadata). Only
+// call from event handlers / effects — getSupabase() is not safe at module
+// scope or during render.
+export async function saveProfile(profile: Profile): Promise<Error | null> {
+  const supabase = getSupabase()
+  if (!supabase) return new Error('Auth is not configured')
+  const { error } = await supabase.auth.updateUser({ data: { ...profile, profile_completed: true } })
+  return error
+}
+
+// Mark the first-login prompt as handled without collecting any fields, so it
+// never repeats. The /profile page still lets the user fill it in later.
+export async function skipProfile(): Promise<Error | null> {
+  const supabase = getSupabase()
+  if (!supabase) return new Error('Auth is not configured')
+  const { error } = await supabase.auth.updateUser({ data: { profile_completed: true } })
+  return error
 }

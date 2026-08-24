@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from '../i18n'
-import { useAuth } from '../lib/auth'
+import { useAuth, getProfile } from '../lib/auth'
 import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS, gifNavIcon } from '../lib/tools'
 import { toolPaths, EDITOR_PATH } from '../lib/routes'
+import Avatar, { type AvatarGender } from './Avatar'
 
 export default function Header() {
   const { t, lang, toggleLang } = useTranslation()
   const { user, loading, openLogin, signOut } = useAuth()
+  // Right-hand identity: nickname if the user set one, otherwise the email. The
+  // avatar defaults to a gender-distinct badge (blue/pink/purple).
+  const profile = user ? getProfile(user) : null
+  const profileName = profile ? profile.nickname || user?.email || '—' : '—'
+  const avatarGender = (profile?.gender ?? '') as AvatarGender
   const [menuOpen, setMenuOpen] = useState(false)
   const [comingToast, setComingToast] = useState(false)
   const { pathname } = useLocation()
@@ -121,10 +127,11 @@ export default function Header() {
             {loading ? (
               <div className="hidden sm:block w-16 h-8 rounded-[var(--radius-sm)] glass opacity-60" aria-hidden />
             ) : user ? (
-              <div className="hidden sm:flex items-center gap-1.5 max-w-[160px]">
-                <span className="text-xs text-[var(--text-dim)] truncate" title={user.email ?? ''}>
-                  {user.email ?? '—'}
-                </span>
+              <div className="hidden sm:flex items-center gap-1.5 max-w-[220px]">
+                <NavLink to="/profile" title={`${profileName} · ${t.profilePageTitle}`} className="flex items-center gap-1.5 min-w-0">
+                  <Avatar gender={avatarGender} avatar={profile?.avatar} className="w-7 h-7" />
+                  <span className="text-xs text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors truncate">{profileName}</span>
+                </NavLink>
                 <button
                   onClick={signOut}
                   className="shrink-0 glass rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all"
@@ -196,12 +203,20 @@ export default function Header() {
           {/* Nav links */}
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             {user && (
-              <div className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2.5 glass">
-                <span className="text-xs text-[var(--text-dim)] truncate">{user.email ?? '—'}</span>
-                <button onClick={signOut} className="shrink-0 text-xs font-medium text-[var(--accent)]">
-                  {t.authSignOut}
-                </button>
-              </div>
+              <>
+                <div className="flex items-center justify-between gap-2 rounded-lg px-2.5 py-2.5 glass">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <Avatar gender={avatarGender} avatar={profile?.avatar} className="w-7 h-7" />
+                    <span className="text-xs text-[var(--text-dim)] truncate">{profileName}</span>
+                  </span>
+                  <button onClick={signOut} className="shrink-0 text-xs font-medium text-[var(--accent)]">
+                    {t.authSignOut}
+                  </button>
+                </div>
+                <MobileNavLink to="/profile" onClick={closeMenu} active={pathname === '/profile'}>
+                  {t.profilePageTitle}
+                </MobileNavLink>
+              </>
             )}
             <MobileNavLink to="/" onClick={closeMenu} active={pathname === '/'}>
               {t.navHome}

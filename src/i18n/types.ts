@@ -235,9 +235,63 @@ export interface Translations {
   authSetPasswordHint: string
   authSkip: string
   authCodeCooldown: string
+  // Profile — optional persona fields on first login, editable in /profile
+  profileTitle: string
+  profileSubtitle: string
+  profileNickname: string
+  profileNicknamePlaceholder: string
+  profileBirthday: string
+  profileGender: string
+  profileGenderMale: string
+  profileGenderFemale: string
+  profileGenderOther: string
+  profileGenderPreferNot: string
+  profileAvatar: string
+  profileAvatarClassic: string
+  profileAvatarCool: string
+  profileCountry: string
+  profileCountryPlaceholder: string
+  profileOccupation: string
+  profileOccupationPlaceholder: string
+  profileOccupationDeveloper: string
+  profileOccupationDesigner: string
+  profileOccupationProduct: string
+  profileOccupationMarketing: string
+  profileOccupationCreator: string
+  profileOccupationStudent: string
+  profileOccupationOther: string
+  profileOccupationOtherPlaceholder: string
+  profileReason: string
+  profileReasonBg: string
+  profileReasonCompress: string
+  profileReasonConvert: string
+  profileReasonResize: string
+  profileReasonEdit: string
+  profileReasonOther: string
+  profileSave: string
+  profileSkip: string
+  profileSaveSuccess: string
+  profileSaveError: string
+  profilePageTitle: string
+  profileSignInHint: string
+  profileViewTitle: string
+  profileChangePasswordTitle: string
+  profileChangePassword: string
+  profileCurrentPassword: string
+  profileNewPassword: string
+  profilePasswordChanged: string
+  profilePasswordWrongCurrent: string
+  profilePasswordChangeFailed: string
+  profileEdit: string
+  profileNotSet: string
   // GIF Maker (/gif-maker) — N images → animated GIF
   gifMaker: string
   gifMakerTagline: string
+  animFormat: string
+  animFormatGif: string
+  animFormatWebm: string
+  animWebmUnsupported: string
+  animWebmLoopHint: string
   gifMakerPickTitle: string
   gifMakerOpen: string
   gifMakerFrames: string
@@ -253,9 +307,11 @@ export interface Translations {
   gifMakerResize: string
   gifMakerResizeOriginal: string
   gifMakerGenerate: string
+  gifMakerGenerateWebm: string
   gifMakerGenerating: string
   gifMakerDownload: string
   gifMakerDownloading: string
+  gifMakerDownloadWebm: string
   gifMakerPreview: string
   gifMakerNeedFrames: string
   gifMakerMaxFrames: string

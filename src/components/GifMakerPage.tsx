@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from '../i18n'
 import { useAuth, tryConsumeFreeDownload } from '../lib/auth'
 import { framesToGifBlob, type GifFrameRgba } from '../lib/gif-utils'
+import { framesToWebmBlob } from '../lib/webm-utils'
 import SeoContent from './SeoContent'
 import CatMascot from './CatMascot'
 
@@ -23,17 +24,22 @@ interface FrameItem {
 }
 
 const RESIZE_OPTIONS = [0, 256, 512, 1024]
+// Quick-pick frame rates, weighted toward slow values — GIFs (esp. slide-show
+// style from stills) read best at 1–5 fps; anything faster than ~8fps can feel
+// frantic for screenshots. The slider below still allows any value 0.5–30.
+const FPS_PRESETS = [0.5, 1, 2, 3, 5, 8, 10, 15, 24, 30]
 
 export default function GifMakerPage() {
   const { t, lang } = useTranslation()
   const { user, openLogin } = useAuth()
 
   const [frames, setFrames] = useState<FrameItem[]>([])
-  const [fps, setFps] = useState(10)
+  const [fps, setFps] = useState(5)
   const [loop, setLoop] = useState(true)
   const [maxEdge, setMaxEdge] = useState(512)
+  const [format, setFormat] = useState<'gif' | 'webm'>('gif')
   const [generating, setGenerating] = useState(false)
-  const [result, setResult] = useState<{ url: string; blob: Blob } | null>(null)
+  const [result, setResult] = useState<{ url: string; blob: Blob; format: 'gif' | 'webm' } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
 
@@ -52,6 +58,19 @@ export default function GifMakerPage() {
 
   // Revoke every object URL we ever created on unmount.
   useEffect(() => () => { urlsRef.current.forEach((u) => URL.revokeObjectURL(u)) }, [])
+
+  // The generated preview must match the frames currently shown — invalidate the
+  // old result whenever the frame set changes (add / remove / reorder / clear).
+  // Otherwise a stale GIF lingers after "Clear all" + re-upload and keeps
+  // animating in the preview area, which reads as if it were the new output.
+  useEffect(() => {
+    setResult((prev) => {
+      if (!prev) return prev
+      URL.revokeObjectURL(prev.url)
+      urlsRef.current.delete(prev.url)
+      return null
+    })
+  }, [frames])
 
   const clearError = useCallback(() => setError(null), [])
 
@@ -143,26 +162,29 @@ export default function GifMakerPage() {
         const imgData = ctx.getImageData(0, 0, maxW, maxH)
         rgbaFrames.push({ rgba: imgData.data, width: maxW, height: maxH })
       }
-      const blob = framesToGifBlob(rgbaFrames, { fps, loop })
+      // GIF or transparent WebM — same frames, different encoders.
+      const blob = format === 'webm'
+        ? await framesToWebmBlob(rgbaFrames, { fps })
+        : framesToGifBlob(rgbaFrames, { fps, loop })
       const url = trackUrl(blob)
       setResult((prev) => {
         if (prev) { URL.revokeObjectURL(prev.url); urlsRef.current.delete(prev.url) }
-        return { url, blob }
+        return { url, blob, format }
       })
     } catch (e) {
-      console.error('gif generate failed:', e)
-      setError(t.errorProcess)
+      console.error('animation generate failed:', e)
+      setError((e as Error)?.message === 'webcodecs-unavailable' ? t.animWebmUnsupported : t.errorProcess)
     } finally {
       setGenerating(false)
     }
-  }, [frames, fps, loop, maxEdge, t, trackUrl])
+  }, [frames, fps, loop, maxEdge, format, t, trackUrl])
 
   const download = useCallback(() => {
     if (!result) return
     if (!tryConsumeFreeDownload(user, openLogin)) return
     const a = document.createElement('a')
     a.href = result.url
-    a.download = 'animation.gif'
+    a.download = result.format === 'webm' ? 'animation.webm' : 'animation.gif'
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -291,16 +313,50 @@ export default function GifMakerPage() {
             <div className="grid md:grid-cols-5 gap-4">
               {/* Settings */}
               <div className="md:col-span-2 glass rounded-[var(--radius-lg)] p-4 sm:p-5 space-y-5">
+                {/* Output format — GIF or transparent WebM video */}
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-primary)] block mb-1.5">{t.animFormat}</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(['gif', 'webm'] as const).map((f) => (
+                      <button key={f} type="button" onClick={() => { setFormat(f); setResult(null) }}
+                        className={`px-3 py-2.5 rounded-md text-xs font-semibold transition-all ${
+                          format === f
+                            ? 'glass-active text-[var(--accent)]'
+                            : 'glass text-[var(--text-dim)] hover:text-[var(--text-primary)]'
+                        }`}>
+                        {f === 'webm' ? t.animFormatWebm : t.animFormatGif}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-[var(--text-dim)] mt-1.5">
+                    {format === 'webm'
+                      ? t.gifMakerTransparentHint
+                      : t.gifMakerSizeHint}
+                  </p>
+                </div>
+
                 {/* FPS */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-medium text-[var(--text-primary)]">{t.gifMakerFps}</label>
                     <span className="text-xs font-bold text-[var(--accent)]">{fpsValue} fps</span>
                   </div>
-                  <input type="range" min={1} max={30} step={1} value={fps}
+                  <input type="range" min={0.5} max={30} step={0.5} value={fps}
                     onChange={(e) => setFps(Number(e.target.value))}
                     className="w-full accent-[var(--accent)]" />
-                  <p className="text-[11px] text-[var(--text-dim)] mt-1">{t.gifMakerFpsHint}</p>
+                  <div className="grid grid-cols-5 gap-1.5 mt-2">
+                    {FPS_PRESETS.map((px) => (
+                      <button key={px} type="button" onClick={() => setFps(px)}
+                        className={`px-1 py-1.5 rounded-md text-xs font-medium transition-all ${
+                          fps === px
+                            ? 'glass-active text-[var(--accent)]'
+                            : 'glass text-[var(--text-dim)] hover:text-[var(--text-primary)]'
+                        }`}>
+                        {px}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-[var(--text-dim)] mt-2">{t.gifMakerFpsHint}</p>
                 </div>
 
                 {/* Loop */}
@@ -313,6 +369,7 @@ export default function GifMakerPage() {
                   </button>
                 </div>
                 <p className="text-[11px] text-[var(--text-dim)] -mt-2">{loop ? t.gifMakerLoopOn : t.gifMakerLoopOff}</p>
+                {format === 'webm' && <p className="text-[11px] text-[var(--text-dim)]">{t.animWebmLoopHint}</p>}
 
                 {/* Max edge */}
                 <div>
@@ -334,7 +391,7 @@ export default function GifMakerPage() {
 
                 <button type="button" onClick={() => void generate()} disabled={generating}
                   className="w-full px-5 py-3 btn-gradient text-sm font-semibold rounded-[var(--radius-md)] disabled:opacity-50 disabled:cursor-not-allowed">
-                  {generating ? t.gifMakerGenerating : `🎞️ ${t.gifMakerGenerate}`}
+                  {generating ? t.gifMakerGenerating : `🎞️ ${format === 'webm' ? t.gifMakerGenerateWebm : t.gifMakerGenerate}`}
                 </button>
               </div>
 
@@ -344,7 +401,7 @@ export default function GifMakerPage() {
                   <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.gifMakerPreview}</h2>
                   {result && (
                     <span className="text-[11px] text-[var(--text-dim)]">
-                      {Math.max(1, result.blob.size / 1024).toFixed(0)} KB · {maxEdge === 0 ? `${frames[0]?.width ?? 0}×${frames[0]?.height ?? 0}` : `${maxEdge}px`}
+                      {result.format.toUpperCase()} · {Math.max(1, result.blob.size / 1024).toFixed(0)} KB · {maxEdge === 0 ? `${frames[0]?.width ?? 0}×${frames[0]?.height ?? 0}` : `${maxEdge}px`}
                     </span>
                   )}
                 </div>
@@ -352,11 +409,15 @@ export default function GifMakerPage() {
                 {result ? (
                   <div className="flex-1 flex flex-col items-center gap-4">
                     <div className="w-full flex-1 flex items-center justify-center rounded-xl bg-black/30 border border-white/[0.06] overflow-hidden min-h-[220px] p-3">
-                      <img src={result.url} alt="GIF preview" className="max-w-full max-h-[320px] object-contain" />
+                      {result.format === 'webm' ? (
+                        <video src={result.url} muted loop autoPlay playsInline className="max-w-full max-h-[320px] object-contain" />
+                      ) : (
+                        <img src={result.url} alt="GIF preview" className="max-w-full max-h-[320px] object-contain" />
+                      )}
                     </div>
                     <button type="button" onClick={download}
                       className="w-full sm:w-auto px-6 py-3 btn-gradient text-sm font-semibold rounded-[var(--radius-md)]">
-                      ↓ {t.gifMakerDownload}
+                      ↓ {result.format === 'webm' ? t.gifMakerDownloadWebm : t.gifMakerDownload}
                     </button>
                     <p className="text-[11px] text-[var(--text-dim)] -mt-1">{t.gifMakerGenerated}</p>
                   </div>

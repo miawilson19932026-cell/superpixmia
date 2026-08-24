@@ -213,7 +213,7 @@ export default function SeoContent({ tool, variant }: SeoContentProps) {
                   <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
                 </svg>
               </span>
-              {en ? 'What you can do' : isStudio ? 'Studio 都能做什么' : 'GIF 合成器能做什么'}
+              {en ? 'What you can do' : isStudio ? 'Studio 都能做什么' : '动效合成器能做什么'}
             </h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {content.features.map((f, i) => (
