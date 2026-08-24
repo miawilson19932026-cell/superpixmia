@@ -5,7 +5,6 @@ import { useAuth, tryConsumeFreeDownload } from '../lib/auth'
 import type { ToolType, OutputFormat, Dimensions } from '../types'
 import { resizeImage, compressImage, convertImage, getResultExtension, removeWatermark } from '../utils'
 import { removeImageBackground } from '../utils/removeBg'
-import JSZip from 'jszip'
 import DropZone from './DropZone'
 import ImagePreview from './ImagePreview'
 import ResizePanel from './ResizePanel'
@@ -14,7 +13,7 @@ import BgRemovePanel from './BgRemovePanel'
 import BgRefinePanel from './BgRefinePanel'
 import ConvertPanel from './ConvertPanel'
 import RemoveWatermarkPanel from './RemoveWatermarkPanel'
-import { toolPaths, EDITOR_PATH } from '../lib/routes'
+import { toolPaths, EDITOR_PATH, HOME_TOOL } from '../lib/routes'
 import { TOOL_KEYS, toolIcons, toolLabelKey, AI_COMING_ITEMS, gifNavIcon } from '../lib/tools'
 
 type Mode = 'single' | 'batch'
@@ -397,6 +396,8 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
         URL.revokeObjectURL(url)
       }
     } else {
+      // JSZip only loads when a batch ZIP is actually downloaded (first-screen win).
+      const { default: JSZip } = await import('jszip')
       const zip = new JSZip()
       results.forEach((result, idx) => {
         if (!result) return
@@ -502,6 +503,15 @@ export default function ToolWorkspace({ activeTool }: ToolWorkspaceProps) {
 
   return (
     <main className="flex-1 px-3 sm:px-6 py-5 sm:py-6 pb-24 sm:pb-6 space-y-5">
+      {/* Homepage hero — the value proposition on the first screen (home only;
+          tool pages lead straight into their focused nav + SEO content). */}
+      {activeTool === HOME_TOOL && (
+        <div className="mx-auto max-w-2xl text-center pt-1 sm:pt-2 pb-1">
+          <div className="text-2xl sm:text-3xl font-bold text-gradient leading-tight">{t.heroTitle}</div>
+          <p className="mt-2 text-sm sm:text-base text-[var(--text-dim)]">{t.heroTagline}</p>
+        </div>
+      )}
+
       {/* Tool Nav — the 5 real tools + Studio (recommended) + AI (coming soon).
           Adding Studio fills the 4-col grid to a clean 2 rows. */}
       <div className="mx-auto max-w-2xl">

@@ -21,6 +21,11 @@ export default function ParticleBg() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    // Decorative only — honor reduced-motion (draw one static frame, no loop)
+    // and cut particle count on small screens so low-end phones stay smooth.
+    const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const count = window.innerWidth < 768 ? 30 : PARTICLE_COUNT
+
     let particles: Particle[] = []
     let animId: number
     let w = 0
@@ -29,7 +34,7 @@ export default function ParticleBg() {
     const init = () => {
       w = canvas.width = window.innerWidth
       h = canvas.height = window.innerHeight
-      particles = Array.from({ length: PARTICLE_COUNT }, () => ({
+      particles = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
         vx: (Math.random() - 0.5) * SPEED,
@@ -78,7 +83,7 @@ export default function ParticleBg() {
         }
       }
 
-      animId = requestAnimationFrame(draw)
+      if (!reduceMotion) animId = requestAnimationFrame(draw)
     }
 
     init()

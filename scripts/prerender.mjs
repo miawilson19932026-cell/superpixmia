@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { createServer } from 'vite'
 import React from 'react'
-import { renderToString } from 'react-dom/server'
+import { renderToReadableStream } from 'react-dom/server'
 import { StaticRouter } from 'react-router'
 
 const SITE = 'https://www.superpixmia.com'
@@ -60,7 +60,10 @@ try {
   for (const route of ROUTES) {
     console.log(`  · rendering ${route.path} …`)
 
-    const appHtml = renderToString(
+    // renderToReadableStream + allReady: waits for every lazy route chunk
+    // (Studio / gif-maker / profile) to finish before emitting the HTML, so the
+    // static pages still carry their full SEO content — no Suspense fallback.
+    const stream = await renderToReadableStream(
       React.createElement(
         StaticRouter,
         { location: route.path },
@@ -70,7 +73,10 @@ try {
           React.createElement(AuthProvider, null, React.createElement(App, null)),
         ),
       ),
+      { onError: (err) => console.error(`  · [render] ${route.path}:`, err) },
     )
+    await stream.allReady
+    const appHtml = await new Response(stream).text()
 
     const routeSeo = seo.getRouteSeo(route.path)
     const en = routeSeo.en

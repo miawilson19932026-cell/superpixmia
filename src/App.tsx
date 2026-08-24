@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
 import { useTranslation } from './i18n'
 import type { ToolType } from './types'
@@ -12,9 +12,12 @@ import { useSeoMeta } from './lib/useSeoMeta'
 import { HOME_TOOL, EDITOR_PATH } from './lib/routes'
 import { helpArticles } from './lib/help-articles'
 import { blogArticles } from './lib/blog-articles'
-import EditorPage from './components/studio/EditorPage'
-import GifMakerPage from './components/GifMakerPage'
-import ProfilePage from './components/ProfilePage'
+// Heavy pages load on demand (route-level code splitting): the Studio editor,
+// animation maker, and profile only ship their JS when actually visited. Keeps
+// the first screen light. prerender.mjs waits for all lazy chunks (allReady).
+const EditorPage = lazy(() => import('./components/studio/EditorPage'))
+const GifMakerPage = lazy(() => import('./components/GifMakerPage'))
+const ProfilePage = lazy(() => import('./components/ProfilePage'))
 
 // A tool page = focused tool workspace + its per-tool SEO content block.
 // The workspace is the exact same component used on the homepage — only the
@@ -60,6 +63,11 @@ export default function App() {
 
       <Header />
 
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center py-24 text-sm text-[var(--text-dim)]">…</div>
+        }
+      >
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/compress" element={<ToolPage tool="compress" />} />
@@ -80,6 +88,7 @@ export default function App() {
         ))}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
 
       <footer className="border-t border-[var(--border)] py-4 mt-auto">
         <div className="mx-auto max-w-6xl px-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[var(--text-dim)]">
