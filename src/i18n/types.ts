@@ -330,6 +330,21 @@ export interface Translations {
   gifMakerTransparentHint: string
   gifMakerMixedSizeHint: string
   gifMakerGenerated: string
+  // Keyframe editing — per-frame duration / scale / rotate / position
+  animFrameConfig: string
+  animFrameDuration: string
+  animFrameScale: string
+  animFrameRotate: string
+  animFrameHorizontal: string
+  animFrameVertical: string
+  animFramePreview: string
+  animFrameSeconds: string
+  animFramePercent: string
+  animFrameDeg: string
+  animApplyToAll: string
+  animCancelSelect: string
+  animFrameCustomized: string
+  animClickHint: string
 }
 
 // Detect language from URL param, browser, or localStorage

@@ -4,6 +4,7 @@
 // sign in for unlimited).
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from '../i18n'
+import type { Translations } from '../i18n/types'
 import { useAuth, tryConsumeFreeDownload } from '../lib/auth'
 import { framesToGifBlob, type GifFrameRgba } from '../lib/gif-utils'
 import { framesToWebmBlob } from '../lib/webm-utils'
@@ -21,6 +22,16 @@ interface FrameItem {
   file: File
   width: number
   height: number
+  /** how long this frame holds before the next one (ms) — per-frame keyframe */
+  delayMs: number
+  /** scale as a fraction (1 = 100%) */
+  scale: number
+  /** rotation in degrees, -180..180 */
+  rotate: number
+  /** horizontal offset, % of canvas width (-100..100) */
+  dx: number
+  /** vertical offset, % of canvas height (-100..100) */
+  dy: number
 }
 
 const RESIZE_OPTIONS = [0, 256, 512, 1024]
@@ -42,6 +53,8 @@ export default function GifMakerPage() {
   const [maxEdge, setMaxEdge] = useState(512)
   const [format, setFormat] = useState<'gif' | 'webm'>('gif')
   const [generating, setGenerating] = useState(false)
+  // Which frame is being keyframe-edited (time / scale / rotate / position).
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
   const [result, setResult] = useState<{ url: string; blob: Blob; format: 'gif' | 'webm' } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -86,14 +99,19 @@ export default function GifMakerPage() {
       if (!ACCEPTED.includes(f.type)) { setError(t.errorUnsupportedFormat); continue }
       if (f.size > MAX_SIZE) { setError(t.errorFileTooBig); continue }
       const dims = await readImageDims(f)
-      if (dims) loaded.push({ url: trackUrl(f), file: f, width: dims.width, height: dims.height })
+      if (dims) {
+        loaded.push({
+          url: trackUrl(f), file: f, width: dims.width, height: dims.height,
+          delayMs: Math.round(1000 / Math.max(0.5, fps)), scale: 1, rotate: 0, dx: 0, dy: 0,
+        })
+      }
     }
     if (loaded.length === 0) return
     const room = Math.max(0, MAX_FRAMES - framesLenRef.current)
     if (loaded.length > room) setError(t.gifMakerMaxFrames.replace('{n}', String(MAX_FRAMES)))
     const kept = loaded.slice(0, room)
     setFrames((prev) => [...prev, ...kept.map((it) => ({ ...it, id: idRef.current++ }))])
-  }, [t, trackUrl, clearError])
+  }, [t, trackUrl, clearError, fps])
 
   const handleFiles = (files: FileList | File[] | null) => { void addFiles(files) }
 
@@ -131,44 +149,80 @@ export default function GifMakerPage() {
     })
   }, [])
 
+  // Keyframe editor — patch one frame's time/scale/rotate/position.
+  const updateFrame = useCallback((
+    idx: number,
+    patch: Partial<Pick<FrameItem, 'delayMs' | 'scale' | 'rotate' | 'dx' | 'dy'>>,
+  ) => {
+    setFrames((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)))
+  }, [])
+
+  // Copy the current global FPS into every frame's hold time.
+  const applyFpsToAll = useCallback(() => {
+    const ms = Math.round(1000 / Math.max(0.5, fps))
+    setFrames((prev) => prev.map((f) => ({ ...f, delayMs: ms })))
+  }, [fps])
+
+  /** true when a frame's settings differ from the current global default */
+  const isFrameCustom = (f: FrameItem) =>
+    f.scale !== 1 || f.rotate !== 0 || f.dx !== 0 || f.dy !== 0 ||
+    f.delayMs !== Math.round(1000 / Math.max(0.5, fps))
+
   const generate = useCallback(async () => {
     if (frames.length < 2) { setError(t.gifMakerNeedFrames); return }
     setGenerating(true)
     setError(null)
     try {
-      // Load every frame to a canvas (optionally downscaled) and find the union box.
-      const scaled: { canvas: HTMLCanvasElement; rgba: Uint8ClampedArray<ArrayBuffer>; width: number; height: number }[] = []
+      // Load every frame and compute its transformed bounding box (rotation +
+      // scale) so the union canvas is big enough that nothing gets cropped.
+      const loaded = await Promise.all(frames.map(async (frame) => {
+        const img = await loadImage(frame.url)
+        const fit = maxEdge > 0 ? Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight)) : 1
+        const baseW = img.naturalWidth * fit
+        const baseH = img.naturalHeight * fit
+        const rad = (frame.rotate * Math.PI) / 180
+        const cos = Math.abs(Math.cos(rad))
+        const sin = Math.abs(Math.sin(rad))
+        const w0 = baseW * frame.scale
+        const h0 = baseH * frame.scale
+        return { img, baseW, baseH, rotW: w0 * cos + h0 * sin, rotH: w0 * sin + h0 * cos, frame }
+      }))
       let maxW = 0
       let maxH = 0
-      for (const frame of frames) {
-        const data = await drawToCanvas(frame.url, maxEdge)
-        scaled.push(data)
-        maxW = Math.max(maxW, data.width)
-        maxH = Math.max(maxH, data.height)
+      for (const l of loaded) {
+        maxW = Math.max(maxW, Math.ceil(l.rotW))
+        maxH = Math.max(maxH, Math.ceil(l.rotH))
       }
       if (maxW * maxH > MAX_CANVAS_PIXELS) {
         setError(t.gifMakerSizeHint)
         return
       }
-      // Center every frame on a transparent canvas of the union size.
+      // Draw each frame centered on the union canvas with its own transform.
       const canvas = document.createElement('canvas')
       canvas.width = maxW
       canvas.height = maxH
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('no 2d context')
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
       const rgbaFrames: GifFrameRgba[] = []
-      for (const s of scaled) {
+      for (const l of loaded) {
         ctx.clearRect(0, 0, maxW, maxH)
-        const ox = Math.round((maxW - s.width) / 2)
-        const oy = Math.round((maxH - s.height) / 2)
-        ctx.putImageData(new ImageData(s.rgba, s.width, s.height), ox, oy)
-        const imgData = ctx.getImageData(0, 0, maxW, maxH)
-        rgbaFrames.push({ rgba: imgData.data, width: maxW, height: maxH })
+        ctx.save()
+        ctx.translate(maxW / 2 + (l.frame.dx / 100) * maxW, maxH / 2 + (l.frame.dy / 100) * maxH)
+        ctx.rotate((l.frame.rotate * Math.PI) / 180)
+        const dw = l.baseW * l.frame.scale
+        const dh = l.baseH * l.frame.scale
+        ctx.drawImage(l.img, -dw / 2, -dh / 2, dw, dh)
+        ctx.restore()
+        rgbaFrames.push({ rgba: ctx.getImageData(0, 0, maxW, maxH).data, width: maxW, height: maxH })
       }
-      // GIF or transparent WebM — same frames, different encoders.
+      // GIF or transparent WebM — same frames, different encoders. Each frame
+      // carries its own hold time (delays) for the keyframe pacing.
+      const delays = frames.map((f) => f.delayMs)
       const blob = format === 'webm'
-        ? await framesToWebmBlob(rgbaFrames, { fps })
-        : framesToGifBlob(rgbaFrames, { fps, loop })
+        ? await framesToWebmBlob(rgbaFrames, { fps, delays })
+        : framesToGifBlob(rgbaFrames, { fps, loop, delays })
       const url = trackUrl(blob)
       setResult((prev) => {
         if (prev) { URL.revokeObjectURL(prev.url); urlsRef.current.delete(prev.url) }
@@ -195,16 +249,34 @@ export default function GifMakerPage() {
 
   const frameGrid = (
     <div className="flex flex-wrap gap-2.5">
-      {frames.map((frame, i) => (
+      {frames.map((frame, i) => {
+        const selected = selectedIdx === i
+        const custom = isFrameCustom(frame)
+        return (
         <div key={frame.id} className="relative w-[92px] sm:w-[104px]">
-          <div className="relative aspect-square rounded-xl overflow-hidden glass border border-white/[0.08]">
-            <img src={frame.url} alt={`frame ${i + 1}`} className="w-full h-full object-contain" draggable={false} />
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelectedIdx(selected ? null : i)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedIdx(selected ? null : i) } }}
+            title={custom ? t.animFrameCustomized : undefined}
+            aria-pressed={selected}
+            className={`relative block w-full aspect-square rounded-xl overflow-hidden glass cursor-pointer transition-all text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+              selected ? 'ring-2 ring-[var(--accent)] shadow-[0_0_0_1px_var(--accent)]' : 'border border-white/[0.08] hover:border-white/25'
+            }`}
+          >
+            <img src={frame.url} alt={`frame ${i + 1}`} className="w-full h-full object-contain pointer-events-none" draggable={false} />
             <span className="absolute top-1 left-1 z-10 rounded-md bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">
               {i + 1}
             </span>
+            {/* badge — this frame has custom time / scale / rotate / position */}
+            {custom && (
+              <span className="absolute bottom-1 right-1 z-10 w-2.5 h-2.5 rounded-full bg-[var(--accent)] ring-2 ring-black/50"
+                title={t.animFrameCustomized} />
+            )}
             <button
               type="button"
-              onClick={() => removeFrame(i)}
+              onClick={(e) => { e.stopPropagation(); removeFrame(i) }}
               title={t.gifMakerRemove}
               className="absolute top-1 right-1 z-10 w-5 h-5 rounded-md bg-black/60 hover:bg-red-500/80 text-white text-[11px] leading-none flex items-center justify-center transition-colors"
             >
@@ -218,7 +290,8 @@ export default function GifMakerPage() {
               className="flex-1 h-6 rounded-md glass text-[var(--text-dim)] hover:text-[var(--text-primary)] disabled:opacity-30 text-xs" title={t.gifMakerDown}>↓</button>
           </div>
         </div>
-      ))}
+        )
+      })}
       <button type="button" onClick={() => inputRef.current?.click()}
         className="w-[92px] sm:w-[104px] aspect-square rounded-xl border border-dashed border-white/15 text-[var(--text-dim)] hover:text-[var(--text-primary)] hover:border-[var(--accent)]/40 flex flex-col items-center justify-center gap-1 transition-all">
         <span className="text-xl leading-none">＋</span>
@@ -311,6 +384,9 @@ export default function GifMakerPage() {
               </div>
               {frameGrid}
               <p className="text-[11px] text-[var(--text-dim)]">{t.gifMakerMixedSizeHint}</p>
+              <p className="text-[11px] text-[var(--text-dim)]">
+                💡 {selectedIdx !== null ? t.animFrameConfig.replace('{n}', String(selectedIdx + 1)) : t.animClickHint}
+              </p>
             </div>
 
             <div className="grid md:grid-cols-5 gap-4">
@@ -360,7 +436,23 @@ export default function GifMakerPage() {
                     ))}
                   </div>
                   <p className="text-[11px] text-[var(--text-dim)] mt-2">{t.gifMakerFpsHint}</p>
+                  <button type="button" onClick={applyFpsToAll}
+                    className="mt-2 w-full px-3 py-2 text-xs font-medium rounded-[var(--radius-sm)] glass text-[var(--text-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-all">
+                    ⏱ {t.animApplyToAll} · {Math.round(1000 / Math.max(0.5, fps))}ms
+                  </button>
                 </div>
+
+                {/* Selected-frame keyframe editor */}
+                {selectedIdx !== null && frames[selectedIdx] && (
+                  <FrameConfigPanel
+                    frame={frames[selectedIdx]}
+                    index={selectedIdx}
+                    maxEdge={maxEdge}
+                    t={t}
+                    onChange={(patch) => updateFrame(selectedIdx, patch)}
+                    onClose={() => setSelectedIdx(null)}
+                  />
+                )}
 
                 {/* Loop */}
                 <div className="flex items-center justify-between">
@@ -462,29 +554,187 @@ function readImageDims(file: File): Promise<{ width: number; height: number } | 
   })
 }
 
-/**
- * Draw an image to an offscreen canvas, optionally downscaling so the longest
- * edge is at most `maxEdge` (0 = original size). Returns the canvas plus its raw
- * RGBA pixels. Transparent areas are preserved.
- */
-function drawToCanvas(url: string, maxEdge: number): Promise<{ canvas: HTMLCanvasElement; rgba: Uint8ClampedArray<ArrayBuffer>; width: number; height: number }> {
+/** Load an image element from an object URL (used by the keyframe compositor). */
+function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
-    img.onload = () => {
-      const scale = maxEdge > 0 ? Math.min(1, maxEdge / Math.max(img.width, img.height)) : 1
-      const w = Math.max(1, Math.round(img.width * scale))
-      const h = Math.max(1, Math.round(img.height * scale))
-      const canvas = document.createElement('canvas')
-      canvas.width = w
-      canvas.height = h
-      const ctx = canvas.getContext('2d')
-      if (!ctx) { reject(new Error('no 2d context')); return }
-      ctx.imageSmoothingEnabled = true
-      ctx.imageSmoothingQuality = 'high'
-      ctx.drawImage(img, 0, 0, w, h)
-      resolve({ canvas, rgba: ctx.getImageData(0, 0, w, h).data, width: w, height: h })
-    }
+    img.onload = () => resolve(img)
     img.onerror = () => reject(new Error('image load failed'))
     img.src = url
   })
+}
+
+interface SliderRowProps {
+  label: string
+  value: number
+  display: string
+  min: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+  /** optional quick-pick buttons rendered under the slider */
+  quick?: { value: number; label: string }[]
+}
+
+function SliderRow({ label, value, display, min, max, step, onChange, quick }: SliderRowProps) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[11px] text-[var(--text-dim)]">{label}</span>
+        <span className="text-xs font-bold text-[var(--accent)]">{display}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-[var(--accent)]"
+      />
+      {quick && (
+        <div className="flex gap-1.5 mt-1.5">
+          {quick.map((q) => (
+            <button
+              key={q.label}
+              type="button"
+              onClick={() => onChange(q.value)}
+              className={`flex-1 px-1 py-1 rounded-md text-[11px] font-medium transition-all ${
+                Math.abs(value - q.value) < 0.01
+                  ? 'glass-active text-[var(--accent)]'
+                  : 'glass text-[var(--text-dim)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              {q.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Live canvas preview of one frame with its scale/rotate/offset applied. */
+function FramePreview({ frame, maxEdge }: { frame: FrameItem; maxEdge: number }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+    let cancelled = false
+    loadImage(frame.url)
+      .then((img) => {
+        if (cancelled) return
+        const fit = maxEdge > 0 ? Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight)) : 1
+        const baseW = img.naturalWidth * fit
+        const baseH = img.naturalHeight * fit
+        const rad = (frame.rotate * Math.PI) / 180
+        const cos = Math.abs(Math.cos(rad))
+        const sin = Math.abs(Math.sin(rad))
+        const w0 = baseW * frame.scale
+        const h0 = baseH * frame.scale
+        const rotW = Math.max(1, Math.ceil(w0 * cos + h0 * sin))
+        const rotH = Math.max(1, Math.ceil(w0 * sin + h0 * cos))
+        const dp = window.devicePixelRatio || 1
+        canvas.width = Math.round(rotW * dp)
+        canvas.height = Math.round(rotH * dp)
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.scale(dp, dp)
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
+        ctx.clearRect(0, 0, rotW, rotH)
+        ctx.save()
+        ctx.translate(rotW / 2 + (frame.dx / 100) * rotW, rotH / 2 + (frame.dy / 100) * rotH)
+        ctx.rotate(rad)
+        ctx.drawImage(img, -w0 / 2, -h0 / 2, w0, h0)
+        ctx.restore()
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [frame.url, frame.rotate, frame.scale, frame.dx, frame.dy, maxEdge])
+  return (
+    <div className="flex items-center justify-center min-h-[80px] rounded-lg bg-black/30 border border-white/[0.06] p-2">
+      <canvas ref={ref} className="max-w-full" style={{ maxHeight: 130, width: 'auto', height: 'auto' }} />
+    </div>
+  )
+}
+
+type FrameUpdate = Partial<Pick<FrameItem, 'delayMs' | 'scale' | 'rotate' | 'dx' | 'dy'>>
+
+interface FrameConfigPanelProps {
+  frame: FrameItem
+  index: number
+  maxEdge: number
+  t: Translations
+  onChange: (patch: FrameUpdate) => void
+  onClose: () => void
+}
+
+/** Keyframe editor for one selected frame: hold time, scale, rotate, position. */
+function FrameConfigPanel({ frame, index, maxEdge, t, onChange, onClose }: FrameConfigPanelProps) {
+  return (
+    <div data-testid="frame-config" className="rounded-[var(--radius-lg)] border border-[var(--accent)]/25 bg-[var(--accent)]/[0.04] p-3.5 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold text-[var(--accent)]">
+          {t.animFrameConfig.replace('{n}', String(index + 1))}
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-[11px] px-2 py-1 rounded-md glass text-[var(--text-dim)] hover:text-[var(--text-primary)] transition-all"
+        >
+          {t.animCancelSelect}
+        </button>
+      </div>
+      <FramePreview frame={frame} maxEdge={maxEdge} />
+      <SliderRow
+        label={t.animFrameDuration}
+        value={frame.delayMs}
+        display={`${(frame.delayMs / 1000).toFixed(1)}${t.animFrameSeconds}`}
+        min={100}
+        max={3000}
+        step={50}
+        onChange={(v) => onChange({ delayMs: Math.round(v) })}
+        quick={[500, 1000, 2000].map((v) => ({ value: v, label: `${(v / 1000).toFixed(1)}${t.animFrameSeconds}` }))}
+      />
+      <SliderRow
+        label={t.animFrameScale}
+        value={frame.scale}
+        display={`${Math.round(frame.scale * 100)}${t.animFramePercent}`}
+        min={0.5}
+        max={2}
+        step={0.05}
+        onChange={(v) => onChange({ scale: v })}
+        quick={[0.5, 1, 1.5, 2].map((v) => ({ value: v, label: `${Math.round(v * 100)}${t.animFramePercent}` }))}
+      />
+      <SliderRow
+        label={t.animFrameRotate}
+        value={frame.rotate}
+        display={`${Math.round(frame.rotate)}${t.animFrameDeg}`}
+        min={-180}
+        max={180}
+        step={5}
+        onChange={(v) => onChange({ rotate: v })}
+        quick={[0, 90, 180, -90].map((v) => ({ value: v, label: `${v}${t.animFrameDeg}` }))}
+      />
+      <SliderRow
+        label={t.animFrameHorizontal}
+        value={frame.dx}
+        display={`${Math.round(frame.dx)}${t.animFramePercent}`}
+        min={-100}
+        max={100}
+        step={1}
+        onChange={(v) => onChange({ dx: v })}
+      />
+      <SliderRow
+        label={t.animFrameVertical}
+        value={frame.dy}
+        display={`${Math.round(frame.dy)}${t.animFramePercent}`}
+        min={-100}
+        max={100}
+        step={1}
+        onChange={(v) => onChange({ dy: v })}
+      />
+    </div>
+  )
 }

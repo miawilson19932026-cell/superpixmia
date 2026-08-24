@@ -99,12 +99,91 @@ check('loop extension written (NETSCAPE2.0)', info && info.loopExt)
 // Regenerate after changing the frame rate — preview updates to a valid GIF.
 await page.evaluate(() => {
   const r = document.querySelector('input[type="range"]')
-  if (r) { r.value = '15'; r.dispatchEvent(new Event('input', { bubbles: true })) }
+  if (r) {
+    // React 19 guards controlled inputs against programmatic .value writes, so
+    // write through the native setter to actually fire onChange.
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+    setter.call(r, '15')
+    r.dispatchEvent(new Event('input', { bubbles: true }))
+  }
 })
 await btn('Generate GIF|生成 GIF')
 await waitFor(() => page.evaluate(() => !!document.querySelector('img[alt="GIF preview"]')), 20000)
 const info2 = await gifPreviewInfo()
 check('regenerate after fps change stays valid', info2 && info2.header === 'GIF89a', info2 ? `${info2.header} · ${info2.size}B` : '')
+
+// ── 2.5 Keyframe editing: select a frame → panel → tweak → deselect → regen ──
+console.log('\n── 2.5 keyframe editing ──')
+await open()
+await uploadAndGenerate()
+
+// Click frame #2's thumbnail to open its keyframe editor.
+const clickFrame2 = () => page.evaluate(() => {
+  const img = document.querySelector('img[alt="frame 2"]')
+  const el = img && img.closest('[role="button"]')
+  if (el) { el.click(); return true } return false
+})
+check('clicking frame #2 selects it', await clickFrame2())
+
+const panelTitle = await waitFor(() => page.evaluate(() => {
+  const p = document.querySelector('[data-testid="frame-config"]')
+  return p ? (p.textContent || '').trim() : null
+}))
+check('keyframe panel appears for frame #2', !!panelTitle, panelTitle ? `"${panelTitle.replace(/\s+/g, ' ').slice(0, 24)}…"` : '')
+
+const sliderCount = await page.evaluate(() => document.querySelectorAll('[data-testid="frame-config"] input[type="range"]').length)
+check('panel has 5 sliders (duration/scale/rotate/h/v)', sliderCount === 5, `${sliderCount} sliders`)
+
+// Set duration 2.0s, scale 150%, rotate 90° (panel sliders are in that order).
+const setPanelSlider = (i, v) => page.evaluate(([i, v]) => {
+  const inputs = Array.from(document.querySelectorAll('[data-testid="frame-config"] input[type="range"]'))
+  const el = inputs[i]
+  if (!el) return null
+  // React 19 guards controlled inputs — use the native setter to bypass its
+  // value tracker so onChange actually fires.
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+  setter.call(el, String(v))
+  el.dispatchEvent(new Event('input', { bubbles: true }))
+  return true
+}, [i, v])
+const tweaked = (await setPanelSlider(0, 2000)) && (await setPanelSlider(1, 1.5)) && (await setPanelSlider(2, 90))
+check('tweaking sliders works', !!tweaked)
+await sleep(300)
+
+const panelLabels = await page.evaluate(() => {
+  const p = document.querySelector('[data-testid="frame-config"]')
+  return p ? p.textContent : ''
+})
+check('panel displays 2.0s / 150% / 90°', /2\.0(秒|s)/.test(panelLabels) && /150%/.test(panelLabels) && /90°/.test(panelLabels), panelLabels.replace(/\s+/g, ' ').slice(0, 100))
+
+const badgeTitle = await page.evaluate(() => {
+  const img = document.querySelector('img[alt="frame 2"]')
+  const el = img && img.closest('[role="button"]')
+  return el ? (el.getAttribute('title') || '') : ''
+})
+check('frame #2 thumbnail marks it as customized', /已单独设置|Customized/.test(badgeTitle), `title="${badgeTitle}"`)
+
+// "Apply to all frames" button exists and stays clickable.
+const applyAll = await page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('button')).find((x) => /统一应用到全部帧|Apply to all/.test(x.textContent || ''))
+  if (b) { b.click(); return true } return false
+})
+check('"apply to all frames" present & clickable', !!applyAll)
+
+// Regenerate after keyframe edits — union canvas 512×410 still fits the rotated
+// frame (pink 200×150 → rotate 90° + scale 1.5 → 225×300), GIF stays valid.
+await btn('Generate GIF|生成 GIF')
+const previewOk2 = await waitFor(() => page.evaluate(() => !!document.querySelector('img[alt="GIF preview"]')), 20000)
+check('regenerate after keyframe edits stays valid', previewOk2)
+const info3 = await gifPreviewInfo()
+check('union canvas unchanged 512×410 with rotated frame', info3 && info3.w === 512 && info3.h === 410, info3 ? `${info3.w}×${info3.h}` : '')
+check('GIF header still GIF89a', info3 && info3.header === 'GIF89a', info3 ? info3.header : '')
+
+// Deselect by clicking frame #2 again → panel closes.
+await clickFrame2()
+await sleep(200)
+const panelGone = await page.evaluate(() => !document.querySelector('[data-testid="frame-config"]'))
+check('clicking frame #2 again deselects (panel closes)', panelGone)
 
 // ── 3. Free-download quota: 1st free, 2nd → sign-in, signed-in unlimited ──
 console.log('\n── 3. download quota ──')

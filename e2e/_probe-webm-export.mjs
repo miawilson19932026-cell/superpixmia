@@ -34,6 +34,11 @@ const out = await page.evaluate(async () => {
     const blob = await framesToWebmBlob(frames, { fps: 5 })
     const bytes = new Uint8Array(await blob.arrayBuffer())
     const magic = bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3
+    // Per-frame hold times (keyframe editor path) must also encode to a valid
+    // WebM with an alpha track.
+    const perFrame = await framesToWebmBlob(frames, { fps: 5, delays: [200, 400, 600] })
+    const pfBytes = new Uint8Array(await perFrame.arrayBuffer())
+    const pfMagic = pfBytes[0] === 0x1a && pfBytes[1] === 0x45 && pfBytes[2] === 0xdf && pfBytes[3] === 0xa3
     // AlphaMode element present with value 1 => the track carries transparency
     let alphaMode = false, i = 0
     while (i < bytes.length - 1) {
@@ -50,7 +55,7 @@ const out = await page.evaluate(async () => {
     await new Promise((res) => { video.onloadedmetadata = res; video.src = url; setTimeout(res, 5000) })
     if (video.videoWidth > 0) { vw = video.videoWidth; vh = video.videoHeight; playable = true }
     URL.revokeObjectURL(url)
-    return { supported, size: bytes.length, type: blob.type, magic, alphaMode, playable, vw, vh }
+    return { supported, size: bytes.length, type: blob.type, magic, alphaMode, playable, vw, vh, perFrameMagic: pfMagic, perFrameSize: pfBytes.length }
   } catch (e) {
     return { error: String(e && e.message || e) }
   }
@@ -60,10 +65,11 @@ console.log('WebM export supported:', out.supported)
 console.log('blob:', out.type, out.size + ' bytes')
 console.log('EBML magic:', out.magic, '· alpha track:', out.alphaMode)
 console.log('video plays it:', out.playable, out.playable ? `(${out.vw}×${out.vh})` : '')
+console.log('per-frame delays encode valid:', out.perFrameMagic, `(${out.perFrameSize} bytes)`)
 if (out.error) console.log('ERROR:', out.error)
 console.log(errors.length ? 'page errors:\n' + errors.join('\n') : 'no page errors')
 
-const ok = !out.error && out.supported && out.size > 100 && out.magic && out.alphaMode && out.playable
+const ok = !out.error && out.supported && out.size > 100 && out.magic && out.alphaMode && out.playable && out.perFrameMagic && out.perFrameSize > 100
 await browser.close()
 console.log(ok ? 'WEBM PROBE PASSED' : 'WEBM PROBE FAILED')
 if (!ok) process.exit(1)

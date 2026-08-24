@@ -13,8 +13,10 @@
 import type { GifFrameRgba } from './gif-utils'
 
 export interface WebmEncodeOptions {
-  /** frames per second (paint cadence + framerate in the container) */
+  /** frames per second — fallback paint cadence when `delays` is missing */
   fps: number
+  /** per-frame hold time in ms (index i ↔ frame i); falls back to 1000/fps */
+  delays?: number[]
 }
 
 function pickMimeType(): string {
@@ -29,7 +31,7 @@ function pickMimeType(): string {
 export async function framesToWebmBlob(frames: GifFrameRgba[], opts: WebmEncodeOptions): Promise<Blob> {
   if (frames.length === 0) throw new Error('no frames')
   if (typeof MediaRecorder === 'undefined') throw new Error('webcodecs-unavailable')
-  const { fps } = opts
+  const { fps, delays } = opts
   const { width, height } = frames[0]
 
   const canvas = document.createElement('canvas')
@@ -38,7 +40,11 @@ export async function framesToWebmBlob(frames: GifFrameRgba[], opts: WebmEncodeO
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('no 2d context')
 
-  const stream = canvas.captureStream(fps)
+  // Sample the canvas at a fixed 24fps so per-frame hold times (which differ)
+  // get fine timestamps; each frame's canvas stays up for its own delayMs. The
+  // VP8 encoder collapses static frames, so size stays reasonable.
+  const stream = canvas.captureStream(24)
+  const holdMs = (i: number) => Math.max(16, delays?.[i] ?? Math.round(1000 / Math.max(1, fps)))
   const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack
 
   const mimeType = pickMimeType()
@@ -54,12 +60,14 @@ export async function framesToWebmBlob(frames: GifFrameRgba[], opts: WebmEncodeO
 
   paint(0)
   rec.start(100)
+  // Each frame stays on the canvas for ITS OWN hold time before the next one
+  // replaces it — the "per-frame duration" of a keyframe editor.
   for (let i = 1; i < frames.length; i++) {
-    await new Promise((r) => setTimeout(r, Math.max(16, 1000 / Math.max(1, fps))))
+    await new Promise((r) => setTimeout(r, holdMs(i - 1)))
     paint(i)
   }
   // trailing time so the final frame is visible before the stream ends
-  await new Promise((r) => setTimeout(r, Math.max(60, 1000 / Math.max(1, fps))))
+  await new Promise((r) => setTimeout(r, holdMs(frames.length - 1)))
   rec.stop()
   await stopped
   track.stop()

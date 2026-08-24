@@ -335,6 +335,21 @@ const zh: Translations = {
   gifMakerTransparentHint: '保留透明区域——抠好的透明 PNG 可直接合成',
   gifMakerMixedSizeHint: '尺寸不同的帧会自动居中铺在透明画布上',
   gifMakerGenerated: '生成完成！调整参数后可随时重新生成。',
+  // 逐帧关键帧编辑
+  animFrameConfig: '帧 {n} 设置',
+  animFrameDuration: '停留时长',
+  animFrameScale: '缩放',
+  animFrameRotate: '旋转',
+  animFrameHorizontal: '水平偏移',
+  animFrameVertical: '垂直偏移',
+  animFramePreview: '实时预览',
+  animFrameSeconds: '秒',
+  animFramePercent: '%',
+  animFrameDeg: '°',
+  animApplyToAll: '统一应用到全部帧',
+  animCancelSelect: '取消选中',
+  animFrameCustomized: '已单独设置，点击可修改',
+  animClickHint: '点击缩略图可单独设置每帧的时长、位置、大小、旋转',
 }
 
 export default zh

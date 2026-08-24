@@ -335,6 +335,21 @@ const en: Translations = {
   gifMakerTransparentHint: 'Transparent areas are preserved — drop a cut-out PNG straight in',
   gifMakerMixedSizeHint: 'Frames of different sizes are centered on a transparent canvas',
   gifMakerGenerated: 'Done! Adjust settings and regenerate any time.',
+  // Keyframe editing — per-frame duration / scale / rotate / position
+  animFrameConfig: 'Frame {n} settings',
+  animFrameDuration: 'Hold time',
+  animFrameScale: 'Scale',
+  animFrameRotate: 'Rotate',
+  animFrameHorizontal: 'Move horizontal',
+  animFrameVertical: 'Move vertical',
+  animFramePreview: 'Live preview',
+  animFrameSeconds: 's',
+  animFramePercent: '%',
+  animFrameDeg: '°',
+  animApplyToAll: 'Apply to all frames',
+  animCancelSelect: 'Deselect',
+  animFrameCustomized: 'Customized — click to edit',
+  animClickHint: 'Click a thumbnail to set that frame’s hold time, position, size and rotation',
 }
 
 export default en

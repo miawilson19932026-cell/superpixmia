@@ -27,20 +27,24 @@ export interface GifFrameRgba {
 }
 
 export interface GifEncodeOptions {
-  /** frames per second (delay = round(100 / fps) centiseconds) */
+  /** frames per second, used as the per-frame delay when `delays` is missing */
   fps: number
   /** true = loop forever, false = play once */
   loop: boolean
+  /** per-frame hold time in ms (index i ↔ frame i); falls back to 1000/fps */
+  delays?: number[]
 }
 
 /** Encode RGBA frames into a GIF Blob. All frames must already share the same size. */
 export function framesToGifBlob(frames: GifFrameRgba[], opts: GifEncodeOptions): Blob {
-  const { fps, loop } = opts
-  const delay = Math.max(1, Math.round(100 / Math.max(1, fps)))
+  const { fps, loop, delays } = opts
 
   const gif = GIFEncoder()
-  for (const frame of frames) {
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i]
     const { width, height } = frame
+    // GIF delay is in centiseconds (min 1cs = 10ms). Per-frame delayMs wins.
+    const delay = Math.max(1, Math.round((delays?.[i] ?? 1000 / Math.max(1, fps)) / 10))
 
     // Copy so prequantize() mutates our copy, not the caller's buffer.
     const rgba = new Uint8ClampedArray(frame.rgba)
