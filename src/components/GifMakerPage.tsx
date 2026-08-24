@@ -35,20 +35,20 @@ interface FrameItem {
 }
 
 const RESIZE_OPTIONS = [0, 256, 512, 1024]
-// Quick-pick frame rates, weighted toward slow values — GIFs (esp. slide-show
-// style from stills) read best at 1–3 fps (each frame holds ~330–1000ms); 5fps
-// is still fine, and faster than ~8fps feels frantic for screenshots. The
-// slider below still allows any value 0.5–24.
-const FPS_PRESETS = [0.5, 1, 1.5, 2, 3, 5, 8, 12, 16, 24]
+// Quick-pick frame rates, weighted toward slow values — slide-show GIFs from
+// stills read best when each frame holds 1–3s (0.33–1 fps); anything faster
+// than ~5fps feels frantic for screenshots. The slider below still allows any
+// value 0.25–24.
+const FPS_PRESETS = [0.25, 0.5, 1, 1.5, 2, 3, 5, 8, 12, 24]
 
 export default function GifMakerPage() {
   const { t, lang } = useTranslation()
   const { user, openLogin } = useAuth()
 
   const [frames, setFrames] = useState<FrameItem[]>([])
-  // Default 2fps = each frame holds 500ms — a relaxed, readable pace for
-  // still-image slideshows. Users wanting faster motion pick a higher preset.
-  const [fps, setFps] = useState(2)
+  // Default 1fps = each frame holds 1000ms — a slow, readable pace for
+  // still-image slideshows (users complained anything faster felt rushed).
+  const [fps, setFps] = useState(1)
   const [loop, setLoop] = useState(true)
   const [maxEdge, setMaxEdge] = useState(512)
   const [format, setFormat] = useState<'gif' | 'webm'>('gif')
@@ -157,11 +157,13 @@ export default function GifMakerPage() {
     setFrames((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)))
   }, [])
 
-  // Copy the current global FPS into every frame's hold time.
-  const applyFpsToAll = useCallback(() => {
-    const ms = Math.round(1000 / Math.max(0.5, fps))
+  // Changing the global FPS applies to every frame immediately (uniform pace by
+  // default). Frames can still be fine-tuned individually afterwards.
+  const changeFps = useCallback((v: number) => {
+    setFps(v)
+    const ms = Math.round(1000 / Math.max(0.25, v))
     setFrames((prev) => prev.map((f) => ({ ...f, delayMs: ms })))
-  }, [fps])
+  }, [])
 
   /** true when a frame's settings differ from the current global default */
   const isFrameCustom = (f: FrameItem) =>
@@ -412,6 +414,9 @@ export default function GifMakerPage() {
                       ? t.gifMakerTransparentHint
                       : t.gifMakerSizeHint}
                   </p>
+                  {format === 'webm' && (
+                    <p className="text-[11px] text-[var(--text-dim)] mt-1">{t.animWebmFpsNote}</p>
+                  )}
                 </div>
 
                 {/* FPS */}
@@ -420,12 +425,12 @@ export default function GifMakerPage() {
                     <label className="text-xs font-medium text-[var(--text-primary)]">{t.gifMakerFps}</label>
                     <span className="text-xs font-bold text-[var(--accent)]">{fpsValue} fps · {Math.round(1000 / fpsValue)} ms/frame</span>
                   </div>
-                  <input type="range" min={0.5} max={24} step={0.5} value={fps}
-                    onChange={(e) => setFps(Number(e.target.value))}
+                  <input type="range" min={0.25} max={24} step={0.25} value={fps}
+                    onChange={(e) => changeFps(Number(e.target.value))}
                     className="w-full accent-[var(--accent)]" />
                   <div className="grid grid-cols-5 gap-1.5 mt-2">
                     {FPS_PRESETS.map((px) => (
-                      <button key={px} type="button" onClick={() => setFps(px)}
+                      <button key={px} type="button" onClick={() => changeFps(px)}
                         className={`px-1 py-1.5 rounded-md text-xs font-medium transition-all ${
                           fps === px
                             ? 'glass-active text-[var(--accent)]'
@@ -436,10 +441,6 @@ export default function GifMakerPage() {
                     ))}
                   </div>
                   <p className="text-[11px] text-[var(--text-dim)] mt-2">{t.gifMakerFpsHint}</p>
-                  <button type="button" onClick={applyFpsToAll}
-                    className="mt-2 w-full px-3 py-2 text-xs font-medium rounded-[var(--radius-sm)] glass text-[var(--text-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-all">
-                    ⏱ {t.animApplyToAll} · {Math.round(1000 / Math.max(0.5, fps))}ms
-                  </button>
                 </div>
 
                 {/* Selected-frame keyframe editor */}

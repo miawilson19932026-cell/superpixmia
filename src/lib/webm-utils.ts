@@ -40,10 +40,15 @@ export async function framesToWebmBlob(frames: GifFrameRgba[], opts: WebmEncodeO
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('no 2d context')
 
-  // Sample the canvas at a fixed 24fps so per-frame hold times (which differ)
-  // get fine timestamps; each frame's canvas stays up for its own delayMs. The
-  // VP8 encoder collapses static frames, so size stays reasonable.
-  const stream = canvas.captureStream(24)
+  // Drive capture manually (captureStream(0)) so WE own the timeline. Chrome's
+  // captureStream only emits a frame when the canvas content CHANGES — a frame
+  // just sitting for its hold time emits nothing, and MediaRecorder collapses
+  // the whole video into ~1 frame. So the sampling tick re-putImageData()s the
+  // CURRENT frame every ~1/24s (which dirties the canvas even when pixels are
+  // identical) then requestFrame()s — MediaRecorder's timestamps then track
+  // real wall-clock time, and per-frame hold times show up in the video. VP8
+  // collapses static frames, so the file stays small.
+  const stream = canvas.captureStream(0)
   const holdMs = (i: number) => Math.max(16, delays?.[i] ?? Math.round(1000 / Math.max(1, fps)))
   const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack
 
@@ -53,21 +58,26 @@ export async function framesToWebmBlob(frames: GifFrameRgba[], opts: WebmEncodeO
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data) }
   const stopped = new Promise<void>((res) => { rec.onstop = () => res() })
 
-  const paint = (i: number) => {
-    ctx.putImageData(new ImageData(new Uint8ClampedArray(frames[i].rgba), width, height), 0, 0)
-    track.requestFrame()
-  }
-
-  paint(0)
+  // One ImageData per frame, reused on every tick.
+  const images = frames.map((f) => new ImageData(new Uint8ClampedArray(f.rgba), width, height))
+  const put = (i: number) => ctx.putImageData(images[i], 0, 0)
+  let current = 0
+  put(0)
   rec.start(100)
+  const keepAlive = setInterval(() => {
+    put(current)
+    track.requestFrame()
+  }, Math.round(1000 / 24))
   // Each frame stays on the canvas for ITS OWN hold time before the next one
   // replaces it — the "per-frame duration" of a keyframe editor.
   for (let i = 1; i < frames.length; i++) {
     await new Promise((r) => setTimeout(r, holdMs(i - 1)))
-    paint(i)
+    current = i
+    put(i)
   }
   // trailing time so the final frame is visible before the stream ends
   await new Promise((r) => setTimeout(r, holdMs(frames.length - 1)))
+  clearInterval(keepAlive)
   rec.stop()
   await stopped
   track.stop()

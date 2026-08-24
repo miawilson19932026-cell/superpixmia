@@ -300,6 +300,7 @@ export interface Translations {
   animFormatWebm: string
   animWebmUnsupported: string
   animWebmLoopHint: string
+  animWebmFpsNote: string
   gifMakerPickTitle: string
   gifMakerOpen: string
   gifMakerFrames: string
@@ -341,7 +342,6 @@ export interface Translations {
   animFrameSeconds: string
   animFramePercent: string
   animFrameDeg: string
-  animApplyToAll: string
   animCancelSelect: string
   animFrameCustomized: string
   animClickHint: string

@@ -163,12 +163,27 @@ const badgeTitle = await page.evaluate(() => {
 })
 check('frame #2 thumbnail marks it as customized', /已单独设置|Customized/.test(badgeTitle), `title="${badgeTitle}"`)
 
-// "Apply to all frames" button exists and stays clickable.
-const applyAll = await page.evaluate(() => {
-  const b = Array.from(document.querySelectorAll('button')).find((x) => /统一应用到全部帧|Apply to all/.test(x.textContent || ''))
-  if (b) { b.click(); return true } return false
+// Changing the global FPS applies to every frame — frame #2's custom 2.0s hold
+// time resets to the new uniform 0.5s. (FPS slider is the page's first range.)
+await page.evaluate(() => {
+  const el = document.querySelector('input[type="range"]')
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+  setter.call(el, '2')
+  el.dispatchEvent(new Event('input', { bubbles: true }))
 })
-check('"apply to all frames" present & clickable', !!applyAll)
+await sleep(300)
+const labelsAfterFps = await page.evaluate(() => {
+  const p = document.querySelector('[data-testid="frame-config"]')
+  return p ? p.textContent : ''
+})
+check('global fps change resets frame hold time (2.0s → 0.5s)', /0\.5(秒|s)/.test(labelsAfterFps), labelsAfterFps.replace(/\s+/g, ' ').slice(0, 80))
+// Scale + rotate survived — badge still present.
+const badgeAfterFps = await page.evaluate(() => {
+  const img = document.querySelector('img[alt="frame 2"]')
+  const el = img && img.closest('[role="button"]')
+  return el ? (el.getAttribute('title') || '') : ''
+})
+check('scale/rotate survive the global fps change', /已单独设置|Customized/.test(badgeAfterFps))
 
 // Regenerate after keyframe edits — union canvas 512×410 still fits the rotated
 // frame (pink 200×150 → rotate 90° + scale 1.5 → 225×300), GIF stays valid.
