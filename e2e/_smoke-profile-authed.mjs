@@ -14,7 +14,9 @@ await page.setViewport({ width: 1280, height: 800 })
 await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US' })
 
 const errors = []
-page.on('console', (m) => { if (m.type() === 'error') errors.push('[console] ' + m.text()) })
+// "Failed to load resource" = network-status noise from the injected fake session
+// (real Supabase calls 403 with a token that isn't on the server) — not a JS error.
+page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('[console] ' + m.text()) })
 page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message))
 let pass = 0, fail = 0
 const check = (name, ok, extra = '') => { ok ? pass++ : fail++; console.log(`${ok ? '✓' : '✗'} ${name}${extra ? ' — ' + extra : ''}`) }
@@ -177,6 +179,43 @@ await page.evaluate(() => {
 await new Promise((r) => setTimeout(r, 200))
 const pressedDef = await page.evaluate(() => Array.from(document.querySelectorAll('[aria-pressed="true"]')).map((b) => b.getAttribute('aria-label')))
 check('gender female auto-selects female-1 default', pressedDef.some((l) => l && l.includes('female-1')), pressedDef.join(',') || '(none selected)')
+
+// ── 9. Breadcrumb on /profile (quick return to home) ──
+await seedSession('female', 'Luna')
+const crumb = await page.evaluate(() => {
+  const nav = document.querySelector('nav[aria-label="Breadcrumb"]')
+  if (!nav) return null
+  const link = nav.querySelector('a')
+  return { linkHref: link ? link.getAttribute('href') : null, text: (nav.textContent || '').replace(/\s+/g, ' ').trim() }
+})
+check('breadcrumb nav with home link', !!crumb && crumb.linkHref === '/' && crumb.text.includes('Personal Center'), JSON.stringify(crumb))
+
+// ── 10. ProfileModal: X button (Skip for now) closes without repeating ──
+// No profile_completed in metadata + fresh profile flag → first-login modal opens.
+await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle2', timeout: 60000 })
+await page.evaluate(() => {
+  localStorage.setItem('spm-auth-token', JSON.stringify({
+    access_token: 'e2e-fake-token', refresh_token: 'e2e-fake-refresh', expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'bearer',
+    user: {
+      id: 'e2e-user2', email: 'e2e2@test.com', aud: 'authenticated', role: 'authenticated',
+      created_at: '2020-01-01T00:00:00.000Z',
+      user_metadata: { nickname: 'Mia' },
+    },
+  }))
+  localStorage.removeItem('spm:profile:e2e-user2')
+})
+await page.reload({ waitUntil: 'networkidle2', timeout: 60000 })
+await page.waitForFunction(() => /Help us know you better|让我们更了解你/.test(document.body.innerText), { timeout: 10000 })
+const xClicked = await page.evaluate(() => {
+  const b = document.querySelector('button[aria-label="Skip for now"]')
+  if (!b) return false
+  b.click()
+  return true
+})
+check('ProfileModal X button (aria-label=Skip for now) exists', xClicked)
+await page.waitForFunction(() => !/Help us know you better|让我们更了解你/.test(document.body.innerText), { timeout: 10000 })
+check('ProfileModal X closes the modal', true)
 
 console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console/page errors')
 await browser.close()

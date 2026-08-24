@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from '../i18n'
 import { useAuth, getProfile } from '../lib/auth'
 import type { AvatarGender } from './Avatar'
@@ -36,6 +37,12 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-md py-8 px-4 space-y-5">
+      {/* Breadcrumb — quick way back to the homepage from the personal center. */}
+      <nav className="flex items-center gap-1.5 text-xs text-[var(--text-dim)]" aria-label="Breadcrumb">
+        <Link to="/" className="hover:text-[var(--accent)] transition-colors">{t.navHome}</Link>
+        <span className="text-[var(--text-dim)]/50">/</span>
+        <span className="text-[var(--text-primary)] font-medium">{t.profilePageTitle}</span>
+      </nav>
       <h1 className="text-lg font-semibold text-[var(--text-primary)]">{t.profilePageTitle}</h1>
 
       {editing ? (
@@ -76,6 +83,15 @@ export default function ProfilePage() {
               <Field label={t.profileReason} value={profile.reasons?.length ? profile.reasons.map((r) => reasonLabel(t, r)).join(' · ') : undefined} />
               {profile.reasons?.includes('other') && profile.reasonOther && <Field label={t.profileReasonOther} value={profile.reasonOther} />}
             </div>
+
+            {/* Password entry — scrolls to the change-password card below. */}
+            <button
+              type="button"
+              onClick={() => document.getElementById('change-password')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="w-full pt-3 mt-3 border-t border-white/[0.06] text-xs text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors flex items-center justify-center gap-1.5"
+            >
+              🔒 {t.profileChangePasswordTitle}
+            </button>
           </div>
 
           <ChangePasswordCard />
@@ -137,7 +153,7 @@ function ChangePasswordCard() {
   }
 
   return (
-    <div className="rounded-[var(--radius-lg)] glass border border-white/10 p-5 space-y-4">
+    <div id="change-password" className="rounded-[var(--radius-lg)] glass border border-white/10 p-5 space-y-4">
       <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.profileChangePasswordTitle}</h2>
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
