@@ -16,7 +16,7 @@ interface Props {
 
 export const GENDER_OPTIONS = ['male', 'female', 'other', 'prefer_not'] as const
 export const OCCUPATION_OPTIONS = ['developer', 'designer', 'product', 'marketing', 'creator', 'student', 'other'] as const
-export const REASON_OPTIONS = ['bg', 'compress', 'convert', 'resize', 'edit', 'other'] as const
+export const REASON_OPTIONS = ['bg', 'compress', 'convert', 'resize', 'edit', 'gif', 'avatar', 'ecommerce', 'social', 'restore', 'other'] as const
 
 // Label lookups shared by the form and the /profile display (values are the
 // short option keys stored in user_metadata).
@@ -55,6 +55,16 @@ export function reasonLabel(t: Translations, v: string): string {
       return t.profileReasonResize
     case 'edit':
       return t.profileReasonEdit
+    case 'gif':
+      return t.profileReasonGif
+    case 'avatar':
+      return t.profileReasonAvatar
+    case 'ecommerce':
+      return t.profileReasonEcommerce
+    case 'social':
+      return t.profileReasonSocial
+    case 'restore':
+      return t.profileReasonRestore
     default:
       return t.profileReasonOther
   }
@@ -71,6 +81,7 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
   const [occupation, setOccupation] = useState(initial?.occupation ?? '')
   const [occupationOther, setOccupationOther] = useState(initial?.occupationOther ?? '')
   const [reasons, setReasons] = useState<string[]>(initial?.reasons ?? [])
+  const [reasonOther, setReasonOther] = useState(initial?.reasonOther ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Once the user taps an avatar, gender changes stop overriding their choice
@@ -140,6 +151,7 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
       if (occupation === 'other' && occupationOther.trim()) profile.occupationOther = occupationOther.trim()
     }
     if (reasons.length) profile.reasons = reasons
+    if (reasons.includes('other') && reasonOther.trim()) profile.reasonOther = reasonOther.trim()
     const err = await saveProfile(profile)
     setSaving(false)
     if (err) {
@@ -261,6 +273,16 @@ export default function ProfileForm({ initial, submitLabel, onDone }: Props) {
             )
           })}
         </div>
+        {reasons.includes('other') && (
+          <input
+            type="text"
+            value={reasonOther}
+            onChange={(e) => setReasonOther(e.target.value)}
+            placeholder={t.profileReasonOtherPlaceholder}
+            className={`${inputCls} mt-2`}
+            maxLength={60}
+          />
+        )}
       </div>
 
       {error && <p className="text-xs text-red-400">{error}</p>}

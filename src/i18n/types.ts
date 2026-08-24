@@ -267,7 +267,13 @@ export interface Translations {
   profileReasonConvert: string
   profileReasonResize: string
   profileReasonEdit: string
+  profileReasonGif: string
+  profileReasonAvatar: string
+  profileReasonEcommerce: string
+  profileReasonSocial: string
+  profileReasonRestore: string
   profileReasonOther: string
+  profileReasonOtherPlaceholder: string
   profileSave: string
   profileSkip: string
   profileSaveSuccess: string

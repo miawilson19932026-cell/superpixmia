@@ -286,6 +286,7 @@ export interface Profile {
   occupation?: string
   occupationOther?: string // filled when occupation === 'other'
   reasons?: string[]
+  reasonOther?: string // custom text filled when reasons includes 'other'
 }
 
 // Read persona fields back from user_metadata, normalizing empty values away.
@@ -300,6 +301,7 @@ export function getProfile(user: User): Profile {
     occupation: m.occupation || undefined,
     occupationOther: m.occupationOther || undefined,
     reasons: Array.isArray(m.reasons) && m.reasons.length ? m.reasons : undefined,
+    reasonOther: m.reasonOther || undefined,
   }
 }
 

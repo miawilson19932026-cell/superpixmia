@@ -74,6 +74,7 @@ export default function ProfilePage() {
               <Field label={t.profileOccupation} value={profile.occupation ? occupationLabel(t, profile.occupation) : undefined} />
               {profile.occupation === 'other' && <Field label={t.profileOccupationOther} value={profile.occupationOther} />}
               <Field label={t.profileReason} value={profile.reasons?.length ? profile.reasons.map((r) => reasonLabel(t, r)).join(' · ') : undefined} />
+              {profile.reasons?.includes('other') && profile.reasonOther && <Field label={t.profileReasonOther} value={profile.reasonOther} />}
             </div>
           </div>
 
