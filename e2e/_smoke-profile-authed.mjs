@@ -135,6 +135,29 @@ await page.waitForFunction(() => document.body.innerText.includes('China 中国'
 const countryShown = await page.evaluate(() => /China 中国/.test(document.body.innerText))
 check('country "China 中国" shown on /profile', countryShown)
 
+// ── 7d. Usage reasons: richer preset tags + custom input on "Other" ──
+await page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('button')).find((x) => /^Edit$/.test((x.textContent || '').trim()))
+  if (b) b.click()
+})
+await page.waitForFunction(() => document.querySelector('form button[aria-pressed]'), { timeout: 10000 })
+const reasonEnriched = await page.evaluate(() => {
+  const form = document.querySelector('form')
+  const txt = form ? form.textContent || '' : ''
+  return txt.includes('GIF / stickers') && txt.includes('Remove backgrounds') && txt.includes('Product shots')
+})
+check('usage-reason tags enriched (new presets present)', !!reasonEnriched)
+const clickedOther = await page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('form button')).find((x) => (x.textContent || '').includes('Other'))
+  if (b) { b.click(); return true } return false
+})
+await new Promise((r) => setTimeout(r, 100))
+const otherInput = await page.evaluate(() => {
+  const inp = Array.from(document.querySelectorAll('form input')).find((i) => (i.placeholder || '').includes('Describe your use case'))
+  return !!inp
+})
+check('custom reason input appears when "Other" selected', clickedOther && otherInput)
+
 // ── 8. Gender → default avatar (no avatar picked yet) ──
 await seedSession('male', 'Mia') // no avatar in metadata → avatarTouched=false
 await page.waitForFunction(() => Array.from(document.querySelectorAll('button')).some((x) => /^Edit$/.test((x.textContent || '').trim())), { timeout: 10000 })
