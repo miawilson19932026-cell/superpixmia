@@ -35,11 +35,12 @@ interface FrameItem {
 }
 
 const RESIZE_OPTIONS = [0, 256, 512, 1024]
-// Quick-pick frame rates, weighted toward slow values — slide-show GIFs from
-// stills read best when each frame holds 1–3s (0.33–1 fps); anything faster
-// than ~5fps feels frantic for screenshots. The slider below still allows any
-// value 0.25–24.
-const FPS_PRESETS = [0.25, 0.5, 1, 1.5, 2, 3, 5, 8, 12, 24]
+
+/** Format a frame rate as its per-frame hold time, e.g. 0.5fps → "2.0s". */
+function fmtHoldSec(fps: number, suffix: string): string {
+  const ms = Math.round(1000 / Math.max(0.25, fps))
+  return ms < 100 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}${suffix}`
+}
 
 export default function GifMakerPage() {
   const { t, lang } = useTranslation()
@@ -419,27 +420,18 @@ export default function GifMakerPage() {
                   )}
                 </div>
 
-                {/* FPS */}
+                {/* FPS — shown as the per-frame hold time, which is how users
+                    actually feel the speed. fps stays as the backing unit. */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-medium text-[var(--text-primary)]">{t.gifMakerFps}</label>
-                    <span className="text-xs font-bold text-[var(--accent)]">{fpsValue} fps · {Math.round(1000 / fpsValue)} ms/frame</span>
+                    <span className="text-xs font-bold text-[var(--accent)]">
+                      {t.animFrameHold} {fmtHoldSec(fps, t.animFrameSeconds)} · {fpsValue} fps
+                    </span>
                   </div>
-                  <input type="range" min={0.25} max={24} step={0.25} value={fps}
+                  <input type="range" min={0.25} max={30} step={0.25} value={fps}
                     onChange={(e) => changeFps(Number(e.target.value))}
                     className="w-full accent-[var(--accent)]" />
-                  <div className="grid grid-cols-5 gap-1.5 mt-2">
-                    {FPS_PRESETS.map((px) => (
-                      <button key={px} type="button" onClick={() => changeFps(px)}
-                        className={`px-1 py-1.5 rounded-md text-xs font-medium transition-all ${
-                          fps === px
-                            ? 'glass-active text-[var(--accent)]'
-                            : 'glass text-[var(--text-dim)] hover:text-[var(--text-primary)]'
-                        }`}>
-                        {px}
-                      </button>
-                    ))}
-                  </div>
                   <p className="text-[11px] text-[var(--text-dim)] mt-2">{t.gifMakerFpsHint}</p>
                 </div>
 

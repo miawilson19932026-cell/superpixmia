@@ -334,6 +334,7 @@ export interface Translations {
   // Keyframe editing — per-frame duration / scale / rotate / position
   animFrameConfig: string
   animFrameDuration: string
+  animFrameHold: string
   animFrameScale: string
   animFrameRotate: string
   animFrameHorizontal: string

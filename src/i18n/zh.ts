@@ -314,7 +314,7 @@ const zh: Translations = {
   gifMakerDown: '下移',
   gifMakerRemove: '删除',
   gifMakerFps: '帧率',
-  gifMakerFpsHint: '默认每帧停留 1 秒（1 帧/秒），舒缓的幻灯节奏；调帧率会统一应用到全部帧，也可点缩略图单独改某一帧',
+  gifMakerFpsHint: '数字越大动画切换越快；想让照片幻灯慢下来，就调小数字（每帧停留更久）。可拖动滑杆自定义任意值，默认每帧停留 1 秒。',
   gifMakerLoop: '循环',
   gifMakerLoopOn: '无限循环',
   gifMakerLoopOff: '播放一次',
@@ -339,6 +339,7 @@ const zh: Translations = {
   // 逐帧关键帧编辑
   animFrameConfig: '帧 {n} 设置',
   animFrameDuration: '停留时长',
+  animFrameHold: '每帧停留',
   animFrameScale: '缩放',
   animFrameRotate: '旋转',
   animFrameHorizontal: '水平偏移',

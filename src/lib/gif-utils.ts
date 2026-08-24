@@ -43,8 +43,10 @@ export function framesToGifBlob(frames: GifFrameRgba[], opts: GifEncodeOptions):
   for (let i = 0; i < frames.length; i++) {
     const frame = frames[i]
     const { width, height } = frame
-    // GIF delay is in centiseconds (min 1cs = 10ms). Per-frame delayMs wins.
-    const delay = Math.max(1, Math.round((delays?.[i] ?? 1000 / Math.max(1, fps)) / 10))
+    // gifenc's `delay` option is in MILLISECONDS — it converts to the file's
+    // centiseconds internally (delayTime = round(delay/10)). Pass the raw hold
+    // time; clamping to 10ms keeps the centisecond field >= 1cs.
+    const delay = Math.max(10, Math.round(delays?.[i] ?? 1000 / Math.max(1, fps)))
 
     // Copy so prequantize() mutates our copy, not the caller's buffer.
     const rgba = new Uint8ClampedArray(frame.rgba)

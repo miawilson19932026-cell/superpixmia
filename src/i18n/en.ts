@@ -314,7 +314,7 @@ const en: Translations = {
   gifMakerDown: 'Move down',
   gifMakerRemove: 'Remove',
   gifMakerFps: 'Frame rate',
-  gifMakerFpsHint: 'Default is 1 fps (each frame holds 1s) — a relaxed slideshow pace; changing the rate applies to every frame, or click a thumbnail to tweak one',
+  gifMakerFpsHint: 'Higher numbers cut faster. To slow a slideshow down, lower it (longer hold per frame). Drag the slider for any value; default is 1s per frame.',
   gifMakerLoop: 'Loop',
   gifMakerLoopOn: 'Infinite loop',
   gifMakerLoopOff: 'Play once',
@@ -339,6 +339,7 @@ const en: Translations = {
   // Keyframe editing — per-frame duration / scale / rotate / position
   animFrameConfig: 'Frame {n} settings',
   animFrameDuration: 'Hold time',
+  animFrameHold: 'Hold',
   animFrameScale: 'Scale',
   animFrameRotate: 'Rotate',
   animFrameHorizontal: 'Move horizontal',
