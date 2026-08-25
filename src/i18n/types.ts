@@ -237,6 +237,7 @@ export interface Translations {
   authResetHint: string
   authResetSend: string
   authResetSent: string
+  authLinkExpired: string
   authBackToSignin: string
   authDone: string
   authSetPasswordTitle: string

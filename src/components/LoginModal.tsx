@@ -53,6 +53,17 @@ export default function LoginModal() {
     const id = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000)
     return () => clearInterval(id)
   }, [cooldown])
+  // Arrived via an expired recovery link (the mail client's security pre-check
+  // consumed the one-time token before the user clicked) → land straight on the
+  // "send a new reset email" view so the user can recover in one step.
+  useEffect(() => {
+    if (loginOpen && loginReason === 'link-expired') {
+      setForgotOpen(true)
+      setResetSent(false)
+      setError(null)
+      setNotice(null)
+    }
+  }, [loginOpen, loginReason])
 
   // Drag-to-close guard (shared with the lightbox + dialogs): see useBackdropDismiss.
   const { onBackdropPointerDown, onBackdropClick } = useBackdropDismiss()
@@ -335,6 +346,9 @@ export default function LoginModal() {
           <div className="space-y-3">
             <h3 className="text-base font-bold text-gradient">{t.authResetTitle}</h3>
             <p className="text-[11px] text-[var(--text-dim)] leading-relaxed">{t.authResetHint}</p>
+            {loginReason === 'link-expired' && !resetSent && (
+              <p className="text-xs text-amber-300/90 leading-relaxed">{t.authLinkExpired}</p>
+            )}
             {resetSent ? (
               <p className="text-xs text-emerald-300 leading-relaxed">{t.authResetSent}</p>
             ) : (

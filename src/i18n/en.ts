@@ -242,6 +242,7 @@ const en: Translations = {
   authResetHint: 'Enter your email and we will send you a link to reset your password.',
   authResetSend: 'Send reset email',
   authResetSent: 'Reset email sent — check your inbox and follow the link to set a new password.',
+  authLinkExpired: 'Your reset link has expired — your email service may have opened it first. Enter your email to send a new one.',
   authBackToSignin: '← Back to sign in',
   authDone: 'Done',
   authSetPasswordTitle: 'Set a password for your new account',

@@ -91,6 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // for accounts of ANY age (the SIGNED_IN handler below only covers
     // brand-new signups via the created_at window).
     const recoveryFromHash = window.location.hash.includes('type=recovery')
+    // A one-time recovery token that was already consumed (e.g. the mail
+    // client's security pre-check opened the verify URL first — QQ mail does
+    // this) lands here as #error=access_denied&error_code=otp_expired&…. Nothing
+    // to restore: open the login modal with a "send a new link" notice instead
+    // of leaving the user on an unauthenticated homepage.
+    const expiredFromHash = /error_code=otp_expired|error=access_denied/.test(window.location.hash)
     let recoveryOpened = false
     const openRecovery = () => {
       if (recoveryOpened) return
@@ -127,6 +133,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       })
+    }
+
+    if (expiredFromHash) {
+      history.replaceState({}, '', window.location.pathname)
+      setLoginReason('link-expired')
+      setLoginOpen(true)
+    }
+
+    // Custom-template reset link: {{ .SiteURL }}/?token=…&type=recovery. QQ mail's
+    // security pre-check fetches OUR link first (static page → token NOT
+    // consumed); only the user's real click reaches this code. Legacy tokens
+    // only exchange via GET (browser navigation): the endpoint 303-redirects
+    // with the session in the URL hash. We can't read that Location from
+    // fetch(redirect:'manual') in a browser (opaque response), so navigate there
+    // — the browser follows the 303 back to us with #access_token=…&type=recovery,
+    // which the hash handler above restores into a session.
+    const legacyToken = params.get('token')
+    if (legacyToken && tokenType === 'recovery') {
+      const authUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+      if (authUrl) {
+        const verifyUrl =
+          `${authUrl}/auth/v1/verify?token=${encodeURIComponent(legacyToken)}&type=recovery` +
+          `&redirect_to=${encodeURIComponent(window.location.origin + '/')}`
+        window.location.assign(verifyUrl)
+      }
     }
 
     supabase.auth.getSession().then(({ data }) => {
