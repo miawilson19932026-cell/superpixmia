@@ -2,7 +2,7 @@ import { useState, useRef, type FormEvent } from 'react'
 import { useTranslation } from '../i18n'
 import type { Translations } from '../i18n/types'
 import { useAuth, saveProfile, type Profile } from '../lib/auth'
-import AnimeAvatar, { ANIME_AVATARS, COOL_AVATARS, defaultAvatarFor, type AnimeAvatarDef } from './avatars'
+import AnimeAvatar, { ANIME_AVATARS, COOL_AVATARS, defaultAvatarFor, type AnimeAvatarDef, type AnimeAvatarKey } from './avatars'
 import { COUNTRIES } from '../lib/countries'
 
 // Optional persona fields, shared by the first-login ProfileModal and the
@@ -22,6 +22,16 @@ interface Props {
 export const GENDER_OPTIONS = ['male', 'female', 'other', 'prefer_not'] as const
 export const OCCUPATION_OPTIONS = ['developer', 'designer', 'product', 'marketing', 'creator', 'student', 'other'] as const
 export const REASON_OPTIONS = ['bg', 'compress', 'convert', 'resize', 'edit', 'gif', 'avatar', 'ecommerce', 'social', 'restore', 'other'] as const
+
+// Birthday is stored as YYYY-MM-DD but picked with three selects (year / month /
+// day). Month/day overflow (e.g. Feb 31) is clamped to that month's real last
+// day so the combination always stays a valid date.
+function birthdayFromParts(y: string, m: string, d: string): string {
+  if (!y || !m || !d) return ''
+  const yy = Number(y)
+  const lastDay = new Date(yy, Number(m), 0).getDate()
+  return `${yy}-${String(Number(m)).padStart(2, '0')}-${String(Math.min(Number(d), lastDay)).padStart(2, '0')}`
+}
 
 // Label lookups shared by the form and the /profile display (values are the
 // short option keys stored in user_metadata).
@@ -79,7 +89,10 @@ export default function ProfileForm({ initial, submitLabel, onDone, compact }: P
   const { t } = useTranslation()
   const { user } = useAuth()
   const [nickname, setNickname] = useState(initial?.nickname ?? '')
-  const [birthday, setBirthday] = useState(initial?.birthday ?? '')
+  const initBirth = (initial?.birthday ?? '').split('-')
+  const [birthY, setBirthY] = useState(initBirth[0] || '')
+  const [birthM, setBirthM] = useState(initBirth[1] || '')
+  const [birthD, setBirthD] = useState(initBirth[2] || '')
   const [gender, setGender] = useState(initial?.gender ?? '')
   const [country, setCountry] = useState(initial?.country ?? '')
   const [avatar, setAvatar] = useState<string | undefined>(initial?.avatar)
@@ -89,10 +102,19 @@ export default function ProfileForm({ initial, submitLabel, onDone, compact }: P
   const [reasonOther, setReasonOther] = useState(initial?.reasonOther ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The avatar picker is collapsed to a single large preview; "change avatar"
+  // expands the 20-avatar grid. Picking one selects it and collapses again.
+  const [avatarOpen, setAvatarOpen] = useState(false)
   // Once the user taps an avatar, gender changes stop overriding their choice
   // (until then the picker follows the gender default, per the "default look by
   // gender" requirement).
   const avatarTouched = useRef(Boolean(initial?.avatar))
+  // Year range for the birthday selects — no one filling a profile is under 18
+  // or over ~76, so keep the list short enough to scroll quickly.
+  const curYear = new Date().getFullYear()
+  const birthYears = Array.from({ length: curYear - 1949 }, (_, i) => curYear - i)
+  const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
+  const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 
   // Same styling tokens as LoginModal so the forms read as one system.
   const inputCls =
@@ -111,7 +133,11 @@ export default function ProfileForm({ initial, submitLabel, onDone, compact }: P
   const pickAvatar = (key: string) => {
     avatarTouched.current = true
     setAvatar(key)
+    setAvatarOpen(false)
   }
+  // The collapsed preview shows the chosen avatar, or the gender's default look
+  // before anything is chosen (so there is always something to look at).
+  const shownAvatar = (avatar || (gender ? defaultAvatarFor(gender) : undefined)) as AnimeAvatarKey | undefined
 
   // One shared cell renderer for both avatar groups. Compact shrinks the cells
   // (w-9 vs w-11) so the picker takes less room inside the first-login modal.
@@ -148,6 +174,7 @@ export default function ProfileForm({ initial, submitLabel, onDone, compact }: P
     setError(null)
     const profile: Profile = {}
     if (nickname.trim()) profile.nickname = nickname.trim()
+    const birthday = birthdayFromParts(birthY, birthM, birthD)
     if (birthday) profile.birthday = birthday
     if (gender) profile.gender = gender
     if (country) profile.country = country
@@ -185,22 +212,35 @@ export default function ProfileForm({ initial, submitLabel, onDone, compact }: P
       <div className={compact ? 'grid grid-cols-2 gap-3' : 'space-y-4'}>
         <div>
           <label className={labelCls}>{t.profileBirthday}</label>
-          <input
-            type="date"
-            value={birthday}
-            onChange={(e) => setBirthday(e.target.value)}
-            className={`${inputCls} [color-scheme:dark]`}
-            // Native date inputs only expand when the calendar icon is clicked.
-            // Opening the picker from anywhere in the field feels more natural.
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect()
-              // Right ~28px is the native calendar icon — let it do its own thing;
-              // anywhere else, open the picker programmatically.
-              if (e.clientX < rect.right - 28) {
-                try { e.currentTarget.showPicker?.() } catch { /* picker already open / unsupported */ }
-              }
-            }}
-          />
+          {/* Three selects instead of a native date picker — faster to fill and
+              reads clearly. Values stay numeric; the combo is clamped to a real
+              date on save (see birthdayFromParts). */}
+          <div className="grid grid-cols-3 gap-2">
+            <select value={birthY} onChange={(e) => setBirthY(e.target.value)} className={inputCls}>
+              <option value="">{t.profileBirthYear}</option>
+              {birthYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <select value={birthM} onChange={(e) => setBirthM(e.target.value)} className={inputCls}>
+              <option value="">{t.profileBirthMonth}</option>
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <select value={birthD} onChange={(e) => setBirthD(e.target.value)} className={inputCls}>
+              <option value="">{t.profileBirthDay}</option>
+              {DAYS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
@@ -253,14 +293,44 @@ export default function ProfileForm({ initial, submitLabel, onDone, compact }: P
         </div>
       </div>
 
-      {/* Anime avatar picker — 20 hand-drawn looks in two groups. Picking a
-          gender pre-selects its default; tapping any avatar overrides it. */}
+      {/* Anime avatar picker — collapsed to one large preview; "change avatar"
+          expands the 20 looks in two groups. Picking a gender pre-selects its
+          default preview; tapping any avatar in the grid overrides it. */}
       <div>
         <label className={labelCls}>{t.profileAvatar}</label>
-        <p className="text-[11px] text-[var(--text-dim)] mb-1.5">{t.profileAvatarClassic}</p>
-        {avatarGrid(ANIME_AVATARS)}
-        <p className="text-[11px] text-[var(--text-dim)] mt-3 mb-1.5">{t.profileAvatarCool}</p>
-        {avatarGrid(COOL_AVATARS)}
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setAvatarOpen((o) => !o)}
+            aria-label={t.profileAvatarChange}
+            className={`shrink-0 rounded-full transition-all outline-none ${
+              avatarOpen ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-input)]' : ''
+            }`}
+          >
+            <span className="block w-16 h-16 rounded-full overflow-hidden bg-[var(--bg-input)] border border-[var(--border)]">
+              {shownAvatar ? (
+                <AnimeAvatar avatar={shownAvatar} className="w-full h-full" />
+              ) : (
+                <span className="flex items-center justify-center w-full h-full text-2xl text-[var(--text-dim)]">?</span>
+              )}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAvatarOpen((o) => !o)}
+            className="px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] text-xs font-medium text-[var(--text-dim)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-all"
+          >
+            {t.profileAvatarChange}
+          </button>
+        </div>
+        {avatarOpen && (
+          <div className="mt-3 space-y-3">
+            <p className="text-[11px] text-[var(--text-dim)]">{t.profileAvatarClassic}</p>
+            {avatarGrid(ANIME_AVATARS)}
+            <p className="text-[11px] text-[var(--text-dim)]">{t.profileAvatarCool}</p>
+            {avatarGrid(COOL_AVATARS)}
+          </div>
+        )}
       </div>
 
       {/* Usage reasons — a tight 3-col grid in compact mode; the chips carry

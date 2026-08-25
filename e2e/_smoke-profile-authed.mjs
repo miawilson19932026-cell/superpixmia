@@ -94,22 +94,47 @@ const animeKeys = await page.evaluate(() => Array.from(document.querySelectorAll
 check('header + profile show the chosen anime avatar (male-3)', animeKeys.filter((k) => k === 'male-3').length >= 2, animeKeys.join(','))
 check('no silhouette gradient when anime avatar set', !(await avatarGradients()).some((c) => c.includes('from-sky-400') || c.includes('from-pink-400')))
 
-// ── 7. Edit mode: avatar picker shows all 20 anime avatars (two groups) ──
+// ── 7. Edit mode: avatar picker is COLLAPSED to one preview — "Change avatar"
+//    expands it to all 20 anime looks (two groups) ──
 const editBtn = await page.evaluate(() => {
   const b = Array.from(document.querySelectorAll('button')).find((x) => /^Edit$/.test((x.textContent || '').trim()))
   if (b) { b.click(); return true } return false
 })
 check('clicked Edit', !!editBtn)
-await page.waitForFunction(() => document.querySelectorAll('form [data-avatar]').length === 20, { timeout: 10000 })
-const pickerKeys = await page.evaluate(() => Array.from(document.querySelectorAll('form [data-avatar]')).map((s) => s.getAttribute('data-avatar')))
+await page.waitForFunction(() => !!document.querySelector('form button[aria-pressed]'), { timeout: 10000 })
+// Collapsed: only the single preview svg lives in the form (no aria-pressed).
+const collapsedPicker = await page.evaluate(() => Array.from(document.querySelectorAll('form button[aria-pressed] svg[data-avatar]')).length)
+check('picker collapsed: 0 avatar grid cells', collapsedPicker === 0, `got ${collapsedPicker}`)
+const changeAvatar = await page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('form button')).find((x) => /Change avatar/.test((x.textContent || '').trim()))
+  if (b) { b.click(); return true } return false
+})
+check('clicked "Change avatar"', !!changeAvatar)
+await page.waitForFunction(() => document.querySelectorAll('form button[aria-pressed] svg[data-avatar]').length === 20, { timeout: 10000 })
+const pickerKeys = await page.evaluate(() => Array.from(document.querySelectorAll('form button[aria-pressed] svg[data-avatar]')).map((s) => s.getAttribute('data-avatar')))
 check('avatar picker shows all 20 avatars', pickerKeys.length === 20, pickerKeys.join(','))
 check('5 male + 5 female keys present', ['male-1','male-2','male-3','male-4','male-5'].every((k) => pickerKeys.includes(k)) && ['female-1','female-2','female-3','female-4','female-5'].every((k) => pickerKeys.includes(k)))
 check('cool international group present (cool-1…cool-10)', ['cool-1','cool-2','cool-3','cool-4','cool-5','cool-6','cool-7','cool-8','cool-9','cool-10'].every((k) => pickerKeys.includes(k)))
 check('no leftover cool-11/cool-12 (deduped)', !pickerKeys.includes('cool-11') && !pickerKeys.includes('cool-12'))
+const pressed = await page.evaluate(() => Array.from(document.querySelectorAll('form button[aria-pressed="true"]')).map((b) => b.getAttribute('aria-label')))
+check('seeded avatar is pre-selected', pressed.some((l) => l && l.includes('male-3')), pressed.join(','))
+// picking a different avatar switches the PREVIEW (the grid collapses on pick)
+await page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('form button[aria-pressed]')).find((x) => (x.getAttribute('aria-label') || '').includes('female-1'))
+  b && b.click()
+})
+await new Promise((r) => setTimeout(r, 150))
+const previewAvatar = await page.evaluate(() => {
+  const svg = document.querySelector('form button span[class*="w-16 h-16"] svg[data-avatar]')
+  return svg ? svg.getAttribute('data-avatar') : null
+})
+check('tapping a new avatar switches selection (preview)', previewAvatar === 'female-1', `preview=${previewAvatar}`)
 
 // ── 7b. Country field: bilingual options (English + native), alphabetical ──
 const countrySel = await page.evaluate(() => {
-  const sel = Array.from(document.querySelectorAll('form select'))[1] // gender, country, occupation
+  // Birthday now adds 3 selects (year/month/day) before gender, so find the
+  // country select by its placeholder instead of position.
+  const sel = Array.from(document.querySelectorAll('form select')).find((s) => s.options[0]?.textContent?.trim() === 'Select a country')
   if (!sel) return null
   const opts = Array.from(sel.options).map((o) => ({ v: o.value, t: (o.textContent || '').trim() }))
   return { count: opts.length, opts }
@@ -118,13 +143,6 @@ check('country select exists', !!countrySel)
 const countryOk = countrySel && countrySel.opts.slice(1).every((o, i, arr) => i === 0 || arr[i - 1].t.localeCompare(o.t, 'en') <= 0)
 check('country options sorted alphabetically (by English name)', !!countryOk)
 check('country shows "Germany Deutschland" and "China 中国"', !!countrySel && countrySel.opts.some((o) => o.v === 'DE' && o.t === 'Germany Deutschland') && countrySel.opts.some((o) => o.v === 'CN' && o.t === 'China 中国'), countrySel ? countrySel.opts.filter((o) => o.v === 'DE' || o.v === 'CN').map((o) => o.t).join(' · ') : '')
-const pressed = await page.evaluate(() => Array.from(document.querySelectorAll('[aria-pressed="true"]')).map((b) => b.getAttribute('aria-label')))
-check('seeded avatar is pre-selected', pressed.some((l) => l && l.includes('male-3')), pressed.join(','))
-// picking a different avatar marks it selected
-await page.evaluate(() => { const b = Array.from(document.querySelectorAll('[aria-pressed]')).find((x) => (x.getAttribute('aria-label') || '').includes('female-1')); b && b.click() })
-await new Promise((r) => setTimeout(r, 150))
-const pressed2 = await page.evaluate(() => Array.from(document.querySelectorAll('[aria-pressed="true"]')).map((b) => b.getAttribute('aria-label')))
-check('tapping a new avatar switches selection', pressed2.some((l) => l && l.includes('female-1')), pressed2.join(','))
 
 // ── 7c. Country renders on the /profile display from stored metadata ──
 await page.evaluate(() => {
@@ -168,17 +186,22 @@ await page.evaluate(() => {
   if (b) b.click()
 })
 await page.waitForFunction(() => document.querySelector('form [data-avatar]'), { timeout: 10000 })
-// change gender select → female should pre-select female-1
+// change gender select → female should pre-select female-1 in the PREVIEW
+// (the grid stays collapsed until "Change avatar").
 await page.evaluate(() => {
-  const sel = document.querySelector('form select')
+  // birthday now adds 3 selects first, so locate gender by its option values
+  const sel = Array.from(document.querySelectorAll('form select')).find((s) => Array.from(s.options).some((o) => o.value === 'male'))
   if (!sel) return
   const proto = HTMLSelectElement.prototype
   Object.getOwnPropertyDescriptor(proto, 'value').set.call(sel, 'female')
   sel.dispatchEvent(new Event('change', { bubbles: true }))
 })
 await new Promise((r) => setTimeout(r, 200))
-const pressedDef = await page.evaluate(() => Array.from(document.querySelectorAll('[aria-pressed="true"]')).map((b) => b.getAttribute('aria-label')))
-check('gender female auto-selects female-1 default', pressedDef.some((l) => l && l.includes('female-1')), pressedDef.join(',') || '(none selected)')
+const previewDef = await page.evaluate(() => {
+  const svg = document.querySelector('form button span[class*="w-16 h-16"] svg[data-avatar]')
+  return svg ? svg.getAttribute('data-avatar') : null
+})
+check('gender female auto-selects female-1 default (preview)', previewDef === 'female-1', `preview=${previewDef}`)
 
 // ── 9. Breadcrumb on /profile (quick return to home) ──
 await seedSession('female', 'Luna')

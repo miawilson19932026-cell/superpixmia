@@ -243,6 +243,10 @@ export interface Translations {
   profileNickname: string
   profileNicknamePlaceholder: string
   profileBirthday: string
+  profileBirthYear: string
+  profileBirthMonth: string
+  profileBirthDay: string
+  profileAvatarChange: string
   profileGender: string
   profileGenderMale: string
   profileGenderFemale: string
