@@ -28,7 +28,7 @@ function friendlyError(msg: string, t: Translations): string {
 }
 
 export default function LoginModal() {
-  const { loginOpen, closeLogin, signIn, sendCode, verifyCode, setPassword, user, passwordSetupOpen, closePasswordSetup, loginReason } = useAuth()
+  const { loginOpen, closeLogin, signIn, sendCode, verifyCode, setPassword, resetPassword, user, passwordSetupOpen, passwordSetupReason, closePasswordSetup, loginReason } = useAuth()
   const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>('signin')
   const [signinMethod, setSigninMethod] = useState<SigninMethod>('password')
@@ -41,6 +41,10 @@ export default function LoginModal() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // Forgot-password view: replaces the sign-in form with a "send reset email"
+  // prompt. resetSent switches from the form to a "check your inbox" note.
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
   // Seconds remaining before the code can be sent again (12s guard against
   // double-sends / resend spam).
   const [cooldown, setCooldown] = useState(0)
@@ -88,7 +92,7 @@ export default function LoginModal() {
           className="relative w-full max-w-sm rounded-2xl glass modal-card border border-white/10 p-5 space-y-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <h3 className="text-base font-bold text-gradient">{t.authSetPasswordTitle}</h3>
+          <h3 className="text-base font-bold text-gradient">{passwordSetupReason === 'recovery' ? t.authResetTitle : t.authSetPasswordTitle}</h3>
           <p className="text-[11px] text-[var(--text-dim)] leading-relaxed">{t.authSetPasswordHint}</p>
           <p className="text-xs text-[var(--text-primary)] truncate glass rounded-[var(--radius-sm)] px-3 py-2">
             {user?.email ?? email}
@@ -239,6 +243,21 @@ export default function LoginModal() {
     closeLogin() // account created + verified + password set → done
   }
 
+  // Forgot-password: send the recovery email (the link lands back on the app,
+  // where AuthProvider opens the set-password overlay).
+  const submitReset = async () => {
+    setError(null)
+    setNotice(null)
+    setSubmitting(true)
+    const err = await resetPassword(email.trim())
+    setSubmitting(false)
+    if (err) {
+      setError(friendlyError(err.message, t))
+      return
+    }
+    setResetSent(true)
+  }
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (mode === 'signin') return signinMethod === 'password' ? submitPassword() : codeSent ? submitCode() : sendCodeNow()
@@ -311,6 +330,40 @@ export default function LoginModal() {
           <p className="text-[11px] text-[var(--accent)] font-medium">{t.authDlLimit}</p>
         )}
 
+        {/* Forgot-password view replaces the whole sign-in form */}
+        {forgotOpen ? (
+          <div className="space-y-3">
+            <h3 className="text-base font-bold text-gradient">{t.authResetTitle}</h3>
+            <p className="text-[11px] text-[var(--text-dim)] leading-relaxed">{t.authResetHint}</p>
+            {resetSent ? (
+              <p className="text-xs text-emerald-300 leading-relaxed">{t.authResetSent}</p>
+            ) : (
+              <form onSubmit={(e) => { e.preventDefault(); submitReset() }} className="space-y-3">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t.authEmail}
+                  autoComplete="email"
+                  className={inputCls}
+                />
+                {error && <p className="text-xs text-red-400">{error}</p>}
+                <button type="submit" disabled={submitting || !emailValid} className={btnCls}>
+                  {submitting ? t.authSubmitting : t.authResetSend}
+                </button>
+              </form>
+            )}
+            <button
+              type="button"
+              onClick={() => { setForgotOpen(false); setResetSent(false); setError(null); setNotice(null) }}
+              className="w-full text-xs text-[var(--text-dim)] hover:text-[var(--text-primary)]"
+            >
+              {t.authBackToSignin}
+            </button>
+          </div>
+        ) : (
+          <>
         {stepLabel && <p className="text-[11px] text-[var(--text-dim)]">{stepLabel}</p>}
 
         <form onSubmit={onSubmit} className="space-y-3">
@@ -341,6 +394,17 @@ export default function LoginModal() {
               autoComplete="current-password"
               className={inputCls}
             />
+          )}
+          {mode === 'signin' && signinMethod === 'password' && (
+            <div className="flex justify-end -mt-2">
+              <button
+                type="button"
+                onClick={() => { setForgotOpen(true); setResetSent(false); setError(null); setNotice(null) }}
+                className="text-xs text-[var(--accent)] hover:underline"
+              >
+                {t.authForgotPassword}
+              </button>
+            </div>
           )}
           {mode === 'signup' && signupStep === 'password' && (
             <>
@@ -448,6 +512,9 @@ export default function LoginModal() {
             </div>
           )}
         </form>
+
+          </>
+        )}
 
         {/* Privacy-assuring copy — login is identity only, images never leave the device */}
         <p className="text-[11px] leading-relaxed text-[var(--text-dim)]">{t.authPrivacyNote}</p>

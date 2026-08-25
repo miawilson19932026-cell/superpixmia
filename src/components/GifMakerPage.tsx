@@ -312,7 +312,7 @@ export default function GifMakerPage() {
 
       <div className="mx-auto max-w-6xl w-full px-3 sm:px-6 pt-14 sm:pt-16 pb-10">
         <h1 className="text-center text-2xl sm:text-3xl font-black">
-          <span className="text-gradient">{lang === 'zh' ? 'GIF 合成器' : 'GIF Maker'}</span>
+          <span className="text-gradient">{t.gifMaker}</span>
         </h1>
         <p className="text-center text-xs sm:text-sm text-[var(--text-dim)] mt-2 mb-8 max-w-xl mx-auto leading-relaxed">
           {t.gifMakerTagline}
@@ -666,9 +666,10 @@ interface FrameConfigPanelProps {
 /** Keyframe editor for one selected frame: hold time, scale, rotate, position. */
 function FrameConfigPanel({ frame, index, maxEdge, t, onChange, onClose }: FrameConfigPanelProps) {
   return (
-    <div data-testid="frame-config" className="rounded-[var(--radius-lg)] border border-[var(--accent)]/25 bg-[var(--accent)]/[0.04] p-3.5 space-y-3">
+    <div data-testid="frame-config" className="rounded-[var(--radius-lg)] glass border border-white/[0.08] p-3.5 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold text-[var(--accent)]">
+        <h3 className="flex items-center gap-2 text-xs font-semibold text-[var(--text-primary)]">
+          <span className="w-1 h-3.5 rounded-full bg-[var(--accent)]" aria-hidden />
           {t.animFrameConfig.replace('{n}', String(index + 1))}
         </h3>
         <button

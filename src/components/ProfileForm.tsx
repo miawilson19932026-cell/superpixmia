@@ -152,7 +152,7 @@ export default function ProfileForm({ initial, submitLabel, onDone, compact }: P
             onClick={() => pickAvatar(a.key)}
             aria-pressed={selected}
             aria-label={`${a.gender} avatar ${a.key}`}
-            className={`rounded-full transition-all outline-none ${
+            className={`${compact ? 'w-9 h-9' : 'w-11 h-11'} rounded-full transition-all outline-none ${
               selected
                 ? 'ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-input)]'
                 : 'opacity-75 hover:opacity-100 hover:scale-105'

@@ -232,6 +232,12 @@ export interface Translations {
   authPasswordMismatch: string
   authUseCodeLogin: string
   authUsePassword: string
+  authForgotPassword: string
+  authResetTitle: string
+  authResetHint: string
+  authResetSend: string
+  authResetSent: string
+  authBackToSignin: string
   authDone: string
   authSetPasswordTitle: string
   authSetPasswordHint: string

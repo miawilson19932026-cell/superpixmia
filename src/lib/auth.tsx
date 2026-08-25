@@ -15,6 +15,9 @@ interface AuthContextValue {
   sendCode: (email: string, forSignup: boolean) => Promise<Error | null>
   verifyCode: (email: string, token: string) => Promise<Error | null>
   setPassword: (password: string) => Promise<Error | null>
+  // Send the "reset password" email. The recovery link (token_hash type=recovery)
+  // is captured by AuthProvider on return, which opens the set-password overlay.
+  resetPassword: (email: string) => Promise<Error | null>
   // Verify the current password, then set a new one. updateUser({password})
   // requires a fresh session, so this signs in first (proving ownership).
   changePassword: (current: string, next: string) => Promise<Error | null>
@@ -26,8 +29,10 @@ interface AuthContextValue {
   openLogin: (reason?: string) => void
   closeLogin: () => void
   // A brand-new account that just signed in via the email link and has no
-  // password yet — LoginModal shows the set-password form for it.
+  // password yet, OR a password reset via the recovery email link — LoginModal
+  // shows the set-password form for both; the reason only changes the heading.
   passwordSetupOpen: boolean
+  passwordSetupReason: 'signup' | 'recovery'
   closePasswordSetup: () => void
   // Optional first-login profile-completion prompt (ProfileModal). All fields
   // optional; saving or skipping sets profile_completed so it never repeats.
@@ -63,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loginOpen, setLoginOpen] = useState(false)
   const [loginReason, setLoginReason] = useState<string | null>(null)
   const [passwordSetupOpen, setPasswordSetupOpen] = useState(false)
+  const [passwordSetupReason, setPasswordSetupReason] = useState<'signup' | 'recovery'>('signup')
   const [profileOpen, setProfileOpen] = useState(false)
   // True while a session is being established by the app itself (password
   // login / code login / code sign-up). A SIGNED_IN that appears WITHOUT this
@@ -78,6 +84,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     let mounted = true
 
+    // Captured BEFORE supabase-js cleans the URL (its detectSessionInUrl strips
+    // the #access_token=… hash as it restores the session). A legacy recovery
+    // link (…/auth/v1/verify?token=…&type=recovery) lands here as
+    // #access_token=…&type=recovery — flag it so the set-password overlay opens
+    // for accounts of ANY age (the SIGNED_IN handler below only covers
+    // brand-new signups via the created_at window).
+    const recoveryFromHash = window.location.hash.includes('type=recovery')
+    let recoveryOpened = false
+    const openRecovery = () => {
+      if (recoveryOpened) return
+      recoveryOpened = true
+      setPasswordSetupReason('recovery')
+      setPasswordSetupOpen(true)
+    }
+
     // Handle the email confirmation link (magic link): Supabase emails include a
     // "confirm" URL with ?token_hash=…&type=email. Exchange it for a session so
     // clicking the link signs the user in. Brand-new accounts created this way
@@ -86,13 +107,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams(window.location.search)
     const tokenHash = params.get('token_hash')
     const tokenType = params.get('type')
-    if (tokenHash && (tokenType === 'email' || tokenType === 'magiclink')) {
-      supabase.auth.verifyOtp({ type: tokenType as 'email', token_hash: tokenHash }).then(({ data, error }) => {
+    if (tokenHash && (tokenType === 'email' || tokenType === 'magiclink' || tokenType === 'recovery')) {
+      supabase.auth.verifyOtp({ type: tokenType as 'email' | 'recovery', token_hash: tokenHash }).then(({ data, error }) => {
         if (mounted) history.replaceState({}, '', window.location.pathname) // clean the URL
-        if (!error && data.user && !hasPasswordFlag(data.user)) {
+        if (error || !data.user) return
+        if (tokenType === 'recovery') {
+          // Password reset: the recovery link proves ownership, so the user can
+          // set a NEW password without entering the old one. Open the same
+          // set-password overlay, with a "reset" heading.
+          openRecovery()
+          return
+        }
+        if (!hasPasswordFlag(data.user)) {
           // New account = created moments ago by this very link.
           const createdMs = Date.parse(data.user.created_at)
-          if (Date.now() - createdMs < 2 * 60 * 1000) setPasswordSetupOpen(true)
+          if (Date.now() - createdMs < 2 * 60 * 1000) {
+            setPasswordSetupReason('signup')
+            setPasswordSetupOpen(true)
+          }
         }
       })
     }
@@ -113,7 +145,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // them to set one. Sessions the app itself created (password / code /
       // sign-up) carry appSessionRef and are skipped: the sign-up flow already
       // handles its own password step. The passwordFlag prevents re-prompting.
-      if (
+      if (recoveryFromHash && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        // User came back through a password-reset link (legacy #type=recovery
+        // hash). Open the set-password overlay regardless of account age.
+        openRecovery()
+      } else if (
         (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
         session?.user &&
         !appSessionRef.current &&
@@ -161,7 +197,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoginReason(null)
     setLoginOpen(false)
   }, [])
-  const closePasswordSetup = useCallback(() => setPasswordSetupOpen(false), [])
+  const closePasswordSetup = useCallback(() => {
+    setPasswordSetupReason('signup')
+    setPasswordSetupOpen(false)
+  }, [])
   const openProfile = useCallback(() => setProfileOpen(true), [])
   const closeProfile = useCallback(() => setProfileOpen(false), [])
 
@@ -171,6 +210,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     appSessionRef.current = true
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) appSessionRef.current = false
+    return error
+  }, [])
+
+  const resetPassword = useCallback(async (email: string) => {
+    const supabase = getSupabase()
+    if (!supabase) return new Error('Auth is not configured')
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Land back on the app root; AuthProvider's token_hash handler picks up
+      // the recovery link and opens the set-password overlay.
+      redirectTo: `${window.location.origin}/`,
+    })
     return error
   }, [])
 
@@ -224,7 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, signIn, sendCode, verifyCode, setPassword, changePassword, signOut, loginOpen, loginReason, openLogin, closeLogin, passwordSetupOpen, closePasswordSetup, profileOpen, openProfile, closeProfile }}
+      value={{ user, loading, signIn, sendCode, verifyCode, setPassword, resetPassword, changePassword, signOut, loginOpen, loginReason, openLogin, closeLogin, passwordSetupOpen, passwordSetupReason, closePasswordSetup, profileOpen, openProfile, closeProfile }}
     >
       {children}
       <LoginModal />
