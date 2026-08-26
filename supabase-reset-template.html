@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!--
+  SuperPixMia — Supabase「重置密码」邮件模板
+  ===========================================
+  作用:让重置链接指向 www.superpixmia.com 而不是 supabase.co。
+  原因:QQ 邮箱的安全检测会提前访问邮件里的站外链接,而 supabase.co 的
+  重置链接是一次性的,被"偷看"一次就作废 → 用户点开后登录失败。
+  链接指向我们网站后,QQ 邮箱预检只打开一个普通网页(不消耗验证码),
+  真正验证发生在用户点击之后。
+
+  怎么用(约 30 秒):
+  1. 打开 supabase.com 登录,进入 SuperPixMia 项目
+  2. 左侧 Authentication → Email Templates → Reset Password
+  3. 把编辑框里的内容【全部替换】为下面这段 HTML,点 Save
+
+  {{ .Token }} 是 Supabase 的模板变量,不要改动。
+-->
+<h2>重置密码</h2>
+<p>点击下方按钮设置新密码:</p>
+<p>
+  <a href="https://www.superpixmia.com/?token={{ .Token }}&type=recovery"
+     style="display:inline-block;padding:10px 20px;background:#6d5cff;color:#fff;border-radius:8px;text-decoration:none;">
+    设置新密码
+  </a>
+</p>
+<p>如果按钮无法点击,请把下面这行完整复制到浏览器地址栏打开:</p>
+<p style="word-break:break-all;">https://www.superpixmia.com/?token={{ .Token }}&amp;type=recovery</p>
+<p style="color:#999;font-size:12px;">链接在 1 小时内有效,如已过期请重新发起重置。</p>
